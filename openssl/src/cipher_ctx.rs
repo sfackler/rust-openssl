@@ -591,6 +591,50 @@ impl CipherCtxRef {
         Ok(len)
     }
 
+    /// Like [`Self::cipher_update`] except that it writes output into the
+    /// `data` buffer. The `inlen` parameter specifies the number of bytes in
+    /// `data` that are considered the input. For streaming ciphers, the size of
+    /// `data` must be at least the input size. Otherwise, it must be at least
+    /// an additional block size larger.
+    ///
+    /// Note: Use [`Self::cipher_update`] with no output argument to write AAD.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if the input size cannot be represented as `int` or
+    /// exceeds the buffer size, or if the output buffer does not contain enough
+    /// additional space.
+    #[corresponds(EVP_CipherUpdate)]
+    pub fn cipher_update_inplace(
+        &mut self,
+        data: &mut [u8],
+        inlen: usize,
+    ) -> Result<usize, ErrorStack> {
+        assert!(inlen <= data.len(), "Input size may not exceed buffer size");
+        let block_size = self.block_size();
+        if block_size != 1 {
+            assert!(
+                data.len() >= inlen + block_size,
+                "Output buffer size must be at least {} bytes.",
+                inlen + block_size
+            );
+        }
+
+        let inlen = c_int::try_from(inlen).unwrap();
+        let mut outlen = 0;
+        unsafe {
+            cvt(ffi::EVP_CipherUpdate(
+                self.as_ptr(),
+                data.as_mut_ptr(),
+                &mut outlen,
+                data.as_ptr(),
+                inlen,
+            ))
+        }?;
+
+        Ok(outlen as usize)
+    }
+
     /// Finalizes the encryption or decryption process.
     ///
     /// Any remaining data will be written to the output buffer.
@@ -778,6 +822,26 @@ mod test {
 
         ctx.cipher_final_vec(&mut vec![0; 0]).unwrap();
 
+        // encrypt again, but use in-place encryption this time
+        // First reset the IV
+        ctx.encrypt_init(None, None, Some(&iv)).unwrap();
+        ctx.set_padding(false);
+        let mut data_inplace: [u8; 32] = [1; 32];
+        let outlen = ctx
+            .cipher_update_inplace(&mut data_inplace[0..15], 15)
+            .unwrap();
+        assert_eq!(15, outlen);
+
+        let outlen = ctx
+            .cipher_update_inplace(&mut data_inplace[15..32], 17)
+            .unwrap();
+        assert_eq!(17, outlen);
+
+        ctx.cipher_final(&mut [0u8; 0]).unwrap();
+
+        // Check that the resulting data is encrypted in the same manner
+        assert_eq!(data_inplace.as_slice(), output.as_slice());
+
         // try to decrypt
         ctx.decrypt_init(Some(cipher), Some(&key), Some(&iv))
             .unwrap();
@@ -800,6 +864,19 @@ mod test {
         ctx.cipher_final_vec(&mut vec![0; 0]).unwrap();
         // check if the decrypted blocks are the same as input (all ones)
         assert_eq!(output_decrypted, vec![1; 32]);
+
+        // decrypt again, but now the output in-place
+        ctx.decrypt_init(None, None, Some(&iv)).unwrap();
+        ctx.set_padding(false);
+
+        let outlen = ctx.cipher_update_inplace(&mut output[0..15], 15).unwrap();
+        assert_eq!(15, outlen);
+
+        let outlen = ctx.cipher_update_inplace(&mut output[15..], 17).unwrap();
+        assert_eq!(17, outlen);
+
+        ctx.cipher_final_vec(&mut vec![0; 0]).unwrap();
+        assert_eq!(output_decrypted, output);
     }
 
     #[test]
