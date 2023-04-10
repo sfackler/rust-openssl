@@ -4,6 +4,7 @@ use libc::*;
 use super::super::*;
 
 pub enum ASN1_INTEGER {}
+pub enum ASN1_ENUMERATED {}
 pub enum ASN1_GENERALIZEDTIME {}
 pub enum ASN1_STRING {}
 pub enum ASN1_BIT_STRING {}

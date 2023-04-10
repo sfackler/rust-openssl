@@ -51,13 +51,13 @@ pub struct Nid(c_int);
 #[allow(non_snake_case)]
 impl Nid {
     /// Create a `Nid` from an integer representation.
-    pub fn from_raw(raw: c_int) -> Nid {
+    pub const fn from_raw(raw: c_int) -> Nid {
         Nid(raw)
     }
 
     /// Return the integer representation of a `Nid`.
     #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn as_raw(&self) -> c_int {
+    pub const fn as_raw(&self) -> c_int {
         self.0
     }
 

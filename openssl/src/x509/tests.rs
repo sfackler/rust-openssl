@@ -18,18 +18,20 @@ use crate::x509::store::X509Lookup;
 use crate::x509::store::X509StoreBuilder;
 #[cfg(any(ossl102, libressl261))]
 use crate::x509::verify::{X509VerifyFlags, X509VerifyParam};
-#[cfg(ossl110)]
-use crate::x509::X509Builder;
 #[cfg(ossl102)]
 use crate::x509::X509PurposeId;
 #[cfg(any(ossl102, libressl261))]
 use crate::x509::X509PurposeRef;
+#[cfg(ossl110)]
+use crate::x509::{CrlReason, X509Builder};
 use crate::x509::{
     CrlStatus, X509Crl, X509Extension, X509Name, X509Req, X509StoreContext, X509VerifyResult, X509,
 };
 use hex::{self, FromHex};
 #[cfg(any(ossl102, libressl261))]
 use libc::time_t;
+
+use super::{CertificateIssuer, ReasonCode};
 
 fn pkey() -> PKey<Private> {
     let rsa = Rsa::generate(2048).unwrap();
@@ -608,6 +610,42 @@ fn test_load_crl() {
         revoked.serial_number().to_bn().unwrap(),
         cert.serial_number().to_bn().unwrap(),
         "revoked and cert serial numbers should match"
+    );
+}
+
+#[test]
+fn test_crl_entry_extensions() {
+    let crl = include_bytes!("../../test/entry_extensions.crl");
+    let crl = X509Crl::from_pem(crl).unwrap();
+
+    let revoked_certs = crl.get_revoked().unwrap();
+    let entry = &revoked_certs[0];
+
+    let (critical, issuer) = entry
+        .extension::<CertificateIssuer>()
+        .unwrap()
+        .expect("Certificate issuer extension should be present");
+    assert!(critical, "Certificate issuer extension is critical");
+    assert_eq!(issuer.len(), 1, "Certificate issuer should have one entry");
+    let issuer = issuer[0]
+        .directory_name()
+        .expect("Issuer should be a directory name");
+    assert_eq!(
+        format!("{:?}", issuer),
+        r#"[countryName = "GB", commonName = "Test CA"]"#
+    );
+
+    // reason_code can't be inspected without ossl110
+    #[allow(unused_variables)]
+    let (critical, reason_code) = entry
+        .extension::<ReasonCode>()
+        .unwrap()
+        .expect("Reason code extension should be present");
+    assert!(!critical, "Reason code extension is not critical");
+    #[cfg(ossl110)]
+    assert_eq!(
+        CrlReason::KEY_COMPROMISE,
+        CrlReason::from_raw(reason_code.get_i64().unwrap() as ffi::c_int)
     );
 }
 
