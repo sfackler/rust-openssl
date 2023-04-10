@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [v0.10.50] - 2023-04-09
+
+### Added
+
+* Added `CipherCtxRef::cipher_update_inplace`.
+
 ## [v0.10.49] - 2023-04-01
 
 ### Fixed
@@ -718,7 +724,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.49...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.50...master
+[v0.10.50]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.49...openssl-v0.10.50
 [v0.10.49]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.48...openssl-v0.10.49
 [v0.10.48]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.47...openssl-v0.10.48
 [v0.10.47]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.46...openssl-v0.10.47
