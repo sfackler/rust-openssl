@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [v0.9.85] - 2023-04-09
+
+### Added
+
+* Added support for LibreSSL 3.7.x.
+
 ## [v0.9.84] - 2023-04-01
 
 ### Added
@@ -418,7 +424,8 @@ Fixed builds against OpenSSL built with `no-cast`.
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.84..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.85..master
+[v0.9.85]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.85...openssl-sys-v0.9.85
 [v0.9.84]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.83...openssl-sys-v0.9.84
 [v0.9.83]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.82...openssl-sys-v0.9.83
 [v0.9.82]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.81...openssl-sys-v0.9.82
