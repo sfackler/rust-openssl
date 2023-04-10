@@ -112,7 +112,9 @@ fn main() {
     cfg.skip_struct(|s| {
         s == "ProbeResult" ||
             s == "X509_OBJECT_data" || // inline union
-            s == "DIST_POINT_NAME_st_anon_union" // inline union
+            s == "DIST_POINT_NAME_st_anon_union" || // inline union
+            s == "PKCS7_data" ||
+            s == "ASN1_TYPE_value"
     });
     cfg.skip_fn(move |s| {
         s == "CRYPTO_memcmp" ||                 // uses volatile
@@ -132,8 +134,10 @@ fn main() {
     cfg.skip_field_type(|s, field| {
         (s == "EVP_PKEY" && field == "pkey") ||      // union
             (s == "GENERAL_NAME" && field == "d") || // union
+            (s == "X509_OBJECT" && field == "data") || // union
             (s == "DIST_POINT_NAME" && field == "name") || // union
-            (s == "X509_OBJECT" && field == "data") // union
+            (s == "PKCS7" && field == "d") || // union
+            (s == "ASN1_TYPE" && field == "value") // union
     });
     cfg.skip_signededness(|s| {
         s.ends_with("_cb")

@@ -220,6 +220,41 @@ impl KeyUsage {
     }
 }
 
+#[cfg(not(boringssl))]
+impl From<u32> for KeyUsage {
+    fn from(flags: u32) -> Self {
+        let mut ku = KeyUsage::new();
+        if flags & ffi::X509v3_KU_DIGITAL_SIGNATURE > 0 {
+            ku.digital_signature();
+        }
+        if flags & ffi::X509v3_KU_NON_REPUDIATION > 0 {
+            ku.non_repudiation();
+        }
+        if flags & ffi::X509v3_KU_KEY_ENCIPHERMENT > 0 {
+            ku.key_encipherment();
+        }
+        if flags & ffi::X509v3_KU_DATA_ENCIPHERMENT > 0 {
+            ku.data_encipherment();
+        }
+        if flags & ffi::X509v3_KU_KEY_AGREEMENT > 0 {
+            ku.key_agreement();
+        }
+        if flags & ffi::X509v3_KU_KEY_CERT_SIGN > 0 {
+            ku.key_cert_sign();
+        }
+        if flags & ffi::X509v3_KU_CRL_SIGN > 0 {
+            ku.crl_sign();
+        }
+        if flags & ffi::X509v3_KU_ENCIPHER_ONLY > 0 {
+            ku.encipher_only();
+        }
+        if flags & ffi::X509v3_KU_DECIPHER_ONLY > 0 {
+            ku.decipher_only();
+        }
+        ku
+    }
+}
+
 /// An extension consisting of a list of usages indicating purposes
 /// for which the certificate public key can be used for.
 pub struct ExtendedKeyUsage {
@@ -271,6 +306,11 @@ impl ExtendedKeyUsage {
     /// Sets the `timeStamping` flag to `true`.
     pub fn time_stamping(&mut self) -> &mut ExtendedKeyUsage {
         self.other("timeStamping")
+    }
+
+    /// Sets the `OCSPSigning` flag to `true`.
+    pub fn ocsp_signing(&mut self) -> &mut ExtendedKeyUsage {
+        self.other("OCSPSigning")
     }
 
     /// Sets the `msCodeInd` flag to `true`.
