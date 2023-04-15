@@ -7,7 +7,7 @@ use std::ptr;
 
 use crate::bn::{BigNum, BigNumRef};
 use crate::error::ErrorStack;
-use crate::pkey::{HasParams, HasPrivate, HasPublic, Params, Private};
+use crate::pkey::{HasParams, HasPrivate, HasPublic, Params, Private, Public};
 use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
 
@@ -66,6 +66,16 @@ impl Dh<Params> {
         }
     }
 
+    /// Sets the public key on the DH object.
+    pub fn set_public_key(self, pub_key: BigNum) -> Result<Dh<Public>, ErrorStack> {
+        unsafe {
+            let dh_ptr = self.0;
+            cvt(DH_set0_key(dh_ptr, pub_key.as_ptr(), ptr::null_mut()))?;
+            mem::forget((self, pub_key));
+            Ok(Dh::from_ptr(dh_ptr))
+        }
+    }
+
     /// Sets the private key on the DH object and recomputes the public key.
     pub fn set_private_key(self, priv_key: BigNum) -> Result<Dh<Private>, ErrorStack> {
         unsafe {
@@ -75,6 +85,16 @@ impl Dh<Params> {
 
             cvt(ffi::DH_generate_key(dh_ptr))?;
             mem::forget(self);
+            Ok(Dh::from_ptr(dh_ptr))
+        }
+    }
+
+    /// Sets the public and private keys on the DH object.
+    pub fn set_key(self, pub_key: BigNum, priv_key: BigNum) -> Result<Dh<Private>, ErrorStack> {
+        unsafe {
+            let dh_ptr = self.0;
+            cvt(DH_set0_key(dh_ptr, pub_key.as_ptr(), priv_key.as_ptr()))?;
+            mem::forget((self, pub_key, priv_key));
             Ok(Dh::from_ptr(dh_ptr))
         }
     }
@@ -365,6 +385,30 @@ mod tests {
 
         assert_eq!(key1.public_key(), key2.public_key());
         assert_eq!(key1.private_key(), key2.private_key());
+    }
+
+    #[test]
+    #[cfg(ossl102)]
+    fn test_set_keys() {
+        let dh1 = Dh::get_2048_256().unwrap();
+        let key1 = dh1.generate_key().unwrap();
+
+        let dh2 = Dh::get_2048_256().unwrap();
+        let key2 = dh2
+            .set_public_key(key1.public_key().to_owned().unwrap())
+            .unwrap();
+
+        assert_eq!(key1.public_key(), key2.public_key());
+
+        let dh3 = Dh::get_2048_256().unwrap();
+        let key3 = dh3
+            .set_key(
+                key1.public_key().to_owned().unwrap(),
+                key1.private_key().to_owned().unwrap(),
+            )
+            .unwrap();
+        assert_eq!(key1.public_key(), key3.public_key());
+        assert_eq!(key1.private_key(), key3.private_key());
     }
 
     #[test]
