@@ -10,6 +10,10 @@ pub const TLS1_2_VERSION: c_int = 0x303;
 #[cfg(any(ossl111, libressl340))]
 pub const TLS1_3_VERSION: c_int = 0x304;
 
+pub const DTLS1_VERSION: c_int = 0xFEFF;
+#[cfg(any(ossl102, libressl332))]
+pub const DTLS1_2_VERSION: c_int = 0xFEFD;
+
 pub const TLS1_AD_DECODE_ERROR: c_int = 50;
 pub const TLS1_AD_UNRECOGNIZED_NAME: c_int = 112;
 
