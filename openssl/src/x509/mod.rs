@@ -485,7 +485,7 @@ impl X509Ref {
 
     /// Returns this certificate's subject key id, if it exists.
     #[corresponds(X509_get0_subject_key_id)]
-    #[cfg(ossl110)]
+    #[cfg(ossl111)]
     pub fn subject_key_id(&self) -> Option<&Asn1StringRef> {
         unsafe {
             let data = ffi::X509_get0_subject_key_id(self.as_ptr());
@@ -495,7 +495,7 @@ impl X509Ref {
 
     /// Returns this certificate's authority key id, if it exists.
     #[corresponds(X509_get0_authority_key_id)]
-    #[cfg(ossl110)]
+    #[cfg(ossl111)]
     pub fn authority_key_id(&self) -> Option<&Asn1StringRef> {
         unsafe {
             let data = ffi::X509_get0_authority_key_id(self.as_ptr());
@@ -505,7 +505,7 @@ impl X509Ref {
 
     /// Returns this certificate's authority issuer name entries, if they exist.
     #[corresponds(X509_get0_authority_issuer)]
-    #[cfg(ossl110)]
+    #[cfg(ossl111)]
     pub fn authority_issuer(&self) -> Option<Stack<GeneralName>> {
         unsafe {
             let stack = ffi::X509_get0_authority_issuer(self.as_ptr());
@@ -515,7 +515,7 @@ impl X509Ref {
 
     /// Returns this certificate's authority serial number, if it exists.
     #[corresponds(X509_get0_authority_serial)]
-    #[cfg(ossl110)]
+    #[cfg(ossl111)]
     pub fn authority_serial(&self) -> Option<&Asn1IntegerRef> {
         unsafe {
             let r = ffi::X509_get0_authority_serial(self.as_ptr());
