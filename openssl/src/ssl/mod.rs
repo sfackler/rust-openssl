@@ -644,6 +644,16 @@ impl SslVersion {
     /// Requires OpenSSL 1.1.1 or LibreSSL 3.4.0 or newer.
     #[cfg(any(ossl111, libressl340))]
     pub const TLS1_3: SslVersion = SslVersion(ffi::TLS1_3_VERSION);
+
+    /// DTLSv1.0
+    ///
+    /// DTLS 1.0 corresponds to TLS 1.1.
+    pub const DTLS1: SslVersion = SslVersion(ffi::DTLS1_VERSION);
+
+    /// DTLSv1.2
+    ///
+    /// DTLS 1.2 corresponds to TLS 1.2 to harmonize versions. There was never a DTLS 1.1.
+    pub const DTLS1_2: SslVersion = SslVersion(ffi::DTLS1_2_VERSION);
 }
 
 cfg_if! {
