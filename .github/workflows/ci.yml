@@ -310,7 +310,7 @@ jobs:
         - run: |
             mkdir -p .cargo
             echo '[patch.crates-io]' > .cargo/config.toml
-            echo 'bssl-sys = { path = "'$OPENSSL_DIR'/rust" }' >> .cargo/config.toml
+            echo 'bssl-sys = { path = "'$OPENSSL_DIR'/rust/bssl-sys" }' >> .cargo/config.toml
           if: matrix.library.name == 'boringssl' && !matrix.bindgen
         - uses: actions/cache@v3
           with:
