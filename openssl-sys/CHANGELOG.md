@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [v0.9.86] - 2023-04-20
+
+### Fixed
+
+* Fixed BoringSSL support with the latest bindgen release.
+
+### Added
+
+* Added bindings for PKCS#7 functions and more X.509 functions.
+
+
 ## [v0.9.85] - 2023-04-09
 
 ### Added
@@ -424,8 +435,9 @@ Fixed builds against OpenSSL built with `no-cast`.
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.85..master
-[v0.9.85]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.85...openssl-sys-v0.9.85
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.86..master
+[v0.9.86]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.85...openssl-sys-v0.9.86
+[v0.9.85]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.84...openssl-sys-v0.9.85
 [v0.9.84]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.83...openssl-sys-v0.9.84
 [v0.9.83]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.82...openssl-sys-v0.9.83
 [v0.9.82]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.81...openssl-sys-v0.9.82
