@@ -1545,7 +1545,7 @@ foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_REVOKED;
     fn drop = ffi::X509_REVOKED_free;
 
-    /// An `X509` certificate request.
+    /// An `X509` certificate revocation list.
     pub struct X509Revoked;
     /// Reference to `X509Crl`.
     pub struct X509RevokedRef;
