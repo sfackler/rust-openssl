@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [v0.10.51] - 2023-04-20
+
+### Added
+
+* Added `X509RevokedRef::issuer_name` and `X509RevokedRef::reason_code`.
+* Added `Dh::set_key` and `Dh::set_public_key`
+* Added `Asn1OctetString` and `Asn1OctetStringRef1`
+* Added `X509Extension::new_from_der`
+
+### Deprecated
+
+* Deprecated `X509Extension::new` and `X509Extension::new_nid` in favor of `X509Extension::new_from_der` and the `extensions` module.
+* Deprecated `X509Extension::add_alias`, it is not required with `new_from_der` or the `extensions` module.
+
 ## [v0.10.50] - 2023-04-09
 
 ### Added
@@ -724,7 +738,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.50...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.51...master
+[v0.10.51]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.50...openssl-v0.10.51
 [v0.10.50]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.49...openssl-v0.10.50
 [v0.10.49]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.48...openssl-v0.10.49
 [v0.10.48]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.47...openssl-v0.10.48
