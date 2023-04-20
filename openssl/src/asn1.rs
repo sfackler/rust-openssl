@@ -28,6 +28,7 @@ use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_char, c_int, c_long, time_t};
 use std::cmp::Ordering;
+use std::convert::TryInto;
 use std::ffi::CString;
 use std::fmt;
 use std::ptr;
@@ -612,6 +613,46 @@ impl Asn1BitStringRef {
 }
 
 foreign_type_and_impl_send_sync! {
+    type CType = ffi::ASN1_OCTET_STRING;
+    fn drop = ffi::ASN1_OCTET_STRING_free;
+    /// ASN.1 OCTET STRING type
+    pub struct Asn1OctetString;
+    /// A reference to an [`Asn1OctetString`].
+    pub struct Asn1OctetStringRef;
+}
+
+impl Asn1OctetString {
+    /// Creates an Asn1OctetString from bytes
+    pub fn new_from_bytes(value: &[u8]) -> Result<Self, ErrorStack> {
+        ffi::init();
+        unsafe {
+            let s = cvt_p(ffi::ASN1_OCTET_STRING_new())?;
+            ffi::ASN1_OCTET_STRING_set(s, value.as_ptr(), value.len().try_into().unwrap());
+            Ok(Self::from_ptr(s))
+        }
+    }
+}
+
+impl Asn1OctetStringRef {
+    /// Returns the octet string as an array of bytes.
+    #[corresponds(ASN1_STRING_get0_data)]
+    pub fn as_slice(&self) -> &[u8] {
+        unsafe { slice::from_raw_parts(ASN1_STRING_get0_data(self.as_ptr().cast()), self.len()) }
+    }
+
+    /// Returns the number of bytes in the octet string.
+    #[corresponds(ASN1_STRING_length)]
+    pub fn len(&self) -> usize {
+        unsafe { ffi::ASN1_STRING_length(self.as_ptr().cast()) as usize }
+    }
+
+    /// Determines if the string is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
+foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_OBJECT;
     fn drop = ffi::ASN1_OBJECT_free;
 
@@ -858,5 +899,12 @@ mod tests {
             object.as_slice(),
             &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01],
         );
+    }
+
+    #[test]
+    fn asn1_octet_string() {
+        let octet_string = Asn1OctetString::new_from_bytes(b"hello world").unwrap();
+        assert_eq!(octet_string.as_slice(), b"hello world");
+        assert_eq!(octet_string.len(), 11);
     }
 }

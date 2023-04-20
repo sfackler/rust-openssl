@@ -51,9 +51,15 @@ extern "C" {
     #[cfg(any(all(ossl101, not(ossl110)), libressl))]
     pub fn ASN1_STRING_data(x: *mut ASN1_STRING) -> *mut c_uchar;
     pub fn ASN1_STRING_new() -> *mut ASN1_STRING;
+    pub fn ASN1_OCTET_STRING_new() -> *mut ASN1_OCTET_STRING;
     pub fn ASN1_STRING_free(x: *mut ASN1_STRING);
     pub fn ASN1_STRING_length(x: *const ASN1_STRING) -> c_int;
     pub fn ASN1_STRING_set(x: *mut ASN1_STRING, data: *const c_void, len_in: c_int) -> c_int;
+    pub fn ASN1_OCTET_STRING_set(
+        x: *mut ASN1_OCTET_STRING,
+        data: *const c_uchar,
+        len_in: c_int,
+    ) -> c_int;
 
     pub fn ASN1_BIT_STRING_free(x: *mut ASN1_BIT_STRING);
     pub fn ASN1_OCTET_STRING_free(x: *mut ASN1_OCTET_STRING);
