@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use crate::asn1::Asn1Time;
+use crate::asn1::{Asn1Object, Asn1OctetString, Asn1Time};
 use crate::bn::{BigNum, MsbOption};
 use crate::hash::MessageDigest;
 use crate::nid::Nid;
@@ -290,11 +290,27 @@ fn x509_builder() {
 }
 
 #[test]
+// This tests `X509Extension::new`, even though its deprecated.
+#[allow(deprecated)]
 fn x509_extension_new() {
     assert!(X509Extension::new(None, None, "crlDistributionPoints", "section").is_err());
     assert!(X509Extension::new(None, None, "proxyCertInfo", "").is_err());
     assert!(X509Extension::new(None, None, "certificatePolicies", "").is_err());
     assert!(X509Extension::new(None, None, "subjectAltName", "dirName:section").is_err());
+}
+
+#[test]
+fn x509_extension_new_from_der() {
+    let ext = X509Extension::new_from_der(
+        &Asn1Object::from_str("2.5.29.19").unwrap(),
+        true,
+        &Asn1OctetString::new_from_bytes(b"\x30\x03\x01\x01\xff").unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        ext.to_der().unwrap(),
+        b"0\x0f\x06\x03U\x1d\x13\x01\x01\xff\x04\x050\x03\x01\x01\xff"
+    );
 }
 
 #[test]

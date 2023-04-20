@@ -24,8 +24,8 @@ use std::slice;
 use std::str;
 
 use crate::asn1::{
-    Asn1BitStringRef, Asn1Enumerated, Asn1IntegerRef, Asn1Object, Asn1ObjectRef, Asn1StringRef,
-    Asn1TimeRef, Asn1Type,
+    Asn1BitStringRef, Asn1Enumerated, Asn1IntegerRef, Asn1Object, Asn1ObjectRef,
+    Asn1OctetStringRef, Asn1StringRef, Asn1TimeRef, Asn1Type,
 };
 use crate::bio::MemBioSlice;
 use crate::conf::ConfRef;
@@ -842,6 +842,13 @@ impl X509Extension {
     /// mini-language that can read arbitrary files.
     ///
     /// See the extension module for builder types which will construct certain common extensions.
+    ///
+    /// This function is deprecated, `X509Extension::new_from_der` or the
+    /// types in `x509::extension` should be used in its place.
+    #[deprecated(
+        note = "Use x509::extension types or new_from_der instead",
+        since = "0.10.51"
+    )]
     pub fn new(
         conf: Option<&ConfRef>,
         context: Option<&X509v3Context<'_>>,
@@ -887,6 +894,13 @@ impl X509Extension {
     /// mini-language that can read arbitrary files.
     ///
     /// See the extension module for builder types which will construct certain common extensions.
+    ///
+    /// This function is deprecated, `X509Extension::new_from_der` or the
+    /// types in `x509::extension` should be used in its place.
+    #[deprecated(
+        note = "Use x509::extension types or new_from_der instead",
+        since = "0.10.51"
+    )]
     pub fn new_nid(
         conf: Option<&ConfRef>,
         context: Option<&X509v3Context<'_>>,
@@ -921,6 +935,31 @@ impl X509Extension {
         }
     }
 
+    /// Constructs a new X509 extension value from its OID, whether it's
+    /// critical, and its DER contents.
+    ///
+    /// The extent structure of the DER value will vary based on the
+    /// extension type, and can generally be found in the RFC defining the
+    /// extension.
+    ///
+    /// For common extension types, there are Rust APIs provided in
+    /// `openssl::x509::extensions` which are more ergonomic.
+    pub fn new_from_der(
+        oid: &Asn1ObjectRef,
+        critical: bool,
+        der_contents: &Asn1OctetStringRef,
+    ) -> Result<X509Extension, ErrorStack> {
+        unsafe {
+            cvt_p(ffi::X509_EXTENSION_create_by_OBJ(
+                ptr::null_mut(),
+                oid.as_ptr(),
+                critical as _,
+                der_contents.as_ptr(),
+            ))
+            .map(X509Extension)
+        }
+    }
+
     pub(crate) unsafe fn new_internal(
         nid: Nid,
         critical: bool,
@@ -936,6 +975,10 @@ impl X509Extension {
     ///
     /// This method modifies global state without locking and therefore is not thread safe
     #[corresponds(X509V3_EXT_add_alias)]
+    #[deprecated(
+        note = "Use x509::extension types or new_from_der and then this is not necessary",
+        since = "0.10.51"
+    )]
     pub unsafe fn add_alias(to: Nid, from: Nid) -> Result<(), ErrorStack> {
         ffi::init();
         cvt(ffi::X509V3_EXT_add_alias(to.as_raw(), from.as_raw())).map(|_| ())

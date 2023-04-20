@@ -67,6 +67,9 @@ impl BasicConstraints {
     }
 
     /// Return the `BasicConstraints` extension as an `X509Extension`.
+    // Temporarily silence the deprecation warning - this should be ported to
+    // `X509Extension::new_internal`.
+    #[allow(deprecated)]
     pub fn build(&self) -> Result<X509Extension, ErrorStack> {
         let mut value = String::new();
         if self.critical {
@@ -183,6 +186,9 @@ impl KeyUsage {
     }
 
     /// Return the `KeyUsage` extension as an `X509Extension`.
+    // Temporarily silence the deprecation warning - this should be ported to
+    // `X509Extension::new_internal`.
+    #[allow(deprecated)]
     pub fn build(&self) -> Result<X509Extension, ErrorStack> {
         let mut value = String::new();
         let mut first = true;
@@ -346,6 +352,9 @@ impl SubjectKeyIdentifier {
     }
 
     /// Return a `SubjectKeyIdentifier` extension as an `X509Extension`.
+    // Temporarily silence the deprecation warning - this should be ported to
+    // `X509Extension::new_internal`.
+    #[allow(deprecated)]
     pub fn build(&self, ctx: &X509v3Context<'_>) -> Result<X509Extension, ErrorStack> {
         let mut value = String::new();
         let mut first = true;
@@ -398,6 +407,9 @@ impl AuthorityKeyIdentifier {
     }
 
     /// Return a `AuthorityKeyIdentifier` extension as an `X509Extension`.
+    // Temporarily silence the deprecation warning - this should be ported to
+    // `X509Extension::new_internal`.
+    #[allow(deprecated)]
     pub fn build(&self, ctx: &X509v3Context<'_>) -> Result<X509Extension, ErrorStack> {
         let mut value = String::new();
         let mut first = true;
