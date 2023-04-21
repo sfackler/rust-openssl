@@ -96,15 +96,15 @@ extern "C" {
         indent: c_int,
     ) -> c_int;
 
-    #[cfg(ossl111)]
+    #[cfg(ossl110)]
     pub fn X509_get_extension_flags(x: *mut X509) -> u32;
-    #[cfg(ossl111)]
+    #[cfg(ossl110)]
     pub fn X509_get_key_usage(x: *mut X509) -> u32;
-    #[cfg(ossl111)]
+    #[cfg(ossl110)]
     pub fn X509_get_extended_key_usage(x: *mut X509) -> u32;
-    #[cfg(ossl111)]
+    #[cfg(ossl110)]
     pub fn X509_get0_subject_key_id(x: *mut X509) -> *const ASN1_OCTET_STRING;
-    #[cfg(ossl111)]
+    #[cfg(ossl110)]
     pub fn X509_get0_authority_key_id(x: *mut X509) -> *const ASN1_OCTET_STRING;
     #[cfg(ossl111)]
     pub fn X509_get0_authority_issuer(x: *mut X509) -> *const stack_st_GENERAL_NAME;

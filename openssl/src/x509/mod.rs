@@ -485,21 +485,21 @@ impl X509Ref {
 
     /// Returns this certificate's subject key id, if it exists.
     #[corresponds(X509_get0_subject_key_id)]
-    #[cfg(ossl111)]
-    pub fn subject_key_id(&self) -> Option<&Asn1StringRef> {
+    #[cfg(ossl110)]
+    pub fn subject_key_id(&self) -> Option<&Asn1OctetStringRef> {
         unsafe {
             let data = ffi::X509_get0_subject_key_id(self.as_ptr());
-            Asn1StringRef::from_const_ptr_opt(data as *const _)
+            Asn1OctetStringRef::from_const_ptr_opt(data)
         }
     }
 
     /// Returns this certificate's authority key id, if it exists.
     #[corresponds(X509_get0_authority_key_id)]
-    #[cfg(ossl111)]
-    pub fn authority_key_id(&self) -> Option<&Asn1StringRef> {
+    #[cfg(ossl110)]
+    pub fn authority_key_id(&self) -> Option<&Asn1OctetStringRef> {
         unsafe {
             let data = ffi::X509_get0_authority_key_id(self.as_ptr());
-            Asn1StringRef::from_const_ptr_opt(data as *const _)
+            Asn1OctetStringRef::from_const_ptr_opt(data)
         }
     }
 
