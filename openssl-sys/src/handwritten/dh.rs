@@ -3,6 +3,7 @@ use super::super::*;
 extern "C" {
     pub fn DH_new() -> *mut DH;
     pub fn DH_free(dh: *mut DH);
+    pub fn DH_check(dh: *const DH, codes: *mut c_int) -> c_int;
 
     pub fn DH_generate_parameters(
         prime_len: c_int,

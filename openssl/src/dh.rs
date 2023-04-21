@@ -39,6 +39,16 @@ where
         params_to_der,
         ffi::i2d_DHparams
     }
+
+    /// Validates DH parameters for correctness
+    #[corresponds(DH_check_key)]
+    pub fn check_key(&self) -> Result<bool, ErrorStack> {
+        unsafe {
+            let mut codes = 0;
+            cvt(ffi::DH_check(self.as_ptr(), &mut codes))?;
+            Ok(codes == 0)
+        }
+    }
 }
 
 impl Dh<Params> {
@@ -456,5 +466,15 @@ mod tests {
         let shared_b = dh2.compute_key(dh1.public_key()).unwrap();
 
         assert_eq!(shared_a, shared_b);
+    }
+
+    #[test]
+    fn test_dh_check_key() {
+        let dh1 = Dh::generate_params(512, 2).unwrap();
+        let p = BigNum::from_hex_str("04").unwrap();
+        let g = BigNum::from_hex_str("02").unwrap();
+        let dh2 = Dh::from_pqg(p, None, g).unwrap();
+        assert!(dh1.check_key().unwrap());
+        assert!(!dh2.check_key().unwrap());
     }
 }
