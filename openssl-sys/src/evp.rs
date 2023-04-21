@@ -20,6 +20,8 @@ pub const EVP_PKEY_X448: c_int = NID_X448;
 pub const EVP_PKEY_ED448: c_int = NID_ED448;
 pub const EVP_PKEY_HMAC: c_int = NID_hmac;
 pub const EVP_PKEY_CMAC: c_int = NID_cmac;
+#[cfg(ossl111)]
+pub const EVP_PKEY_POLY1305: c_int = NID_poly1305;
 #[cfg(ossl110)]
 pub const EVP_PKEY_HKDF: c_int = NID_hkdf;
 
