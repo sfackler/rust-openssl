@@ -125,6 +125,8 @@ pub enum EVP_PKEY_ASN1_METHOD {}
 
 pub enum EVP_PKEY_CTX {}
 
+pub enum CMAC_CTX {}
+
 cfg_if! {
     if #[cfg(any(ossl110, libressl280))] {
         pub enum HMAC_CTX {}
