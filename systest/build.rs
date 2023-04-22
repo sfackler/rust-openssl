@@ -56,6 +56,7 @@ fn main() {
         .header("openssl/bio.h")
         .header("openssl/x509v3.h")
         .header("openssl/safestack.h")
+        .header("openssl/cmac.h")
         .header("openssl/hmac.h")
         .header("openssl/obj_mac.h")
         .header("openssl/ssl.h")
