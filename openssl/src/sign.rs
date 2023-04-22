@@ -117,10 +117,10 @@ pub struct Signer<'a> {
     _p: PhantomData<&'a ()>,
 }
 
-unsafe impl<'a> Sync for Signer<'a> {}
-unsafe impl<'a> Send for Signer<'a> {}
+unsafe impl Sync for Signer<'_> {}
+unsafe impl Send for Signer<'_> {}
 
-impl<'a> Drop for Signer<'a> {
+impl Drop for Signer<'_> {
     fn drop(&mut self) {
         // pkey_ctx is owned by the md_ctx, so no need to explicitly free it.
         unsafe {
@@ -130,7 +130,7 @@ impl<'a> Drop for Signer<'a> {
 }
 
 #[allow(clippy::len_without_is_empty)]
-impl<'a> Signer<'a> {
+impl Signer<'_> {
     /// Creates a new `Signer`.
     ///
     /// This cannot be used with Ed25519 or Ed448 keys. Please refer to
@@ -139,7 +139,7 @@ impl<'a> Signer<'a> {
     /// OpenSSL documentation at [`EVP_DigestSignInit`].
     ///
     /// [`EVP_DigestSignInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestSignInit.html
-    pub fn new<T>(type_: MessageDigest, pkey: &'a PKeyRef<T>) -> Result<Signer<'a>, ErrorStack>
+    pub fn new<'a, T>(type_: MessageDigest, pkey: &PKeyRef<T>) -> Result<Signer<'a>, ErrorStack>
     where
         T: HasPrivate,
     {
@@ -154,16 +154,16 @@ impl<'a> Signer<'a> {
     /// OpenSSL documentation at [`EVP_DigestSignInit`].
     ///
     /// [`EVP_DigestSignInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestSignInit.html
-    pub fn new_without_digest<T>(pkey: &'a PKeyRef<T>) -> Result<Signer<'a>, ErrorStack>
+    pub fn new_without_digest<'a, T>(pkey: &PKeyRef<T>) -> Result<Signer<'a>, ErrorStack>
     where
         T: HasPrivate,
     {
         Self::new_intern(None, pkey)
     }
 
-    fn new_intern<T>(
+    fn new_intern<'a, T>(
         type_: Option<MessageDigest>,
-        pkey: &'a PKeyRef<T>,
+        pkey: &PKeyRef<T>,
     ) -> Result<Signer<'a>, ErrorStack>
     where
         T: HasPrivate,
