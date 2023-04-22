@@ -165,7 +165,6 @@ pub mod nid;
 #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_OCSP")))]
 pub mod ocsp;
 pub mod pkcs12;
-#[cfg(not(boringssl))]
 pub mod pkcs5;
 #[cfg(not(boringssl))]
 pub mod pkcs7;
