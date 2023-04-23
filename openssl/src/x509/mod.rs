@@ -506,10 +506,10 @@ impl X509Ref {
     /// Returns this certificate's authority issuer name entries, if they exist.
     #[corresponds(X509_get0_authority_issuer)]
     #[cfg(ossl111)]
-    pub fn authority_issuer(&self) -> Option<Stack<GeneralName>> {
+    pub fn authority_issuer(&self) -> Option<&StackRef<GeneralName>> {
         unsafe {
             let stack = ffi::X509_get0_authority_issuer(self.as_ptr());
-            Stack::from_ptr_opt(stack as *mut _)
+            StackRef::from_const_ptr_opt(stack)
         }
     }
 

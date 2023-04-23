@@ -169,6 +169,32 @@ fn test_subject_alt_name() {
 }
 
 #[test]
+#[cfg(ossl110)]
+fn test_subject_key_id() {
+    let cert = include_bytes!("../../test/github.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    let subject_key_id = cert.subject_key_id().unwrap();
+    assert_eq!(
+        subject_key_id.as_slice(),
+        &b"\xC7\x07\x27\x78\x85\xF2\x9D\x33\xC9\x4C\x5E\x56\x7D\x5C\xD6\x8E\x72\x67\xEB\xDE"[..]
+    );
+}
+
+#[test]
+#[cfg(ossl110)]
+fn test_authority_key_id() {
+    let cert = include_bytes!("../../test/github.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    let subject_key_id = cert.authority_key_id().unwrap();
+    assert_eq!(
+        subject_key_id.as_slice(),
+        &b"\x0A\xBC\x08\x29\x17\x8C\xA5\x39\x6D\x7A\x0E\xCE\x33\xC7\x2E\xB3\xED\xFB\xC3\x7A"[..]
+    );
+}
+
+#[test]
 fn test_subject_alt_name_iter() {
     let cert = include_bytes!("../../test/alt_name_cert.pem");
     let cert = X509::from_pem(cert).unwrap();
