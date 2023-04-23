@@ -171,27 +171,48 @@ fn test_subject_alt_name() {
 #[test]
 #[cfg(ossl110)]
 fn test_subject_key_id() {
-    let cert = include_bytes!("../../test/github.pem");
+    let cert = include_bytes!("../../test/certv3.pem");
     let cert = X509::from_pem(cert).unwrap();
 
     let subject_key_id = cert.subject_key_id().unwrap();
     assert_eq!(
         subject_key_id.as_slice(),
-        &b"\xC7\x07\x27\x78\x85\xF2\x9D\x33\xC9\x4C\x5E\x56\x7D\x5C\xD6\x8E\x72\x67\xEB\xDE"[..]
+        &b"\xB6\x73\x2F\x61\xA5\x4B\xA1\xEF\x48\x2C\x15\xB1\x9F\xF3\xDC\x34\x2F\xBC\xAC\x30"[..]
     );
 }
 
 #[test]
 #[cfg(ossl110)]
 fn test_authority_key_id() {
-    let cert = include_bytes!("../../test/github.pem");
+    let cert = include_bytes!("../../test/certv3.pem");
     let cert = X509::from_pem(cert).unwrap();
 
-    let subject_key_id = cert.authority_key_id().unwrap();
+    let authority_key_id = cert.authority_key_id().unwrap();
     assert_eq!(
-        subject_key_id.as_slice(),
-        &b"\x0A\xBC\x08\x29\x17\x8C\xA5\x39\x6D\x7A\x0E\xCE\x33\xC7\x2E\xB3\xED\xFB\xC3\x7A"[..]
+        authority_key_id.as_slice(),
+        &b"\x6C\xD3\xA5\x03\xAB\x0D\x5F\x2C\xC9\x8D\x8A\x9C\x88\xA7\x88\x77\xB8\x37\xFD\x9A"[..]
     );
+}
+
+#[test]
+fn test_authority_issuer_and_serial() {
+    let cert = include_bytes!("../../test/authority_key_identifier.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    let authority_issuer = cert.authority_issuer().unwrap();
+    assert_eq!(1, authority_issuer.len());
+    let dn = authority_issuer[0].directory_name().unwrap();
+    let mut o = dn.entries_by_nid(Nid::ORGANIZATIONNAME);
+    let o = o.next().unwrap().data().as_utf8().unwrap();
+    assert_eq!(o.as_bytes(), b"PyCA");
+    let mut cn = dn.entries_by_nid(Nid::COMMONNAME);
+    let cn = cn.next().unwrap().data().as_utf8().unwrap();
+    assert_eq!(cn.as_bytes(), b"cryptography.io");
+
+    let authority_serial = cert.authority_serial().unwrap();
+    let serial = authority_serial.to_bn().unwrap();
+    let expected = BigNum::from_u32(3).unwrap();
+    assert_eq!(serial, expected);
 }
 
 #[test]
