@@ -8,7 +8,9 @@
 extern crate bindgen;
 extern crate cc;
 #[cfg(feature = "vendored")]
-extern crate openssl_src;
+extern crate openssl_src_v1 as openssl_src;
+#[cfg(feature = "vendored-v3")]
+extern crate openssl_src_v3 as openssl_src;
 extern crate pkg_config;
 #[cfg(target_env = "msvc")]
 extern crate vcpkg;
