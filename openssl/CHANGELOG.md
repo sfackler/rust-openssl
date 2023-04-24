@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [v0.10.52] - 2023-04-24
+
+### Added
+
+* Added `DhRef::check_key`.
+* Added `Id::POLY1305`.
+* Added `X509Ref::subject_key_id`, `X509Ref::authority_key_id`, `X509Ref::authority_issuer`, and `X509Ref::authority_serial`.
+
+
 ## [v0.10.51] - 2023-04-20
 
 ### Added
@@ -738,7 +747,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.51...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.52...master
+[v0.10.52]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.51...openssl-v0.10.52
 [v0.10.51]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.50...openssl-v0.10.51
 [v0.10.50]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.49...openssl-v0.10.50
 [v0.10.49]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.48...openssl-v0.10.49
