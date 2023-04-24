@@ -15,7 +15,8 @@ build = "build/main.rs"
 edition = "2018"
 
 [features]
-vendored = ['openssl-src']
+vendored = ['openssl-src-v1']
+vendored-v3 = ['openssl-src-v3']
 unstable_boringssl = ['bssl-sys']
 
 [dependencies]
@@ -25,7 +26,8 @@ bssl-sys = { version = "0.1.0", optional = true }
 [build-dependencies]
 bindgen = { version = "0.64.0", optional = true, features = ["experimental"] }
 cc = "1.0.61"
-openssl-src = { version = "111", optional = true }
+openssl-src-v1 = { package = "openssl-src", version = "111", optional = true }
+openssl-src-v3 = { package = "openssl-src", version = "300", optional = true }
 pkg-config = "0.3.9"
 
 [target.'cfg(target_env = "msvc")'.build-dependencies]
