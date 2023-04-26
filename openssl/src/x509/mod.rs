@@ -505,7 +505,7 @@ impl X509Ref {
 
     /// Returns this certificate's authority issuer name entries, if they exist.
     #[corresponds(X509_get0_authority_issuer)]
-    #[cfg(ossl111)]
+    #[cfg(ossl111d)]
     pub fn authority_issuer(&self) -> Option<&StackRef<GeneralName>> {
         unsafe {
             let stack = ffi::X509_get0_authority_issuer(self.as_ptr());
@@ -515,7 +515,7 @@ impl X509Ref {
 
     /// Returns this certificate's authority serial number, if it exists.
     #[corresponds(X509_get0_authority_serial)]
-    #[cfg(ossl111)]
+    #[cfg(ossl111d)]
     pub fn authority_serial(&self) -> Option<&Asn1IntegerRef> {
         unsafe {
             let r = ffi::X509_get0_authority_serial(self.as_ptr());
