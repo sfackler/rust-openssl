@@ -23,7 +23,7 @@ unstable_boringssl = ["ffi/unstable_boringssl"]
 default = []
 
 [dependencies]
-bitflags = "1.0"
+bitflags = "2.2.1"
 cfg-if = "1.0"
 foreign-types = "0.3.1"
 libc = "0.2"
