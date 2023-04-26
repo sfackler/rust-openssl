@@ -324,6 +324,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_des_ede3_cfb64() as *mut _) }
     }
 
+    #[cfg(not(osslconf = "OPENSSL_NO_RC4"))]
     pub fn rc4() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_rc4() as *mut _) }
     }
