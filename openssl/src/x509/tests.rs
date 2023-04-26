@@ -195,7 +195,7 @@ fn test_authority_key_id() {
 }
 
 #[test]
-#[cfg(ossl111)]
+#[cfg(ossl111d)]
 fn test_authority_issuer_and_serial() {
     let cert = include_bytes!("../../test/authority_key_identifier.pem");
     let cert = X509::from_pem(cert).unwrap();
