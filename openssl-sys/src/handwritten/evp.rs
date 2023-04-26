@@ -311,6 +311,7 @@ extern "C" {
     pub fn EVP_des_ede3_cbc() -> *const EVP_CIPHER;
     pub fn EVP_des_ede3_cfb64() -> *const EVP_CIPHER;
     pub fn EVP_des_cbc() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_RC4"))]
     pub fn EVP_rc4() -> *const EVP_CIPHER;
     pub fn EVP_bf_ecb() -> *const EVP_CIPHER;
     pub fn EVP_bf_cbc() -> *const EVP_CIPHER;

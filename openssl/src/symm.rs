@@ -283,6 +283,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_des_ede3_cfb64()) }
     }
 
+    #[cfg(not(osslconf = "OPENSSL_NO_RC4"))]
     pub fn rc4() -> Cipher {
         unsafe { Cipher(ffi::EVP_rc4()) }
     }
