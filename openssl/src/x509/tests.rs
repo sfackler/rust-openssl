@@ -27,6 +27,9 @@ use crate::x509::{CrlReason, X509Builder};
 use crate::x509::{
     CrlStatus, X509Crl, X509Extension, X509Name, X509Req, X509StoreContext, X509VerifyResult, X509,
 };
+
+#[cfg(ossl110)]
+use foreign_types::ForeignType;
 use hex::{self, FromHex};
 #[cfg(any(ossl102, libressl261))]
 use libc::time_t;
@@ -1103,6 +1106,31 @@ fn ipv6_as_subject_alternative_name_is_formatted_in_debug() {
     ipaddress_as_subject_alternative_name_is_formatted_in_debug([
         8u8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 128,
     ]);
+}
+
+#[cfg(ossl110)]
+#[test]
+fn other_name_as_subject_alternative_name() {
+    let oid = Asn1Object::from_str("1.3.6.1.5.5.7.8.11").unwrap();
+    // this is the hex representation of "test" encoded as a ia5string
+    let content = [0x16, 0x04, 0x74, 0x65, 0x73, 0x74];
+
+    let mut builder = X509Builder::new().unwrap();
+    let san = SubjectAlternativeName::new()
+        .other_name2(oid, &content)
+        .build(&builder.x509v3_context(None, None))
+        .unwrap();
+    builder.append_extension(san).unwrap();
+    let cert = builder.build();
+    let general_name = cert
+        .subject_alt_names()
+        .into_iter()
+        .flatten()
+        .next()
+        .unwrap();
+    unsafe {
+        assert_eq!((*general_name.as_ptr()).type_, 0);
+    }
 }
 
 #[test]

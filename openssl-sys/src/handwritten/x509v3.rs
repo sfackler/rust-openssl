@@ -6,6 +6,11 @@ pub enum CONF_METHOD {}
 extern "C" {
     pub fn GENERAL_NAME_new() -> *mut GENERAL_NAME;
     pub fn GENERAL_NAME_free(name: *mut GENERAL_NAME);
+    pub fn GENERAL_NAME_set0_othername(
+        gen: *mut GENERAL_NAME,
+        oid: *mut ASN1_OBJECT,
+        value: *mut ASN1_TYPE,
+    ) -> c_int;
 }
 
 #[repr(C)]

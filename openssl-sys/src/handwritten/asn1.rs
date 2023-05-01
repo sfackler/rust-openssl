@@ -10,6 +10,7 @@ pub struct ASN1_ENCODING {
 
 extern "C" {
     pub fn ASN1_OBJECT_free(x: *mut ASN1_OBJECT);
+    pub fn OBJ_dup(x: *const ASN1_OBJECT) -> *mut ASN1_OBJECT;
 }
 
 stack!(stack_st_ASN1_OBJECT);
@@ -94,7 +95,14 @@ extern "C" {
     #[cfg(ossl110)]
     pub fn ASN1_ENUMERATED_get_int64(pr: *mut i64, a: *const ASN1_ENUMERATED) -> c_int;
 
+    pub fn ASN1_TYPE_new() -> *mut ASN1_TYPE;
+    pub fn ASN1_TYPE_set(a: *mut ASN1_TYPE, type_: c_int, value: *mut c_void);
     pub fn ASN1_TYPE_free(x: *mut ASN1_TYPE);
+    pub fn d2i_ASN1_TYPE(
+        k: *mut *mut ASN1_TYPE,
+        buf: *mut *const u8,
+        len: c_long,
+    ) -> *mut ASN1_TYPE;
 }
 
 const_ptr_api! {
@@ -102,5 +110,6 @@ const_ptr_api! {
         pub fn ASN1_STRING_to_UTF8(out: *mut *mut c_uchar, s: #[const_ptr_if(any(ossl110, libressl280))] ASN1_STRING) -> c_int;
         pub fn ASN1_STRING_type(x: #[const_ptr_if(any(ossl110, libressl280))]  ASN1_STRING) -> c_int;
         pub fn ASN1_generate_v3(str: #[const_ptr_if(any(ossl110, libressl280))] c_char, cnf: *mut X509V3_CTX) -> *mut ASN1_TYPE;
+        pub fn i2d_ASN1_TYPE(a: #[const_ptr_if(ossl300)] ASN1_TYPE, pp: *mut *mut c_uchar) -> c_int;
     }
 }

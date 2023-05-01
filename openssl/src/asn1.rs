@@ -655,6 +655,7 @@ impl Asn1OctetStringRef {
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_OBJECT;
     fn drop = ffi::ASN1_OBJECT_free;
+    fn clone = ffi::OBJ_dup;
 
     /// Object Identifier
     ///
