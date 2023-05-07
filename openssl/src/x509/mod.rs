@@ -1451,7 +1451,12 @@ impl X509PubkeyRef {
         }
     }
 
-    pub fn public_key_bytes(&self) -> Result<&[u8], ErrorStack> {
+    /// Get the encoded bytes of the X509 SubjectPublicKeyInfo.
+    ///
+    /// This corresponds to ['X509_PUBKEY_get0_param']
+    ///
+    /// ['X509_PUBKEY_get0_param']: https://www.openssl.org/docs/man3.0/man3/X509_PUBKEY_get0_param.html
+    pub fn encoded_bytes(&self) -> Result<&[u8], ErrorStack> {
         unsafe {
             let mut pk = ptr::null_mut() as *const c_uchar;
             let mut pkt_len: c_int = 0;

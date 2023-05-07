@@ -276,7 +276,7 @@ fn test_x509_pubkey() {
     let pkey = cert.public_key().unwrap();
     let x_pkey = X509Pubkey::from_pubkey(&pkey).unwrap();
 
-    let xbytes = x_pkey.public_key_bytes().unwrap();
+    let xbytes = x_pkey.encoded_bytes().unwrap();
     let hashed = crate::hash::hash(MessageDigest::sha1(), xbytes).unwrap();
 
     assert_eq!(pubkey_digest.as_ref(), hashed.as_ref());
@@ -290,10 +290,10 @@ fn test_x509_pubkey_ref() {
 
     let pkey = cert.public_key().unwrap();
     let x_pkey = X509Pubkey::from_pubkey(&pkey).unwrap();
-    let xbytes = x_pkey.public_key_bytes().unwrap();
+    let xbytes = x_pkey.encoded_bytes().unwrap();
 
     let y_pkey = cert.x509_pubkey().unwrap();
-    let ybytes = y_pkey.public_key_bytes().unwrap();
+    let ybytes = y_pkey.encoded_bytes().unwrap();
     assert_eq!(xbytes, ybytes);
 }
 
