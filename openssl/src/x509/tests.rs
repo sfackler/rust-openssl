@@ -170,6 +170,22 @@ fn test_subject_alt_name() {
 
 #[test]
 #[cfg(ossl110)]
+fn test_retrieve_pathlen() {
+    let cert = include_bytes!("../../test/root-ca.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    assert_eq!(cert.pathlen(), None);
+
+    let cert = include_bytes!("../../test/intermediate-ca.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    assert_eq!(cert.pathlen(), Some(0));
+
+    let cert = include_bytes!("../../test/alt_name_cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    assert_eq!(cert.pathlen(), None);
+}
+
+#[test]
+#[cfg(ossl110)]
 fn test_subject_key_id() {
     let cert = include_bytes!("../../test/certv3.pem");
     let cert = X509::from_pem(cert).unwrap();

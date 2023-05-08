@@ -483,6 +483,14 @@ impl X509Ref {
         }
     }
 
+    /// Retrieves the path length extension from a certificate, if it exists.
+    #[corresponds(X509_get_pathlen)]
+    #[cfg(ossl110)]
+    pub fn pathlen(&self) -> Option<u32> {
+        let v = unsafe { ffi::X509_get_pathlen(self.as_ptr()) };
+        u32::try_from(v).ok()
+    }
+
     /// Returns this certificate's subject key id, if it exists.
     #[corresponds(X509_get0_subject_key_id)]
     #[cfg(ossl110)]
