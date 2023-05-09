@@ -1786,6 +1786,130 @@ unsafe impl ExtensionType for AuthorityInformationAccess {
     type Output = Stack<AccessDescription>;
 }
 
+/// A builder used to construct `X509Crl`.
+pub struct X509CrlBuilder(X509Crl);
+
+impl X509CrlBuilder {
+    /// Creates a new CRL builder.
+    #[corresponds(X509_CRL_new)]
+    pub fn new() -> Result<X509CrlBuilder, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(ffi::X509_CRL_new()).map(|p| X509CrlBuilder(X509Crl(p)))
+        }
+    }
+
+    /// Sets the issuer name of the CRL.
+    #[corresponds(X509_CRL_set_issuer_name)]
+    pub fn set_issuer_name(&mut self, issuer_name: &X509NameRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_CRL_set_issuer_name(
+                self.0.as_ptr(),
+                issuer_name.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Sets last update to CRL.
+    #[corresponds(X509_CRL_set1_lastUpdate)]
+    pub fn set_last_update(&mut self, last_update: &Asn1TimeRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(X509_CRL_set1_lastUpdate(
+                self.0.as_ptr(),
+                last_update.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Sets next update to CRL.
+    #[corresponds(X509_CRL_set1_nextUpdate)]
+    pub fn set_next_update(&mut self, next_update: &Asn1TimeRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(X509_CRL_set1_nextUpdate(
+                self.0.as_ptr(),
+                next_update.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Adds an X509 extension value to the CRL.
+    #[corresponds(X509_CRL_add_ext)]
+    pub fn append_extension(&mut self, extension: &X509ExtensionRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_CRL_add_ext(
+                self.0.as_ptr(),
+                extension.as_ptr(),
+                -1,
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Return an `X509v3Context`. This context object can be used to construct
+    /// certain `X509Crl` extensions.
+    pub fn x509v3_context<'a>(
+        &'a self,
+        issuer: &X509Ref,
+        conf: Option<&'a ConfRef>,
+    ) -> X509v3Context<'a> {
+        unsafe {
+            let mut ctx = mem::zeroed();
+
+            ffi::X509V3_set_ctx(
+                &mut ctx,
+                issuer.as_ptr(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                self.0.as_ptr(),
+                0,
+            );
+
+            if let Some(conf) = conf {
+                ffi::X509V3_set_nconf(&mut ctx, conf.as_ptr());
+            }
+
+            X509v3Context(ctx, PhantomData)
+        }
+    }
+
+    /// Add a certificate the CRL.
+    #[corresponds(X509_CRL_add0_revoked)]
+    pub fn add_revoked(&mut self, revoked: X509Revoked) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_CRL_add0_revoked(
+                self.0.as_ptr(),
+                revoked.as_ptr(),
+            ))?;
+            mem::forget(revoked);
+            Ok(())
+        }
+    }
+
+    /// Signs the CRL with a private key.
+    #[corresponds(X509_CRL_sign)]
+    pub fn sign<T>(&mut self, key: &PKeyRef<T>, hash: MessageDigest) -> Result<(), ErrorStack>
+    where
+        T: HasPrivate,
+    {
+        unsafe {
+            cvt(ffi::X509_CRL_sign(
+                self.0.as_ptr(),
+                key.as_ptr(),
+                hash.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Consumes the builder, returning the CRL.
+    pub fn build(self) -> X509Crl {
+        self.0
+    }
+}
+
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_CRL;
     fn drop = ffi::X509_CRL_free;
@@ -1841,6 +1965,11 @@ impl<'a> CrlStatus<'a> {
 }
 
 impl X509Crl {
+    /// Returns a new builder.
+    pub fn builder() -> Result<X509CrlBuilder, ErrorStack> {
+        X509CrlBuilder::new()
+    }
+
     from_pem! {
         /// Deserializes a PEM-encoded Certificate Revocation List
         ///
@@ -2475,6 +2604,18 @@ cfg_if! {
 
 cfg_if! {
     if #[cfg(any(ossl110, libressl350, boringssl, awslc))] {
+        use ffi::{X509_CRL_set1_nextUpdate, X509_CRL_set1_lastUpdate};
+    } else {
+        use ffi::{
+            X509_CRL_set_nextUpdate as X509_CRL_set1_nextUpdate,
+            X509_CRL_set_lastUpdate as X509_CRL_set1_lastUpdate,
+
+        };
+    }
+}
+
+cfg_if! {
+    if #[cfg(any(ossl110, libressl350, boringssl))] {
         use ffi::{
             X509_CRL_get_issuer, X509_CRL_get0_nextUpdate, X509_CRL_get0_lastUpdate,
             X509_CRL_get_REVOKED,
