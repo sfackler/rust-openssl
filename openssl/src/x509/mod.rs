@@ -1648,6 +1648,61 @@ impl CrlReason {
     }
 }
 
+/// A builder used to construct `X509Revoked`.
+pub struct X509RevokedBuilder(X509Revoked);
+
+impl X509RevokedBuilder {
+    /// Creates a new X509Revoked builder.
+    pub fn new() -> Result<X509RevokedBuilder, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(ffi::X509_REVOKED_new()).map(|p| X509RevokedBuilder(X509Revoked(p)))
+        }
+    }
+
+    /// Set revocation reason.
+    pub fn set_crl_reason(&mut self, crl_reason: &CrlReason) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_REVOKED_add1_ext_i2d(
+                self.0.as_ptr(),
+                ffi::NID_crl_reason,
+                crl_reason.to_asn1_integer()?.as_ptr() as *mut c_void,
+                0,
+                0,
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Set revocation date.
+    #[corresponds(X509_REVOKED_set_revocationDate)]
+    pub fn set_revocation_date(&mut self, revocation_date: &Asn1TimeRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_REVOKED_set_revocationDate(
+                self.0.as_ptr(),
+                revocation_date.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Set serial number.
+    #[corresponds(X509_REVOKED_set_serialNumber)]
+    pub fn set_serial_number(&mut self, serial_number: &Asn1IntegerRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_REVOKED_set_serialNumber(
+                self.0.as_ptr(),
+                serial_number.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    pub fn build(self) -> X509Revoked {
+        self.0
+    }
+}
+
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_REVOKED;
     fn drop = ffi::X509_REVOKED_free;
@@ -1663,6 +1718,11 @@ impl Stackable for X509Revoked {
 }
 
 impl X509Revoked {
+    /// Returns a new builder.
+    pub fn builder() -> Result<X509RevokedBuilder, ErrorStack> {
+        X509RevokedBuilder::new()
+    }
+
     from_der! {
         /// Deserializes a DER-encoded certificate revocation status
         #[corresponds(d2i_X509_REVOKED)]
