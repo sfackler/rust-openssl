@@ -24,10 +24,11 @@ use std::slice;
 use std::str;
 
 use crate::asn1::{
-    Asn1BitStringRef, Asn1Enumerated, Asn1IntegerRef, Asn1Object, Asn1ObjectRef,
+    Asn1BitStringRef, Asn1Enumerated, Asn1Integer, Asn1IntegerRef, Asn1Object, Asn1ObjectRef,
     Asn1OctetStringRef, Asn1StringRef, Asn1TimeRef, Asn1Type,
 };
 use crate::bio::MemBioSlice;
+use crate::bn::BigNum;
 use crate::conf::ConfRef;
 use crate::error::ErrorStack;
 use crate::ex_data::Index;
@@ -1645,6 +1646,10 @@ impl CrlReason {
     /// Returns the raw OpenSSL value represented by this type.
     pub const fn as_raw(&self) -> c_int {
         self.0
+    }
+
+    pub fn to_asn1_integer(&self) -> Result<Asn1Integer, ErrorStack> {
+        Asn1Integer::from_bn(BigNum::from_u32(self.0 as u32)?.as_ref())
     }
 }
 
