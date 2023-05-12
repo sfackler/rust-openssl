@@ -72,7 +72,7 @@ use crate::srtp::{SrtpProtectionProfile, SrtpProtectionProfileRef};
 use crate::ssl::bio::BioMethod;
 use crate::ssl::callbacks::*;
 use crate::ssl::error::InnerError;
-use crate::stack::{Stack, StackRef};
+use crate::stack::{Stack, StackRef, Stackable};
 use crate::util::{ForeignTypeExt, ForeignTypeRefExt};
 use crate::x509::store::{X509Store, X509StoreBuilderRef, X509StoreRef};
 #[cfg(any(ossl102, libressl261))]
@@ -1940,6 +1940,10 @@ impl ForeignType for SslCipher {
     }
 }
 
+impl Stackable for SslCipher {
+    type StackType = ffi::stack_st_SSL_CIPHER;
+}
+
 impl Deref for SslCipher {
     type Target = SslCipherRef;
 
@@ -2054,6 +2058,19 @@ impl SslCipherRef {
             Some(Nid::from_raw(n))
         }
     }
+}
+
+impl fmt::Debug for SslCipherRef {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(fmt, "{}", self.name())
+    }
+}
+
+/// A stack of selected ciphers, and a stack of selected signalling cipher suites
+#[derive(Debug)]
+pub struct CipherLists {
+    pub suites: Stack<SslCipher>,
+    pub signalling_suites: Stack<SslCipher>,
 }
 
 foreign_type_and_impl_send_sync! {
@@ -3079,6 +3096,41 @@ impl SslRef {
                 None
             } else {
                 Some(slice::from_raw_parts(ptr, len))
+            }
+        }
+    }
+
+    /// Decodes a slice of wire-format cipher suite specification bytes. Unsupported cipher suites
+    /// are ignored.
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    #[corresponds(SSL_bytes_to_cipher_list)]
+    #[cfg(ossl111)]
+    pub fn bytes_to_ciphers_stack(
+        &self,
+        bytes: &[u8],
+        isv2format: bool,
+    ) -> Result<CipherLists, ErrorStack> {
+        unsafe {
+            let ptr = bytes.as_ptr();
+            let len = bytes.len();
+            let mut sk = ptr::null_mut();
+            let mut scsvs = ptr::null_mut();
+            let res = ffi::SSL_bytes_to_cipher_list(
+                self.as_ptr(),
+                ptr,
+                len,
+                isv2format as c_int,
+                &mut sk,
+                &mut scsvs,
+            );
+            if res == 1 {
+                Ok(CipherLists {
+                    suites: Stack::from_ptr(sk),
+                    signalling_suites: Stack::from_ptr(scsvs),
+                })
+            } else {
+                Err(ErrorStack::get())
             }
         }
     }

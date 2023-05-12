@@ -1458,6 +1458,9 @@ fn client_hello() {
         assert!(ssl.client_hello_session_id().is_some());
         assert!(ssl.client_hello_ciphers().is_some());
         assert!(ssl.client_hello_compression_methods().is_some());
+        assert!(ssl
+            .bytes_to_ciphers_stack(ssl.client_hello_ciphers().unwrap(), ssl.client_hello_isv2())
+            .is_ok());
 
         CALLED_BACK.store(true, Ordering::SeqCst);
         Ok(ClientHelloResponse::SUCCESS)
