@@ -648,6 +648,15 @@ extern "C" {
         num: size_t,
         readbytes: *mut size_t,
     ) -> c_int;
+    #[cfg(ossl111)]
+    pub fn SSL_bytes_to_cipher_list(
+        s: *mut SSL,
+        bytes: *const c_uchar,
+        len: size_t,
+        isv2format: c_int,
+        sk: *mut *mut stack_st_SSL_CIPHER,
+        scsvs: *mut *mut stack_st_SSL_CIPHER,
+    ) -> c_int;
 }
 
 extern "C" {
