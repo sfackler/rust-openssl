@@ -3106,7 +3106,7 @@ impl SslRef {
     /// Requires OpenSSL 1.1.1 or newer.
     #[corresponds(SSL_bytes_to_cipher_list)]
     #[cfg(ossl111)]
-    pub fn bytes_to_ciphers_stack(
+    pub fn bytes_to_cipher_list(
         &self,
         bytes: &[u8],
         isv2format: bool,
