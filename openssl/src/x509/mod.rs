@@ -2054,6 +2054,37 @@ impl GeneralName {
             Ok(GeneralName::from_ptr(gn))
         }
     }
+
+    pub(crate) fn new_other_name(
+        oid: Asn1Object,
+        value: &Vec<u8>,
+    ) -> Result<GeneralName, ErrorStack> {
+        unsafe {
+            ffi::init();
+
+            let typ = cvt_p(ffi::d2i_ASN1_TYPE(
+                ptr::null_mut(),
+                &mut value.as_ptr().cast(),
+                value.len().try_into().unwrap(),
+            ))?;
+
+            let gn = cvt_p(ffi::GENERAL_NAME_new())?;
+            (*gn).type_ = ffi::GEN_OTHERNAME;
+
+            if let Err(e) = cvt(ffi::GENERAL_NAME_set0_othername(
+                gn,
+                oid.as_ptr().cast(),
+                typ,
+            )) {
+                ffi::GENERAL_NAME_free(gn);
+                return Err(e);
+            }
+
+            mem::forget(oid);
+
+            Ok(GeneralName::from_ptr(gn))
+        }
+    }
 }
 
 impl GeneralNameRef {
