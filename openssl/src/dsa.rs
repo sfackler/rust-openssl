@@ -14,7 +14,7 @@ use std::ptr;
 
 use crate::bn::{BigNum, BigNumRef};
 use crate::error::ErrorStack;
-use crate::pkey::{HasParams, HasPrivate, HasPublic, Private, Public};
+use crate::pkey::{HasParams, HasPrivate, HasPublic, Params, Private, Public};
 use crate::util::ForeignTypeRefExt;
 use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
@@ -182,6 +182,49 @@ where
 type BitType = libc::c_uint;
 #[cfg(not(boringssl))]
 type BitType = c_int;
+
+impl Dsa<Params> {
+    /// Creates a DSA params based upon the given parameters.
+    #[corresponds(DSA_set0_pqg)]
+    pub fn from_pqg(p: BigNum, q: BigNum, g: BigNum) -> Result<Dsa<Params>, ErrorStack> {
+        unsafe {
+            let dsa = Dsa::from_ptr(cvt_p(ffi::DSA_new())?);
+            cvt(DSA_set0_pqg(dsa.0, p.as_ptr(), q.as_ptr(), g.as_ptr()))?;
+            mem::forget((p, q, g));
+            Ok(dsa)
+        }
+    }
+
+    /// Generates DSA params based on the given number of bits.
+    #[corresponds(DSA_generate_parameters_ex)]
+    pub fn generate_params(bits: u32) -> Result<Dsa<Params>, ErrorStack> {
+        ffi::init();
+        unsafe {
+            let dsa = Dsa::from_ptr(cvt_p(ffi::DSA_new())?);
+            cvt(ffi::DSA_generate_parameters_ex(
+                dsa.0,
+                bits as BitType,
+                ptr::null(),
+                0,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+            ))?;
+            Ok(dsa)
+        }
+    }
+
+    /// Generates a private key based on the DSA params.
+    #[corresponds(DSA_generate_key)]
+    pub fn generate_key(self) -> Result<Dsa<Private>, ErrorStack> {
+        unsafe {
+            let dsa_ptr = self.0;
+            cvt(ffi::DSA_generate_key(dsa_ptr))?;
+            mem::forget(self);
+            Ok(Dsa::from_ptr(dsa_ptr))
+        }
+    }
+}
 
 impl Dsa<Private> {
     /// Generate a DSA key pair.
@@ -554,6 +597,24 @@ mod test {
         assert_eq!(dsa.p(), &BigNum::from_u32(283).unwrap());
         assert_eq!(dsa.q(), &BigNum::from_u32(47).unwrap());
         assert_eq!(dsa.g(), &BigNum::from_u32(60).unwrap());
+    }
+
+    #[test]
+    fn test_params() {
+        let params = Dsa::generate_params(1024).unwrap();
+        let p = params.p().to_owned().unwrap();
+        let q = params.q().to_owned().unwrap();
+        let g = params.g().to_owned().unwrap();
+        let key = params.generate_key().unwrap();
+        let params2 = Dsa::from_pqg(
+            key.p().to_owned().unwrap(),
+            key.q().to_owned().unwrap(),
+            key.g().to_owned().unwrap(),
+        )
+        .unwrap();
+        assert_eq!(p, *params2.p());
+        assert_eq!(q, *params2.q());
+        assert_eq!(g, *params2.g());
     }
 
     #[test]
