@@ -127,6 +127,13 @@ where
         ffi::PEM_write_bio_DSAPrivateKey
     }
 
+    to_der! {
+        /// Serializes the private_key to a DER-encoded `DSAPrivateKey` structure.
+        #[corresponds(i2d_DSAPrivateKey)]
+        private_key_to_der,
+        ffi::i2d_DSAPrivateKey
+    }
+
     /// Returns a reference to the private key component of `self`.
     #[corresponds(DSA_get0_key)]
     pub fn priv_key(&self) -> &BigNumRef {
