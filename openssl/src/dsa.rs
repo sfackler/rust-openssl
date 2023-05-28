@@ -229,29 +229,10 @@ impl Dsa<Params> {
 impl Dsa<Private> {
     /// Generate a DSA key pair.
     ///
-    /// Calls [`DSA_generate_parameters_ex`] to populate the `p`, `g`, and `q` values.
-    /// These values are used to generate the key pair with [`DSA_generate_key`].
-    ///
     /// The `bits` parameter corresponds to the length of the prime `p`.
-    ///
-    /// [`DSA_generate_parameters_ex`]: https://www.openssl.org/docs/manmaster/crypto/DSA_generate_parameters_ex.html
-    /// [`DSA_generate_key`]: https://www.openssl.org/docs/manmaster/crypto/DSA_generate_key.html
     pub fn generate(bits: u32) -> Result<Dsa<Private>, ErrorStack> {
-        ffi::init();
-        unsafe {
-            let dsa = Dsa::from_ptr(cvt_p(ffi::DSA_new())?);
-            cvt(ffi::DSA_generate_parameters_ex(
-                dsa.0,
-                bits as BitType,
-                ptr::null(),
-                0,
-                ptr::null_mut(),
-                ptr::null_mut(),
-                ptr::null_mut(),
-            ))?;
-            cvt(ffi::DSA_generate_key(dsa.0))?;
-            Ok(dsa)
-        }
+        let params = Dsa::generate_params(bits)?;
+        params.generate_key()
     }
 
     /// Create a DSA key pair with the given parameters
