@@ -8,6 +8,7 @@
 
 * Added `Dsa::from_pqg`, `Dsa::generate_key`, and `Dsa::generate_params`.
 * Added `SslRef::bytes_to_cipher_list`.
+* Added `SubjectAlternativeName::other_name2`
 
 ## [v0.10.52] - 2023-04-24
 
