@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [v0.10.53] - 2023-05-30
+
+### Added
+
+* Added `Dsa::from_pqg`, `Dsa::generate_key`, and `Dsa::generate_params`.
+* Added `SslRef::bytes_to_cipher_list`.
+* Added `SubjectAlternativeName::other_name2`
+
 ## [v0.10.52] - 2023-04-24
 
 ### Added
@@ -747,7 +755,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.52...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.53...master
+[v0.10.52]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.52...openssl-v0.10.53
 [v0.10.52]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.51...openssl-v0.10.52
 [v0.10.51]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.50...openssl-v0.10.51
 [v0.10.50]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.49...openssl-v0.10.50
