@@ -57,7 +57,7 @@ use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long};
 use openssl_macros::corresponds;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::ffi::CString;
 use std::fmt;
 use std::mem;
@@ -350,10 +350,6 @@ where
 
     /// Serializes a private key into a DER-formatted PKCS#8, using the supplied password to
     /// encrypt the key.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `passphrase` contains an embedded null.
     #[corresponds(i2d_PKCS8PrivateKey_bio)]
     pub fn private_key_to_pkcs8_passphrase(
         &self,
@@ -362,14 +358,12 @@ where
     ) -> Result<Vec<u8>, ErrorStack> {
         unsafe {
             let bio = MemBio::new()?;
-            let len = passphrase.len();
-            let passphrase = CString::new(passphrase).unwrap();
             cvt(ffi::i2d_PKCS8PrivateKey_bio(
                 bio.as_ptr(),
                 self.as_ptr(),
                 cipher.as_ptr(),
                 passphrase.as_ptr() as *const _ as *mut _,
-                len as ::libc::c_int,
+                passphrase.len().try_into().unwrap(),
                 None,
                 ptr::null_mut(),
             ))?;
