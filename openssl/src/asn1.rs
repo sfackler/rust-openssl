@@ -738,7 +738,7 @@ impl fmt::Debug for Asn1ObjectRef {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl273))] {
+    if #[cfg(any(ossl110, libressl273, boringssl))] {
         use ffi::ASN1_STRING_get0_data;
     } else {
         #[allow(bad_style)]
