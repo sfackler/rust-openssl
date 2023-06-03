@@ -32,41 +32,54 @@ pub unsafe fn BIO_get_mem_data(b: *mut BIO, pp: *mut *mut c_char) -> c_long {
     BIO_ctrl(b, BIO_CTRL_INFO, 0, pp as *mut c_void)
 }
 
-extern "C" {
-    #[deprecated(note = "use BIO_meth_set_write__fixed_rust instead")]
-    #[cfg(any(ossl110, libressl273))]
-    pub fn BIO_meth_set_write(
-        biom: *mut BIO_METHOD,
-        write: unsafe extern "C" fn(*mut BIO, *const c_char, c_int) -> c_int,
-    ) -> c_int;
-    #[deprecated(note = "use BIO_meth_set_read__fixed_rust instead")]
-    #[cfg(any(ossl110, libressl273))]
-    pub fn BIO_meth_set_read(
-        biom: *mut BIO_METHOD,
-        read: unsafe extern "C" fn(*mut BIO, *mut c_char, c_int) -> c_int,
-    ) -> c_int;
-    #[deprecated(note = "use BIO_meth_set_puts__fixed_rust instead")]
-    #[cfg(any(ossl110, libressl273))]
-    pub fn BIO_meth_set_puts(
-        biom: *mut BIO_METHOD,
-        read: unsafe extern "C" fn(*mut BIO, *const c_char) -> c_int,
-    ) -> c_int;
-    #[deprecated(note = "use BIO_meth_set_ctrl__fixed_rust instead")]
-    #[cfg(any(ossl110, libressl273))]
-    pub fn BIO_meth_set_ctrl(
-        biom: *mut BIO_METHOD,
-        read: unsafe extern "C" fn(*mut BIO, c_int, c_long, *mut c_void) -> c_long,
-    ) -> c_int;
-    #[deprecated(note = "use BIO_meth_set_create__fixed_rust instead")]
-    #[cfg(any(ossl110, libressl273))]
-    pub fn BIO_meth_set_create(
-        biom: *mut BIO_METHOD,
-        create: unsafe extern "C" fn(*mut BIO) -> c_int,
-    ) -> c_int;
-    #[deprecated(note = "use BIO_meth_set_destroy__fixed_rust instead")]
-    #[cfg(any(ossl110, libressl273))]
-    pub fn BIO_meth_set_destroy(
-        biom: *mut BIO_METHOD,
-        destroy: unsafe extern "C" fn(*mut BIO) -> c_int,
-    ) -> c_int;
+// These symbols were originally bound with the wrong signatures. They were then
+// deprecated in favor of `__fixed_rust`-suffixed versions. The unsuffixed
+// symbols are now fixed, so the suffixed ones are deprecated aliases.
+#[deprecated(note = "use BIO_meth_set_write instead")]
+#[cfg(any(ossl110, libressl273))]
+pub unsafe fn BIO_meth_set_write__fixed_rust(
+    biom: *mut BIO_METHOD,
+    write: Option<unsafe extern "C" fn(*mut BIO, *const c_char, c_int) -> c_int>,
+) -> c_int {
+    BIO_meth_set_write(biom, write)
+}
+#[deprecated(note = "use BIO_meth_set_read instead")]
+#[cfg(any(ossl110, libressl273))]
+pub unsafe fn BIO_meth_set_read__fixed_rust(
+    biom: *mut BIO_METHOD,
+    read: Option<unsafe extern "C" fn(*mut BIO, *mut c_char, c_int) -> c_int>,
+) -> c_int {
+    BIO_meth_set_read(biom, read)
+}
+#[deprecated(note = "use BIO_meth_set_puts instead")]
+#[cfg(any(ossl110, libressl273))]
+pub unsafe fn BIO_meth_set_puts__fixed_rust(
+    biom: *mut BIO_METHOD,
+    puts: Option<unsafe extern "C" fn(*mut BIO, *const c_char) -> c_int>,
+) -> c_int {
+    BIO_meth_set_puts(biom, puts)
+}
+#[deprecated(note = "use BIO_meth_set_ctrl instead")]
+#[cfg(any(ossl110, libressl273))]
+pub unsafe fn BIO_meth_set_ctrl__fixed_rust(
+    biom: *mut BIO_METHOD,
+    ctrl: Option<unsafe extern "C" fn(*mut BIO, c_int, c_long, *mut c_void) -> c_long>,
+) -> c_int {
+    BIO_meth_set_ctrl(biom, ctrl)
+}
+#[deprecated(note = "use BIO_meth_set_create instead")]
+#[cfg(any(ossl110, libressl273))]
+pub unsafe fn BIO_meth_set_create__fixed_rust(
+    biom: *mut BIO_METHOD,
+    create: Option<unsafe extern "C" fn(*mut BIO) -> c_int>,
+) -> c_int {
+    BIO_meth_set_create(biom, create)
+}
+#[deprecated(note = "use BIO_meth_set_destroy instead")]
+#[cfg(any(ossl110, libressl273))]
+pub unsafe fn BIO_meth_set_destroy__fixed_rust(
+    biom: *mut BIO_METHOD,
+    destroy: Option<unsafe extern "C" fn(*mut BIO) -> c_int>,
+) -> c_int {
+    BIO_meth_set_destroy(biom, destroy)
 }
