@@ -46,6 +46,8 @@ extern "C" {
 
     pub fn EC_GROUP_set_asn1_flag(key: *mut EC_GROUP, flag: c_int);
 
+    pub fn EC_GROUP_get_asn1_flag(group: *const EC_GROUP) -> c_int;
+
     pub fn EC_GROUP_get_curve_GFp(
         group: *const EC_GROUP,
         p: *mut BIGNUM,

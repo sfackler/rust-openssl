@@ -57,7 +57,7 @@ impl PointConversionForm {
 /// Named Curve or Explicit
 ///
 /// This type acts as a boolean as to whether the `EcGroup` is named or explicit.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Asn1Flag(c_int);
 
 impl Asn1Flag {
@@ -292,6 +292,12 @@ impl EcGroupRef {
         unsafe {
             ffi::EC_GROUP_set_asn1_flag(self.as_ptr(), flag.0);
         }
+    }
+
+    /// Gets the flag determining if the group corresponds to a named curve.
+    #[corresponds(EC_GROUP_get_asn1_flag)]
+    pub fn asn1_flag(&mut self) -> Asn1Flag {
+        unsafe { Asn1Flag(ffi::EC_GROUP_get_asn1_flag(self.as_ptr())) }
     }
 
     /// Returns the name of the curve, if a name is associated.
@@ -1264,5 +1270,13 @@ mod test {
 
         let group2 = EcGroup::from_curve_name(Nid::X9_62_PRIME239V3).unwrap();
         assert!(!g.is_on_curve(&group2, &mut ctx).unwrap());
+    }
+
+    #[test]
+    #[cfg(any(boringssl, ossl111, libressl350))]
+    fn asn1_flag() {
+        let mut group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let flag = group.asn1_flag();
+        assert_eq!(flag, Asn1Flag::NAMED_CURVE);
     }
 }
