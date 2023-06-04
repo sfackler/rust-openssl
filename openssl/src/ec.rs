@@ -296,7 +296,7 @@ impl EcGroupRef {
 
     /// Gets the flag determining if the group corresponds to a named curve.
     #[corresponds(EC_GROUP_get_asn1_flag)]
-    pub fn asn1_flag(&mut self) -> Asn1Flag {
+    pub fn asn1_flag(&self) -> Asn1Flag {
         unsafe { Asn1Flag(ffi::EC_GROUP_get_asn1_flag(self.as_ptr())) }
     }
 
