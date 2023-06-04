@@ -10,6 +10,7 @@
     overflowing_literals,
     unused_imports
 )]
+#![cfg_attr(feature = "unstable_boringssl", allow(ambiguous_glob_reexports))]
 #![doc(html_root_url = "https://docs.rs/openssl-sys/0.9")]
 #![recursion_limit = "128"] // configure fixed limit across all rust versions
 
