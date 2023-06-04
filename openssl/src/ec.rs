@@ -296,7 +296,7 @@ impl EcGroupRef {
 
     /// Gets the flag determining if the group corresponds to a named curve.
     #[corresponds(EC_GROUP_get_asn1_flag)]
-    pub fn asn1_flag(&mut self) -> Asn1Flag {
+    pub fn asn1_flag(&self) -> Asn1Flag {
         unsafe { Asn1Flag(ffi::EC_GROUP_get_asn1_flag(self.as_ptr())) }
     }
 
@@ -1275,7 +1275,7 @@ mod test {
     #[test]
     #[cfg(any(boringssl, ossl111, libressl350))]
     fn asn1_flag() {
-        let mut group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let flag = group.asn1_flag();
         assert_eq!(flag, Asn1Flag::NAMED_CURVE);
     }
