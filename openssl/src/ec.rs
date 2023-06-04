@@ -57,7 +57,7 @@ impl PointConversionForm {
 /// Named Curve or Explicit
 ///
 /// This type acts as a boolean as to whether the `EcGroup` is named or explicit.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct Asn1Flag(c_int);
 
 impl Asn1Flag {
@@ -1277,6 +1277,6 @@ mod test {
     fn asn1_flag() {
         let mut group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let flag = group.asn1_flag();
-        assert_eq!(flag.0, Asn1Flag::NAMED_CURVE.0);
+        assert_eq!(flag, Asn1Flag::NAMED_CURVE);
     }
 }
