@@ -140,7 +140,7 @@ pub mod base64;
 pub mod bn;
 pub mod cipher;
 pub mod cipher_ctx;
-#[cfg(all(not(boringssl), not(libressl), not(osslconf = "OPENSSL_NO_CMS")))]
+#[cfg(all(not(libressl), not(osslconf = "OPENSSL_NO_CMS")))]
 pub mod cms;
 pub mod conf;
 pub mod derive;
@@ -162,7 +162,7 @@ pub mod md;
 pub mod md_ctx;
 pub mod memcmp;
 pub mod nid;
-#[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_OCSP")))]
+#[cfg(not(osslconf = "OPENSSL_NO_OCSP"))]
 pub mod ocsp;
 pub mod pkcs12;
 pub mod pkcs5;

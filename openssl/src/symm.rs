@@ -252,12 +252,12 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_bf_ecb()) }
     }
 
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_BF")))]
+    #[cfg(not(osslconf = "OPENSSL_NO_BF"))]
     pub fn bf_cfb64() -> Cipher {
         unsafe { Cipher(ffi::EVP_bf_cfb64()) }
     }
 
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_BF")))]
+    #[cfg(not(osslconf = "OPENSSL_NO_BF"))]
     pub fn bf_ofb() -> Cipher {
         unsafe { Cipher(ffi::EVP_bf_ofb()) }
     }
@@ -300,22 +300,22 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_chacha20_poly1305()) }
     }
 
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_SEED")))]
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     pub fn seed_cbc() -> Cipher {
         unsafe { Cipher(ffi::EVP_seed_cbc()) }
     }
 
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_SEED")))]
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     pub fn seed_cfb128() -> Cipher {
         unsafe { Cipher(ffi::EVP_seed_cfb128()) }
     }
 
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_SEED")))]
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     pub fn seed_ecb() -> Cipher {
         unsafe { Cipher(ffi::EVP_seed_ecb()) }
     }
 
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_SEED")))]
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     pub fn seed_ofb() -> Cipher {
         unsafe { Cipher(ffi::EVP_seed_ofb()) }
     }
@@ -1534,7 +1534,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_SEED", ossl300)))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", ossl300)))]
     fn test_seed_cbc() {
         #[cfg(ossl300)]
         let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
@@ -1548,7 +1548,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_SEED", ossl300)))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", ossl300)))]
     fn test_seed_cfb128() {
         #[cfg(ossl300)]
         let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
@@ -1562,7 +1562,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_SEED", ossl300)))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", ossl300)))]
     fn test_seed_ecb() {
         #[cfg(ossl300)]
         let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
@@ -1576,7 +1576,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_SEED", ossl300)))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", ossl300)))]
     fn test_seed_ofb() {
         #[cfg(ossl300)]
         let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();

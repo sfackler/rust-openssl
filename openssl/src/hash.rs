@@ -157,7 +157,7 @@ impl MessageDigest {
         unsafe { MessageDigest(ffi::EVP_shake256()) }
     }
 
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_RMD160")))]
+    #[cfg(not(osslconf = "OPENSSL_NO_RMD160"))]
     pub fn ripemd160() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_ripemd160()) }
     }
