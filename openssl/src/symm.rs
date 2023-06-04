@@ -142,7 +142,7 @@ impl Cipher {
     }
 
     /// Requires OpenSSL 1.1.0 or newer.
-    #[cfg(ossl110)]
+    #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_OCB")))]
     pub fn aes_128_ocb() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_ocb()) }
     }
@@ -187,7 +187,7 @@ impl Cipher {
     }
 
     /// Requires OpenSSL 1.1.0 or newer.
-    #[cfg(ossl110)]
+    #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_OCB")))]
     pub fn aes_192_ocb() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_192_ocb()) }
     }
@@ -237,7 +237,7 @@ impl Cipher {
     }
 
     /// Requires OpenSSL 1.1.0 or newer.
-    #[cfg(ossl110)]
+    #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_OCB")))]
     pub fn aes_256_ocb() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_ocb()) }
     }
@@ -402,14 +402,14 @@ impl Cipher {
     }
 
     /// Determines whether the cipher is using OCB mode
-    #[cfg(ossl110)]
+    #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_OCB")))]
     fn is_ocb(self) -> bool {
         self == Cipher::aes_128_ocb()
             || self == Cipher::aes_192_ocb()
             || self == Cipher::aes_256_ocb()
     }
 
-    #[cfg(not(ossl110))]
+    #[cfg(any(not(ossl110), osslconf = "OPENSSL_NO_OCB"))]
     const fn is_ocb(self) -> bool {
         false
     }
@@ -1422,7 +1422,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(ossl110)]
+    #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_OCB")))]
     fn test_aes_128_ocb() {
         let key = "000102030405060708090a0b0c0d0e0f";
         let aad = "0001020304050607";
@@ -1458,7 +1458,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(ossl110)]
+    #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_OCB")))]
     fn test_aes_128_ocb_fail() {
         let key = "000102030405060708090a0b0c0d0e0f";
         let aad = "0001020304050607";
