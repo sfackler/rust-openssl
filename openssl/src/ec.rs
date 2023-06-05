@@ -491,7 +491,7 @@ impl EcPointRef {
     /// Places affine coordinates of a curve over a prime field in the provided
     /// `x` and `y` `BigNum`s.
     #[corresponds(EC_POINT_get_affine_coordinates)]
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, boringssl, libressl350))]
     pub fn affine_coordinates(
         &self,
         group: &EcGroupRef,
@@ -1197,7 +1197,7 @@ mod test {
         assert!(ec_key.check_key().is_ok());
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, boringssl, libressl350))]
     #[test]
     fn get_affine_coordinates() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
