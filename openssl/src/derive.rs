@@ -93,6 +93,30 @@ impl<'a> Deriver<'a> {
         unsafe { cvt(ffi::EVP_PKEY_derive_set_peer(self.0, key.as_ptr())).map(|_| ()) }
     }
 
+    /// Sets the peer key used for secret derivation along with optionally validating the peer public key.
+    ///
+    /// This corresponds to [`EVP_PKEY_derive_set_peer_ex`]:
+    ///
+    /// [`EVP_PKEY_derive_set_peer_ex`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_derive_set_peer_ex.html
+    #[cfg(ossl300)]
+    pub fn set_peer_ex<T>(
+        &mut self,
+        key: &'a PKeyRef<T>,
+        validate_peer: bool,
+    ) -> Result<(), ErrorStack>
+    where
+        T: HasPublic,
+    {
+        unsafe {
+            cvt(ffi::EVP_PKEY_derive_set_peer_ex(
+                self.0,
+                key.as_ptr(),
+                validate_peer as i32,
+            ))
+            .map(|_| ())
+        }
+    }
+
     /// Returns the size of the shared secret.
     ///
     /// It can be used to size the buffer passed to [`Deriver::derive`].
@@ -176,6 +200,20 @@ mod test {
         let pkey2 = PKey::from_ec_key(ec_key2).unwrap();
         let mut deriver = Deriver::new(&pkey).unwrap();
         deriver.set_peer(&pkey2).unwrap();
+        let shared = deriver.derive_to_vec().unwrap();
+        assert!(!shared.is_empty());
+    }
+
+    #[test]
+    #[cfg(ossl300)]
+    fn test_ec_key_derive_ex() {
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let ec_key = EcKey::generate(&group).unwrap();
+        let ec_key2 = EcKey::generate(&group).unwrap();
+        let pkey = PKey::from_ec_key(ec_key).unwrap();
+        let pkey2 = PKey::from_ec_key(ec_key2).unwrap();
+        let mut deriver = Deriver::new(&pkey).unwrap();
+        deriver.set_peer_ex(&pkey2, true).unwrap();
         let shared = deriver.derive_to_vec().unwrap();
         assert!(!shared.is_empty());
     }
