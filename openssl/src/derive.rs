@@ -95,9 +95,8 @@ impl<'a> Deriver<'a> {
 
     /// Sets the peer key used for secret derivation along with optionally validating the peer public key.
     ///
-    /// This corresponds to [`EVP_PKEY_derive_set_peer_ex`]:
-    ///
-    /// [`EVP_PKEY_derive_set_peer_ex`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_derive_set_peer_ex.html
+    /// Requires OpenSSL 3.0.0 or newer.
+    #[corresponds(EVP_PKEY_derive_set_peer_ex)]
     #[cfg(ossl300)]
     pub fn set_peer_ex<T>(
         &mut self,
