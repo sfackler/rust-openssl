@@ -56,6 +56,7 @@ use std::ptr;
 use crate::error::ErrorStack;
 use crate::pkey::{HasPrivate, HasPublic, PKeyRef};
 use crate::{cvt, cvt_p};
+use openssl_macros::corresponds;
 
 /// A type used to derive a shared secret between two keys.
 pub struct Deriver<'a>(*mut ffi::EVP_PKEY_CTX, PhantomData<&'a ()>);
@@ -82,15 +83,35 @@ impl<'a> Deriver<'a> {
     }
 
     /// Sets the peer key used for secret derivation.
-    ///
-    /// This corresponds to [`EVP_PKEY_derive_set_peer`]:
-    ///
-    /// [`EVP_PKEY_derive_set_peer`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_derive_init.html
+    #[corresponds(EVP_PKEY_derive_set_peer)]
     pub fn set_peer<T>(&mut self, key: &'a PKeyRef<T>) -> Result<(), ErrorStack>
     where
         T: HasPublic,
     {
         unsafe { cvt(ffi::EVP_PKEY_derive_set_peer(self.0, key.as_ptr())).map(|_| ()) }
+    }
+
+    /// Sets the peer key used for secret derivation along with optionally validating the peer public key.
+    ///
+    /// Requires OpenSSL 3.0.0 or newer.
+    #[corresponds(EVP_PKEY_derive_set_peer_ex)]
+    #[cfg(ossl300)]
+    pub fn set_peer_ex<T>(
+        &mut self,
+        key: &'a PKeyRef<T>,
+        validate_peer: bool,
+    ) -> Result<(), ErrorStack>
+    where
+        T: HasPublic,
+    {
+        unsafe {
+            cvt(ffi::EVP_PKEY_derive_set_peer_ex(
+                self.0,
+                key.as_ptr(),
+                validate_peer as i32,
+            ))
+            .map(|_| ())
+        }
     }
 
     /// Returns the size of the shared secret.
@@ -176,6 +197,20 @@ mod test {
         let pkey2 = PKey::from_ec_key(ec_key2).unwrap();
         let mut deriver = Deriver::new(&pkey).unwrap();
         deriver.set_peer(&pkey2).unwrap();
+        let shared = deriver.derive_to_vec().unwrap();
+        assert!(!shared.is_empty());
+    }
+
+    #[test]
+    #[cfg(ossl300)]
+    fn test_ec_key_derive_ex() {
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let ec_key = EcKey::generate(&group).unwrap();
+        let ec_key2 = EcKey::generate(&group).unwrap();
+        let pkey = PKey::from_ec_key(ec_key).unwrap();
+        let pkey2 = PKey::from_ec_key(ec_key2).unwrap();
+        let mut deriver = Deriver::new(&pkey).unwrap();
+        deriver.set_peer_ex(&pkey2, true).unwrap();
         let shared = deriver.derive_to_vec().unwrap();
         assert!(!shared.is_empty());
     }
