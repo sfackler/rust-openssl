@@ -56,6 +56,7 @@ use std::ptr;
 use crate::error::ErrorStack;
 use crate::pkey::{HasPrivate, HasPublic, PKeyRef};
 use crate::{cvt, cvt_p};
+use openssl_macros::corresponds;
 
 /// A type used to derive a shared secret between two keys.
 pub struct Deriver<'a>(*mut ffi::EVP_PKEY_CTX, PhantomData<&'a ()>);
