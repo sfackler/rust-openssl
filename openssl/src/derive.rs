@@ -83,10 +83,6 @@ impl<'a> Deriver<'a> {
     }
 
     /// Sets the peer key used for secret derivation.
-    ///
-    /// This corresponds to [`EVP_PKEY_derive_set_peer`]:
-    ///
-    /// [`EVP_PKEY_derive_set_peer`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_derive_init.html
     #[corresponds(EVP_PKEY_derive_set_peer)]
     pub fn set_peer<T>(&mut self, key: &'a PKeyRef<T>) -> Result<(), ErrorStack>
     where
