@@ -406,11 +406,7 @@ impl<T> PKey<T> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
             let pkey = PKey::from_ptr(evp);
-            cvt(ffi::EVP_PKEY_assign(
-                pkey.0,
-                ffi::EVP_PKEY_RSA,
-                rsa.as_ptr() as *mut _,
-            ))?;
+            cvt(ffi::EVP_PKEY_assign_RSA(pkey.0, rsa.as_ptr()))?;
             mem::forget(rsa);
             Ok(pkey)
         }
@@ -422,11 +418,7 @@ impl<T> PKey<T> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
             let pkey = PKey::from_ptr(evp);
-            cvt(ffi::EVP_PKEY_assign(
-                pkey.0,
-                ffi::EVP_PKEY_DSA,
-                dsa.as_ptr() as *mut _,
-            ))?;
+            cvt(ffi::EVP_PKEY_assign_DSA(pkey.0, dsa.as_ptr()))?;
             mem::forget(dsa);
             Ok(pkey)
         }
@@ -434,15 +426,12 @@ impl<T> PKey<T> {
 
     /// Creates a new `PKey` containing a Diffie-Hellman key.
     #[corresponds(EVP_PKEY_assign_DH)]
+    #[cfg(not(boringssl))]
     pub fn from_dh(dh: Dh<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
             let pkey = PKey::from_ptr(evp);
-            cvt(ffi::EVP_PKEY_assign(
-                pkey.0,
-                ffi::EVP_PKEY_DH,
-                dh.as_ptr() as *mut _,
-            ))?;
+            cvt(ffi::EVP_PKEY_assign_DH(pkey.0, dh.as_ptr()))?;
             mem::forget(dh);
             Ok(pkey)
         }
@@ -454,11 +443,7 @@ impl<T> PKey<T> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
             let pkey = PKey::from_ptr(evp);
-            cvt(ffi::EVP_PKEY_assign(
-                pkey.0,
-                ffi::EVP_PKEY_EC,
-                ec_key.as_ptr() as *mut _,
-            ))?;
+            cvt(ffi::EVP_PKEY_assign_EC_KEY(pkey.0, ec_key.as_ptr()))?;
             mem::forget(ec_key);
             Ok(pkey)
         }
@@ -861,6 +846,7 @@ impl<T> TryFrom<PKey<T>> for Dsa<T> {
     }
 }
 
+#[cfg(not(boringssl))]
 impl<T> TryFrom<Dh<T>> for PKey<T> {
     type Error = ErrorStack;
 
