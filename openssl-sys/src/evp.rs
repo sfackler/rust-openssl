@@ -285,3 +285,19 @@ pub unsafe fn EVP_PKEY_CTX_add1_hkdf_info(
         info as *mut c_void,
     )
 }
+
+pub unsafe fn EVP_PKEY_assign_RSA(pkey: *mut EVP_PKEY, rsa: *mut RSA) -> c_int {
+    EVP_PKEY_assign(pkey, EVP_PKEY_RSA, rsa as *mut c_void)
+}
+
+pub unsafe fn EVP_PKEY_assign_DSA(pkey: *mut EVP_PKEY, dsa: *mut DSA) -> c_int {
+    EVP_PKEY_assign(pkey, EVP_PKEY_DSA, dsa as *mut c_void)
+}
+
+pub unsafe fn EVP_PKEY_assign_DH(pkey: *mut EVP_PKEY, dh: *mut DH) -> c_int {
+    EVP_PKEY_assign(pkey, EVP_PKEY_DH, dh as *mut c_void)
+}
+
+pub unsafe fn EVP_PKEY_assign_EC_KEY(pkey: *mut EVP_PKEY, ec_key: *mut EC_KEY) -> c_int {
+    EVP_PKEY_assign(pkey, EVP_PKEY_EC, ec_key as *mut c_void)
+}
