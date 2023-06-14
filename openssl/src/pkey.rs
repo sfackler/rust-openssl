@@ -85,6 +85,8 @@ impl Id {
     pub const DSA: Id = Id(ffi::EVP_PKEY_DSA);
     pub const DH: Id = Id(ffi::EVP_PKEY_DH);
     pub const EC: Id = Id(ffi::EVP_PKEY_EC);
+    #[cfg(ossl111)]
+    pub const SM2: Id = Id(ffi::EVP_PKEY_SM2);
 
     #[cfg(any(ossl110, boringssl))]
     pub const HKDF: Id = Id(ffi::EVP_PKEY_HKDF);
