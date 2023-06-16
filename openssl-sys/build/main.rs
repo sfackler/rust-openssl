@@ -1,9 +1,3 @@
-#![allow(
-    clippy::inconsistent_digit_grouping,
-    clippy::uninlined_format_args,
-    clippy::unusual_byte_groupings
-)]
-
 #[cfg(feature = "bindgen")]
 extern crate bindgen;
 extern crate cc;
@@ -131,7 +125,6 @@ fn main() {
     }
 }
 
-#[allow(clippy::let_and_return)]
 fn postprocess(include_dirs: &[PathBuf]) -> Version {
     let version = validate_headers(include_dirs);
 
@@ -146,7 +139,7 @@ fn postprocess(include_dirs: &[PathBuf]) -> Version {
 
 /// Validates the header files found in `include_dir` and then returns the
 /// version string of OpenSSL.
-#[allow(clippy::manual_strip)] // we need to support pre-1.45.0
+#[allow(clippy::unusual_byte_groupings)]
 fn validate_headers(include_dirs: &[PathBuf]) -> Version {
     // This `*-sys` crate only works with OpenSSL 1.0.1, 1.0.2, 1.1.0, 1.1.1 and 3.0.0.
     // To correctly expose the right API from this crate, take a look at
