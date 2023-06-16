@@ -599,7 +599,7 @@ impl AlpnError {
     /// Terminate the handshake with a fatal alert.
     ///
     /// Requires OpenSSL 1.1.0 or newer.
-    #[cfg(any(ossl110))]
+    #[cfg(ossl110)]
     pub const ALERT_FATAL: AlpnError = AlpnError(ffi::SSL_TLSEXT_ERR_ALERT_FATAL);
 
     /// Do not select a protocol, but continue the handshake.
@@ -2413,7 +2413,7 @@ impl SslRef {
     ///
     /// Requires OpenSSL 1.0.1 or 1.0.2.
     #[corresponds(SSL_set_tmp_ecdh_callback)]
-    #[cfg(any(all(ossl101, not(ossl110))))]
+    #[cfg(all(ossl101, not(ossl110)))]
     #[deprecated(note = "this function leaks memory and does not exist on newer OpenSSL versions")]
     pub fn set_tmp_ecdh_callback<F>(&mut self, callback: F)
     where

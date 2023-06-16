@@ -467,7 +467,7 @@ fn test_alpn_server_advertise_multiple() {
 }
 
 #[test]
-#[cfg(any(ossl110))]
+#[cfg(ossl110)]
 fn test_alpn_server_select_none_fatal() {
     let mut server = Server::builder();
     server.ctx().set_alpn_select_callback(|_, client| {
