@@ -155,9 +155,7 @@ fn validate_headers(include_dirs: &[PathBuf]) -> Version {
     // account for compile differences and such.
     println!("cargo:rerun-if-changed=build/expando.c");
     let mut gcc = cc::Build::new();
-    for include_dir in include_dirs {
-        gcc.include(include_dir);
-    }
+    gcc.includes(include_dirs);
     let expanded = match gcc.file("build/expando.c").try_expand() {
         Ok(expanded) => expanded,
         Err(e) => {
@@ -326,18 +324,13 @@ due to this version mismatch.
 }
 
 // parses a string that looks like "0x100020cfL"
-#[allow(deprecated)] // trim_right_matches is now trim_end_matches
-#[allow(clippy::match_like_matches_macro)] // matches macro requires rust 1.42.0
 fn parse_version(version: &str) -> u64 {
     // cut off the 0x prefix
     assert!(version.starts_with("0x"));
     let version = &version[2..];
 
     // and the type specifier suffix
-    let version = version.trim_right_matches(|c: char| match c {
-        '0'..='9' | 'a'..='f' | 'A'..='F' => false,
-        _ => true,
-    });
+    let version = version.trim_end_matches(|c: char| !c.is_ascii_hexdigit());
 
     u64::from_str_radix(version, 16).unwrap()
 }
