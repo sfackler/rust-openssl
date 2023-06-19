@@ -283,6 +283,7 @@ extern "C" {
         ptr: *mut c_void,
     ) -> c_int;
     pub fn EVP_CIPHER_CTX_rand_key(ctx: *mut EVP_CIPHER_CTX, key: *mut c_uchar) -> c_int;
+    pub fn EVP_CIPHER_CTX_set_flags(ctx: *mut EVP_CIPHER_CTX, flags: c_int);
 
     pub fn EVP_md_null() -> *const EVP_MD;
     pub fn EVP_md5() -> *const EVP_MD;
@@ -329,6 +330,10 @@ extern "C" {
     pub fn EVP_aes_128_ofb() -> *const EVP_CIPHER;
     #[cfg(ossl110)]
     pub fn EVP_aes_128_ocb() -> *const EVP_CIPHER;
+    #[cfg(ossl102)]
+    pub fn EVP_aes_128_wrap() -> *const EVP_CIPHER;
+    #[cfg(ossl110)]
+    pub fn EVP_aes_128_wrap_pad() -> *const EVP_CIPHER;
     pub fn EVP_aes_192_ecb() -> *const EVP_CIPHER;
     pub fn EVP_aes_192_cbc() -> *const EVP_CIPHER;
     pub fn EVP_aes_192_cfb1() -> *const EVP_CIPHER;
@@ -340,6 +345,10 @@ extern "C" {
     pub fn EVP_aes_192_ofb() -> *const EVP_CIPHER;
     #[cfg(ossl110)]
     pub fn EVP_aes_192_ocb() -> *const EVP_CIPHER;
+    #[cfg(ossl102)]
+    pub fn EVP_aes_192_wrap() -> *const EVP_CIPHER;
+    #[cfg(ossl110)]
+    pub fn EVP_aes_192_wrap_pad() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_ecb() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_cbc() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_cfb1() -> *const EVP_CIPHER;
@@ -352,6 +361,10 @@ extern "C" {
     pub fn EVP_aes_256_ofb() -> *const EVP_CIPHER;
     #[cfg(ossl110)]
     pub fn EVP_aes_256_ocb() -> *const EVP_CIPHER;
+    #[cfg(ossl102)]
+    pub fn EVP_aes_256_wrap() -> *const EVP_CIPHER;
+    #[cfg(ossl110)]
+    pub fn EVP_aes_256_wrap_pad() -> *const EVP_CIPHER;
     #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_CHACHA")))]
     pub fn EVP_chacha20() -> *const EVP_CIPHER;
     #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_CHACHA")))]
