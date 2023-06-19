@@ -395,9 +395,10 @@ cfg_if! {
 
             let param = ssl.param_mut();
             param.set_hostflags(X509CheckFlags::NO_PARTIAL_WILDCARDS);
-            match domain.parse() {
-                Ok(ip) => param.set_ip(ip),
-                Err(_) => param.set_host(domain),
+            match (domain.parse(), domain.len()) {
+                (Ok(ip), _) => param.set_ip(ip),
+                (Err(_), 0) => param.set_host(""),
+                (Err(_), _) => param.set_host(domain),
             }
         }
     } else {
