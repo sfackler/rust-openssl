@@ -1,9 +1,3 @@
-#![allow(
-    clippy::inconsistent_digit_grouping,
-    clippy::uninlined_format_args,
-    clippy::unusual_byte_groupings
-)]
-
 #[cfg(feature = "bindgen")]
 extern crate bindgen;
 extern crate cc;
@@ -131,7 +125,6 @@ fn main() {
     }
 }
 
-#[allow(clippy::let_and_return)]
 fn postprocess(include_dirs: &[PathBuf]) -> Version {
     let version = validate_headers(include_dirs);
 
@@ -146,7 +139,7 @@ fn postprocess(include_dirs: &[PathBuf]) -> Version {
 
 /// Validates the header files found in `include_dir` and then returns the
 /// version string of OpenSSL.
-#[allow(clippy::manual_strip)] // we need to support pre-1.45.0
+#[allow(clippy::unusual_byte_groupings)]
 fn validate_headers(include_dirs: &[PathBuf]) -> Version {
     // This `*-sys` crate only works with OpenSSL 1.0.1, 1.0.2, 1.1.0, 1.1.1 and 3.0.0.
     // To correctly expose the right API from this crate, take a look at
@@ -162,9 +155,7 @@ fn validate_headers(include_dirs: &[PathBuf]) -> Version {
     // account for compile differences and such.
     println!("cargo:rerun-if-changed=build/expando.c");
     let mut gcc = cc::Build::new();
-    for include_dir in include_dirs {
-        gcc.include(include_dir);
-    }
+    gcc.includes(include_dirs);
     let expanded = match gcc.file("build/expando.c").try_expand() {
         Ok(expanded) => expanded,
         Err(e) => {
@@ -210,17 +201,14 @@ See rust-openssl documentation for more information:
         let libressl_prefix = "RUST_VERSION_LIBRESSL_";
         let boringsl_prefix = "RUST_OPENSSL_IS_BORINGSSL";
         let conf_prefix = "RUST_CONF_";
-        if line.starts_with(openssl_prefix) {
-            let version = &line[openssl_prefix.len()..];
+        if let Some(version) = line.strip_prefix(openssl_prefix) {
             openssl_version = Some(parse_version(version));
-        } else if line.starts_with(new_openssl_prefix) {
-            let version = &line[new_openssl_prefix.len()..];
+        } else if let Some(version) = line.strip_prefix(new_openssl_prefix) {
             openssl_version = Some(parse_new_version(version));
-        } else if line.starts_with(libressl_prefix) {
-            let version = &line[libressl_prefix.len()..];
+        } else if let Some(version) = line.strip_prefix(libressl_prefix) {
             libressl_version = Some(parse_version(version));
-        } else if line.starts_with(conf_prefix) {
-            enabled.push(&line[conf_prefix.len()..]);
+        } else if let Some(conf) = line.strip_prefix(conf_prefix) {
+            enabled.push(conf);
         } else if line.starts_with(boringsl_prefix) {
             is_boringssl = true;
         }
@@ -336,18 +324,13 @@ due to this version mismatch.
 }
 
 // parses a string that looks like "0x100020cfL"
-#[allow(deprecated)] // trim_right_matches is now trim_end_matches
-#[allow(clippy::match_like_matches_macro)] // matches macro requires rust 1.42.0
 fn parse_version(version: &str) -> u64 {
     // cut off the 0x prefix
     assert!(version.starts_with("0x"));
     let version = &version[2..];
 
     // and the type specifier suffix
-    let version = version.trim_right_matches(|c: char| match c {
-        '0'..='9' | 'a'..='f' | 'A'..='F' => false,
-        _ => true,
-    });
+    let version = version.trim_end_matches(|c: char| !c.is_ascii_hexdigit());
 
     u64::from_str_radix(version, 16).unwrap()
 }
