@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+## [v0.10.55] - 2023-06-20
+
+### Fixed
+
+* Fixed compilation with the latest version of BoringSSL.
+* Fixed compilation when OpenSSL is compiled with `OPENSSL_NO_OCB`.
+* Fixed a segfault in `X509VerifyParamRef::set_host` when called with an empty string.
+
+### Added
+
+* Added `Deriver::set_peer_ex`.
+* Added `EcGroupRef::asn1_flag`.
+* Exposed `EcPointRef::affine_coordinates` on BoringSSL and LibreSSL.
+* Added `Nid::SM2` and `Id::SM2`
+
 ## [v0.10.54] - 2023-05-31
 
 ### Fixed
@@ -761,7 +776,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.54...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.55...master
+[v0.10.55]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.54...openssl-v0.10.55
 [v0.10.54]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.53...openssl-v0.10.54
 [v0.10.53]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.52...openssl-v0.10.53
 [v0.10.52]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.51...openssl-v0.10.52
