@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+## [v0.9.89] - 2023-06-20
+
+### Fixed
+
+* Fixed compilation with recent versions of BoringSSL.
+
+### Added
+
+* Added support for detecting OpenSSL compiled with `OPENSSL_NO_OCB`.
+* Added `EVP_PKEY_SM2` and `NID_sm2`.
+* Added `EVP_PKEY_assign_RSA`, `EVP_PKEY_assign_DSA`, `EVP_PKEY_assign_DH`, and `EVP_PKEY_assign_EC_KEY`.
+* Added `EC_GROUP_get_asn1_flag`.
+* Expose `EC_POINT_get_affine_coordinates` on BoringSSL and LibreSSL.
+* Added `EVP_PKEY_derive_set_peer_ex`.
+
 ## [v0.9.88] - 2023-05-30
 
 ### Added
@@ -458,7 +473,8 @@ Fixed builds against OpenSSL built with `no-cast`.
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.88..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.89..master
+[v0.9.89]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.88...openssl-sys-v0.9.89
 [v0.9.88]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.87...openssl-sys-v0.9.88
 [v0.9.87]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.86...openssl-sys-v0.9.87
 [v0.9.86]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.85...openssl-sys-v0.9.86
