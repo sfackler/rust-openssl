@@ -413,22 +413,6 @@ cfg_if! {
             pub fn EVP_PKEY_get_bits(key: *const EVP_PKEY) -> c_int;
             pub fn EVP_PKEY_get_security_bits(key: *const EVP_PKEY) -> c_int;
         }
-
-        #[inline]
-        pub unsafe fn EVP_PKEY_id(pkey: *const EVP_PKEY) -> c_int {
-            EVP_PKEY_get_id(pkey)
-        }
-
-        #[inline]
-        pub unsafe fn EVP_PKEY_bits(pkey: *const EVP_PKEY) -> c_int {
-            EVP_PKEY_get_bits(pkey)
-        }
-
-        #[inline]
-        pub unsafe fn EVP_PKEY_security_bits(pkey: *const EVP_PKEY) -> c_int {
-            EVP_PKEY_get_security_bits(pkey)
-        }
-
     } else {
         extern "C" {
             pub fn EVP_PKEY_id(pkey: *const EVP_PKEY) -> c_int;
