@@ -1914,75 +1914,75 @@ impl SslContextRef {
 
     /// Gets the current number of sessions in the internal session cache.
     #[corresponds(SSL_CTX_sess_number)]
-    pub fn get_session_count(&self) -> i64 {
+    pub fn session_count(&self) -> i64 {
         unsafe { ffi::SSL_CTX_sess_number(self.as_ptr()) as i64 }
     }
 
     /// Gets the number of started SSL/TLS handshakes in client mode
     #[corresponds(SSL_CTX_sess_connect)]
-    pub fn get_connect_count(&self) -> i64 {
+    pub fn connect_count(&self) -> i64 {
         unsafe { ffi::SSL_CTX_sess_connect(self.as_ptr()) as i64 }
     }
 
     /// Gets the number of successfully established SSL/TLS handshakes in client mode
     #[corresponds(SSL_CTX_sess_connect_good)]
-    pub fn get_connect_good_count(&self) -> i64 {
+    pub fn connect_good_count(&self) -> i64 {
         unsafe { ffi::SSL_CTX_sess_connect_good(self.as_ptr()) as i64 }
     }
 
     /// Gets the number of started renegotiations in client mode
     #[corresponds(SSL_CTX_sess_connect_renegotiate)]
-    pub fn get_connect_renegotiate_count(&self) -> i64 {
+    pub fn connect_renegotiate_count(&self) -> i64 {
         unsafe { ffi::SSL_CTX_sess_connect_renegotiate(self.as_ptr()) as i64 }
     }
 
     /// Gets the number of started SSL/TLS handshakes in server mode
     #[corresponds(SSL_CTX_sess_accept)]
-    pub fn get_accept_count(&self) -> i64 {
+    pub fn accept_count(&self) -> i64 {
         unsafe { ffi::SSL_CTX_sess_accept(self.as_ptr()) as i64 }
     }
 
     /// Gets the number of successfully established SSL/TLS handshakes in server mode
     #[corresponds(SSL_CTX_sess_accept_good)]
-    pub fn get_accept_good_count(&self) -> i64 {
+    pub fn accept_good_count(&self) -> i64 {
         unsafe { ffi::SSL_CTX_sess_accept_good(self.as_ptr()) as i64 }
     }
 
     /// Gets the number of started renegotiations in server mode
     #[corresponds(SSL_CTX_sess_accept_renegotiate)]
-    pub fn get_accept_renegotiate_count(&self) -> i64 {
+    pub fn accept_renegotiate_count(&self) -> i64 {
         unsafe { ffi::SSL_CTX_sess_accept_renegotiate(self.as_ptr()) as i64 }
     }
 
     /// Gets the number of successfully reused sessions
     #[corresponds(SSL_CTX_sess_hits)]
-    pub fn get_session_hits_count(&self) -> i64 {
+    pub fn session_hits_count(&self) -> i64 {
         unsafe { ffi::SSL_CTX_sess_hits(self.as_ptr()) as i64 }
     }
 
     /// Gets the number of successfully reused sessions from the external cache in server mode
     #[corresponds(SSL_CTX_sess_cb_hits)]
-    pub fn get_session_callback_hits_count(&self) -> i64 {
+    pub fn session_callback_hits_count(&self) -> i64 {
         unsafe { ffi::SSL_CTX_sess_cb_hits(self.as_ptr()) as i64 }
     }
 
     /// Gets the number of sessions proposed by clients that were not found in the internal session
     /// in server mode
     #[corresponds(SSL_CTX_sess_misses)]
-    pub fn get_session_misses_count(&self) -> i64 {
+    pub fn session_misses_count(&self) -> i64 {
         unsafe { ffi::SSL_CTX_sess_misses(self.as_ptr()) as i64 }
     }
 
     /// Gets the number of sessions proposed by clients that were found in the session cache but
     /// were invalid due to a timeout
     #[corresponds(SSL_CTX_sess_timeouts)]
-    pub fn get_session_timeouts_count(&self) -> i64 {
+    pub fn session_timeouts_count(&self) -> i64 {
         unsafe { ffi::SSL_CTX_sess_timeouts(self.as_ptr()) as i64 }
     }
 
     /// Gets the number of sessions removed because the maximum session cache size was exceeded
     #[corresponds(SSL_CTX_sess_cache_full)]
-    pub fn get_session_cache_full_count(&self) -> i64 {
+    pub fn session_cache_full_count(&self) -> i64 {
         unsafe { ffi::SSL_CTX_sess_cache_full(self.as_ptr()) as i64 }
     }
 }
