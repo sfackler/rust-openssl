@@ -1475,4 +1475,17 @@ mod tests {
         b.set_const_time();
         assert!(b.is_const_time())
     }
+
+    #[cfg(ossl110)]
+    #[test]
+    fn test_mod_sqrt() {
+        let mut ctx = BigNumContext::new().unwrap();
+
+        let s = BigNum::from_hex_str("47A8DD7626B9908C80ACD7E0D3344D69").unwrap();
+        let p = BigNum::from_hex_str("81EF47265B58BCE5").unwrap();
+        let mut out = BigNum::new().unwrap();
+
+        out.mod_sqrt(&s, &p, &mut ctx).unwrap();
+        assert_eq!(out, BigNum::from_hex_str("7C6D179E19B97BDD").unwrap());
+    }
 }
