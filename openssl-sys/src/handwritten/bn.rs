@@ -73,6 +73,13 @@ extern "C" {
         m: *const BIGNUM,
         ctx: *mut BN_CTX,
     ) -> c_int;
+    #[cfg(ossl110)]
+    pub fn BN_mod_sqrt(
+        ret: *mut BIGNUM,
+        a: *const BIGNUM,
+        p: *const BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> *mut BIGNUM;
 
     pub fn BN_mod_word(r: *const BIGNUM, w: BN_ULONG) -> BN_ULONG;
     pub fn BN_div_word(r: *mut BIGNUM, w: BN_ULONG) -> BN_ULONG;

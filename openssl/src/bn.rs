@@ -639,6 +639,26 @@ impl BigNumRef {
         }
     }
 
+    /// Places into `self` the modular square root of `a` such that `self^2 = a (mod p)`
+    #[corresponds(BN_mod_sqrt)]
+    #[cfg(ossl110)]
+    pub fn mod_sqrt(
+        &mut self,
+        a: &BigNumRef,
+        p: &BigNumRef,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt_p(ffi::BN_mod_sqrt(
+                self.as_ptr(),
+                a.as_ptr(),
+                p.as_ptr(),
+                ctx.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
     /// Places the result of `a^p` in `self`.
     #[corresponds(BN_exp)]
     pub fn exp(
@@ -1454,5 +1474,18 @@ mod tests {
         let mut b = BigNum::new().unwrap();
         b.set_const_time();
         assert!(b.is_const_time())
+    }
+
+    #[cfg(ossl110)]
+    #[test]
+    fn test_mod_sqrt() {
+        let mut ctx = BigNumContext::new().unwrap();
+
+        let s = BigNum::from_hex_str("47A8DD7626B9908C80ACD7E0D3344D69").unwrap();
+        let p = BigNum::from_hex_str("81EF47265B58BCE5").unwrap();
+        let mut out = BigNum::new().unwrap();
+
+        out.mod_sqrt(&s, &p, &mut ctx).unwrap();
+        assert_eq!(out, BigNum::from_hex_str("7C6D179E19B97BDD").unwrap());
     }
 }
