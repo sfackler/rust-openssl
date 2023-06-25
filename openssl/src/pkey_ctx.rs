@@ -70,6 +70,7 @@ use crate::error::ErrorStack;
 use crate::md::MdRef;
 use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Private};
 use crate::rsa::Padding;
+use crate::sign::RsaPssSaltlen;
 use crate::{cvt, cvt_n, cvt_p};
 use foreign_types::{ForeignType, ForeignTypeRef};
 #[cfg(not(boringssl))]
@@ -395,6 +396,21 @@ impl<T> PkeyCtxRef<T> {
         }
 
         Ok(())
+    }
+
+    /// Sets the RSA PSS salt length.
+    ///
+    /// This is only useful for RSA keys.
+    #[corresponds(EVP_PKEY_CTX_set_rsa_pss_saltlen)]
+    #[inline]
+    pub fn set_rsa_pss_saltlen(&mut self, len: RsaPssSaltlen) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_rsa_pss_saltlen(
+                self.as_ptr(),
+                len.as_raw(),
+            ))
+            .map(|_| ())
+        }
     }
 
     /// Sets the RSA MGF1 algorithm.
@@ -732,6 +748,32 @@ mod test {
         ctx.sign_to_vec(&digest, &mut signature).unwrap();
 
         let mut verifier = Verifier::new(MessageDigest::sha384(), &pkey).unwrap();
+        verifier.update(msg).unwrap();
+        assert!(matches!(verifier.verify(&signature), Ok(true)));
+    }
+
+    #[test]
+    fn rsa_sign_pss() {
+        let key = include_bytes!("../test/rsa.pem");
+        let rsa = Rsa::private_key_from_pem(key).unwrap();
+        let pkey = PKey::from_rsa(rsa).unwrap();
+
+        let mut ctx = PkeyCtx::new(&pkey).unwrap();
+        ctx.sign_init().unwrap();
+        ctx.set_rsa_padding(Padding::PKCS1_PSS).unwrap();
+        ctx.set_signature_md(Md::sha384()).unwrap();
+        ctx.set_rsa_pss_saltlen(RsaPssSaltlen::custom(14)).unwrap();
+
+        let msg = b"hello world";
+        let digest = hash(MessageDigest::sha384(), msg).unwrap();
+        let mut signature = vec![];
+        ctx.sign_to_vec(&digest, &mut signature).unwrap();
+
+        let mut verifier = Verifier::new(MessageDigest::sha384(), &pkey).unwrap();
+        verifier.set_rsa_padding(Padding::PKCS1_PSS).unwrap();
+        verifier
+            .set_rsa_pss_saltlen(RsaPssSaltlen::custom(14))
+            .unwrap();
         verifier.update(msg).unwrap();
         assert!(matches!(verifier.verify(&signature), Ok(true)));
     }
