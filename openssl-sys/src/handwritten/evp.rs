@@ -497,6 +497,9 @@ extern "C" {
         p2: *mut c_void,
     ) -> c_int;
 
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_CTX_set_signature_md(ctx: *mut EVP_PKEY_CTX, md: *const EVP_MD) -> c_int;
+
     pub fn EVP_PKEY_new_mac_key(
         type_: c_int,
         e: *mut ENGINE,

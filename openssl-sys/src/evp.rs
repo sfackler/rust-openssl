@@ -186,6 +186,8 @@ pub const EVP_PKEY_OP_TYPE_SIG: c_int = EVP_PKEY_OP_SIGN
 
 pub const EVP_PKEY_OP_TYPE_CRYPT: c_int = EVP_PKEY_OP_ENCRYPT | EVP_PKEY_OP_DECRYPT;
 
+pub const EVP_PKEY_CTRL_MD: c_int = 1;
+
 pub const EVP_PKEY_CTRL_SET_MAC_KEY: c_int = 6;
 
 pub const EVP_PKEY_CTRL_CIPHER: c_int = 12;
@@ -285,6 +287,18 @@ pub unsafe fn EVP_PKEY_CTX_add1_hkdf_info(
         EVP_PKEY_CTRL_HKDF_INFO,
         infolen,
         info as *mut c_void,
+    )
+}
+
+#[cfg(all(not(ossl300), not(boringssl)))]
+pub unsafe fn EVP_PKEY_CTX_set_signature_md(cxt: *mut EVP_PKEY_CTX, md: *mut EVP_MD) -> c_int {
+    EVP_PKEY_CTX_ctrl(
+        cxt,
+        -1,
+        EVP_PKEY_OP_TYPE_SIG,
+        EVP_PKEY_CTRL_MD,
+        0,
+        md as *mut c_void,
     )
 }
 

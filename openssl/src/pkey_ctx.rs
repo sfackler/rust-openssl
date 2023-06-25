@@ -351,6 +351,22 @@ impl<T> PkeyCtxRef<T> {
         Ok(())
     }
 
+    /// Sets which algorithm was used to compute the digest used in a
+    /// signature. With RSA signatures this causes the signature to be wrapped
+    /// in a `DigestInfo` structure. This is almost always what you want with
+    /// RSA signatures.
+    #[corresponds(EVP_PKEY_CTX_set_signature_md)]
+    #[inline]
+    pub fn set_signature_md(&self, md: &MdRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_signature_md(
+                self.as_ptr(),
+                md.as_ptr(),
+            ))?;
+        }
+        Ok(())
+    }
+
     /// Returns the RSA padding mode in use.
     ///
     /// This is only useful for RSA keys.
@@ -641,11 +657,12 @@ mod test {
     #[cfg(not(boringssl))]
     use crate::cipher::Cipher;
     use crate::ec::{EcGroup, EcKey};
-    #[cfg(any(ossl102, libressl310, boringssl))]
+    use crate::hash::{hash, MessageDigest};
     use crate::md::Md;
     use crate::nid::Nid;
     use crate::pkey::PKey;
     use crate::rsa::Rsa;
+    use crate::sign::Verifier;
 
     #[test]
     fn rsa() {
@@ -696,6 +713,27 @@ mod test {
         ctx.decrypt_to_vec(&ct, &mut out).unwrap();
 
         assert_eq!(pt, out);
+    }
+
+    #[test]
+    fn rsa_sign() {
+        let key = include_bytes!("../test/rsa.pem");
+        let rsa = Rsa::private_key_from_pem(key).unwrap();
+        let pkey = PKey::from_rsa(rsa).unwrap();
+
+        let mut ctx = PkeyCtx::new(&pkey).unwrap();
+        ctx.sign_init().unwrap();
+        ctx.set_rsa_padding(Padding::PKCS1).unwrap();
+        ctx.set_signature_md(Md::sha384()).unwrap();
+
+        let msg = b"hello world";
+        let digest = hash(MessageDigest::sha384(), msg).unwrap();
+        let mut signature = vec![];
+        ctx.sign_to_vec(&digest, &mut signature).unwrap();
+
+        let mut verifier = Verifier::new(MessageDigest::sha384(), &pkey).unwrap();
+        verifier.update(msg).unwrap();
+        assert!(matches!(verifier.verify(&signature), Ok(true)));
     }
 
     #[test]
