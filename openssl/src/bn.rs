@@ -335,6 +335,20 @@ impl BigNumRef {
         unsafe { BN_is_negative(self.as_ptr()) == 1 }
     }
 
+    /// Returns `true` is `self` is even.
+    #[corresponds(BN_is_even)]
+    #[cfg(any(ossl110, boringssl, libressl350))]
+    pub fn is_even(&self) -> bool {
+        !self.is_odd()
+    }
+
+    /// Returns `true` is `self` is odd.
+    #[corresponds(BN_is_odd)]
+    #[cfg(any(ossl110, boringssl, libressl350))]
+    pub fn is_odd(&self) -> bool {
+        unsafe { ffi::BN_is_odd(self.as_ptr()) == 1 }
+    }
+
     /// Returns the number of significant bits in `self`.
     #[corresponds(BN_num_bits)]
     #[allow(clippy::unnecessary_cast)]
@@ -1487,5 +1501,18 @@ mod tests {
 
         out.mod_sqrt(&s, &p, &mut ctx).unwrap();
         assert_eq!(out, BigNum::from_hex_str("7C6D179E19B97BDD").unwrap());
+    }
+
+    #[test]
+    #[cfg(any(ossl110, boringssl, libressl350))]
+    fn test_odd_even() {
+        let a = BigNum::from_u32(17).unwrap();
+        let b = BigNum::from_u32(18).unwrap();
+
+        assert!(a.is_odd());
+        assert!(!b.is_odd());
+
+        assert!(!a.is_even());
+        assert!(b.is_even());
     }
 }
