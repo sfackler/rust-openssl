@@ -27,6 +27,9 @@ pub const EVP_PKEY_POLY1305: c_int = NID_poly1305;
 #[cfg(ossl110)]
 pub const EVP_PKEY_HKDF: c_int = NID_hkdf;
 
+#[cfg(ossl102)]
+pub const EVP_CIPHER_CTX_FLAG_WRAP_ALLOW: c_int = 0x1;
+
 pub const EVP_CTRL_GCM_SET_IVLEN: c_int = 0x9;
 pub const EVP_CTRL_GCM_GET_TAG: c_int = 0x10;
 pub const EVP_CTRL_GCM_SET_TAG: c_int = 0x11;
