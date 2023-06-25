@@ -93,7 +93,7 @@ pub struct RsaPssSaltlen(c_int);
 
 impl RsaPssSaltlen {
     /// Returns the integer representation of `RsaPssSaltlen`.
-    fn as_raw(&self) -> c_int {
+    pub(crate) fn as_raw(&self) -> c_int {
         self.0
     }
 
