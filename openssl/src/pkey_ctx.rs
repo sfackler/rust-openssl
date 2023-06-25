@@ -71,7 +71,7 @@ use crate::md::MdRef;
 use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Private};
 use crate::rsa::Padding;
 use crate::sign::RsaPssSaltlen;
-use crate::{cvt, cvt_n, cvt_p};
+use crate::{cvt, cvt_p};
 use foreign_types::{ForeignType, ForeignTypeRef};
 #[cfg(not(boringssl))]
 use libc::c_int;
@@ -210,13 +210,25 @@ where
     #[inline]
     pub fn verify(&mut self, data: &[u8], sig: &[u8]) -> Result<bool, ErrorStack> {
         unsafe {
-            let r = cvt_n(ffi::EVP_PKEY_verify(
+            let r = ffi::EVP_PKEY_verify(
                 self.as_ptr(),
                 sig.as_ptr(),
                 sig.len(),
                 data.as_ptr(),
                 data.len(),
-            ))?;
+            );
+            // `EVP_PKEY_verify` is not terribly consistent about how it,
+            // reports errors. It does not clearly distinguish between 0 and
+            // -1, and may put errors on the stack in both cases. If there's
+            // errors on the stack, we return `Err()`, else we return
+            // `Ok(false)`.
+            if r <= 0 {
+                let errors = ErrorStack::get();
+                if !errors.errors().is_empty() {
+                    return Err(errors);
+                }
+            }
+
             Ok(r == 1)
         }
     }
@@ -889,5 +901,19 @@ mod test {
         ctx.verify_init().unwrap();
         let valid = ctx.verify(bad_data, &signature).unwrap();
         assert!(!valid);
+        assert!(ErrorStack::get().errors().is_empty());
+    }
+
+    #[test]
+    fn verify_fail_ec() {
+        let key1 =
+            EcKey::generate(&EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap()).unwrap();
+        let key1 = PKey::from_ec_key(key1).unwrap();
+
+        let data = b"Some Crypto Text";
+        let mut ctx = PkeyCtx::new(&key1).unwrap();
+        ctx.verify_init().unwrap();
+        assert!(matches!(ctx.verify(data, &[0; 64]), Ok(false) | Err(_)));
+        assert!(ErrorStack::get().errors().is_empty());
     }
 }
