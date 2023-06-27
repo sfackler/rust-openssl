@@ -97,6 +97,11 @@ fn find_openssl_dir(target: &str) -> OsString {
         return OsString::from("/usr");
     }
 
+    // OpenBSD ships with OpenSSL but doesn't include a pkg-config file :(
+    if host == target && target.contains("openbsd") {
+        return OsString::from("/usr");
+    }
+
     // DragonFly has libressl (or openssl) in ports, but this doesn't include a pkg-config file
     if host == target && target.contains("dragonfly") {
         return OsString::from("/usr/local");
