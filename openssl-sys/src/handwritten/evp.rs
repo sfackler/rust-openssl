@@ -572,6 +572,14 @@ extern "C" {
         pin: *const c_uchar,
         pinlen: size_t,
     ) -> c_int;
+    pub fn EVP_PKEY_verify_recover_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
+    pub fn EVP_PKEY_verify_recover(
+        ctx: *mut EVP_PKEY_CTX,
+        rout: *mut c_uchar,
+        routlen: *mut size_t,
+        sig: *const c_uchar,
+        siglen: size_t,
+    ) -> c_int;
 }
 
 const_ptr_api! {
