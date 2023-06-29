@@ -482,7 +482,7 @@ impl<T> PkeyCtxRef<T> {
     ///
     /// This is only useful for RSA keys.
     #[corresponds(EVP_PKEY_CTX_set_rsa_oaep_md)]
-    #[cfg(any(ossl102, libressl310))]
+    #[cfg(any(ossl102, libressl310, boringssl))]
     #[inline]
     pub fn set_rsa_oaep_md(&mut self, md: &MdRef) -> Result<(), ErrorStack> {
         unsafe {
@@ -753,7 +753,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(any(ossl102, libressl310))]
+    #[cfg(any(ossl102, libressl310, boringssl))]
     fn rsa_oaep() {
         let key = include_bytes!("../test/rsa.pem");
         let rsa = Rsa::private_key_from_pem(key).unwrap();
