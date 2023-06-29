@@ -165,6 +165,17 @@ where
         Ok(())
     }
 
+    /// Prepares the context for signature recovery using the public key.
+    #[corresponds(EVP_PKEY_verify_recover_init)]
+    #[inline]
+    pub fn verify_recover_init(&mut self) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_verify_recover_init(self.as_ptr()))?;
+        }
+
+        Ok(())
+    }
+
     /// Encrypts data using the public key.
     ///
     /// If `to` is set to `None`, an upper bound on the number of bytes required for the output buffer will be
@@ -231,6 +242,32 @@ where
 
             Ok(r == 1)
         }
+    }
+
+    /// Recovers the original data signed by the private key. You almost
+    /// always want `verify` instead.
+    ///
+    /// Returns the number of bytes written to `to`, or the number of bytes
+    /// that would be written, if `to` is `None.
+    #[corresponds(EVP_PKEY_verify_recover)]
+    #[inline]
+    pub fn verify_recover(
+        &mut self,
+        sig: &[u8],
+        to: Option<&mut [u8]>,
+    ) -> Result<usize, ErrorStack> {
+        let mut written = to.as_ref().map_or(0, |b| b.len());
+        unsafe {
+            cvt(ffi::EVP_PKEY_verify_recover(
+                self.as_ptr(),
+                to.map_or(ptr::null_mut(), |b| b.as_mut_ptr()),
+                &mut written,
+                sig.as_ptr(),
+                sig.len(),
+            ))?;
+        }
+
+        Ok(written)
     }
 }
 
@@ -915,5 +952,51 @@ mod test {
         ctx.verify_init().unwrap();
         assert!(matches!(ctx.verify(data, &[0; 64]), Ok(false) | Err(_)));
         assert!(ErrorStack::get().errors().is_empty());
+    }
+
+    #[test]
+    fn test_verify_recover() {
+        let key = Rsa::generate(2048).unwrap();
+        let key = PKey::from_rsa(key).unwrap();
+
+        let digest = [
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+            24, 25, 26, 27, 28, 29, 30, 31,
+        ];
+
+        let mut ctx = PkeyCtx::new(&key).unwrap();
+        ctx.sign_init().unwrap();
+        ctx.set_rsa_padding(Padding::PKCS1).unwrap();
+        ctx.set_signature_md(Md::sha256()).unwrap();
+        let mut signature = vec![];
+        ctx.sign_to_vec(&digest, &mut signature).unwrap();
+
+        // Attempt recovery of just the digest.
+        let mut ctx = PkeyCtx::new(&key).unwrap();
+        ctx.verify_recover_init().unwrap();
+        ctx.set_rsa_padding(Padding::PKCS1).unwrap();
+        ctx.set_signature_md(Md::sha256()).unwrap();
+        let length = ctx.verify_recover(&signature, None).unwrap();
+        let mut result_buf = vec![0; length];
+        let length = ctx
+            .verify_recover(&signature, Some(&mut result_buf))
+            .unwrap();
+        assert_eq!(length, digest.len());
+        // result_buf contains the digest
+        assert_eq!(result_buf[..length], digest);
+
+        // Attempt recovery of teh entire DigestInfo
+        let mut ctx = PkeyCtx::new(&key).unwrap();
+        ctx.verify_recover_init().unwrap();
+        ctx.set_rsa_padding(Padding::PKCS1).unwrap();
+        let length = ctx.verify_recover(&signature, None).unwrap();
+        let mut result_buf = vec![0; length];
+        let length = ctx
+            .verify_recover(&signature, Some(&mut result_buf))
+            .unwrap();
+        // 32-bytes of SHA256 digest + the ASN.1 DigestInfo structure == 51 bytes
+        assert_eq!(length, 51);
+        // The digest is the end of the DigestInfo structure.
+        assert_eq!(result_buf[length - digest.len()..length], digest);
     }
 }
