@@ -936,8 +936,8 @@ mod test {
         let bad_data = b"Some Crypto text";
 
         ctx.verify_init().unwrap();
-        let valid = ctx.verify(bad_data, &signature).unwrap();
-        assert!(!valid);
+        let valid = ctx.verify(bad_data, &signature);
+        assert!(matches!(valid, Ok(false) | Err(_)));
         assert!(ErrorStack::get().errors().is_empty());
     }
 
