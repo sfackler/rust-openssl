@@ -196,15 +196,13 @@ https://github.com/sfackler/rust-openssl#windows
 /// typically tells us all the information that we need.
 fn try_pkg_config() {
     let target = env::var("TARGET").unwrap();
-    let host = env::var("HOST").unwrap();
 
-    // If we're going to windows-gnu we can use pkg-config, but only so long as
-    // we're coming from a windows host.
-    //
-    // Otherwise if we're going to windows we probably can't use pkg-config.
-    if target.contains("windows-gnu") && host.contains("windows") {
+    // If we're using mingw (windows-gnu*), we can use pkg-config, but we need
+    // to allow mismatched host/target.
+    if target.contains("windows-gnu") {
         env::set_var("PKG_CONFIG_ALLOW_CROSS", "1");
     } else if target.contains("windows") {
+        // MSVC targets use vcpkg instead.
         return;
     }
 
