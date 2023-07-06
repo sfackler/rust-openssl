@@ -196,6 +196,7 @@ https://github.com/sfackler/rust-openssl#windows
 /// typically tells us all the information that we need.
 fn try_pkg_config() {
     let target = env::var("TARGET").unwrap();
+    let host = env::var("HOST").unwrap();
 
     // FIXME we really shouldn't be automatically enabling this
     if target.contains("windows-gnu") && host.contains("windows") {
