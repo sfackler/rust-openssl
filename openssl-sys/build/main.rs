@@ -4,7 +4,6 @@ extern crate cc;
 #[cfg(feature = "vendored")]
 extern crate openssl_src;
 extern crate pkg_config;
-#[cfg(target_env = "msvc")]
 extern crate vcpkg;
 
 use std::collections::HashSet;

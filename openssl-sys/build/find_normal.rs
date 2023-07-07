@@ -230,8 +230,12 @@ fn try_pkg_config() {
 ///
 /// Note that if this succeeds then the function does not return as vcpkg
 /// should emit all of the cargo metadata that we need.
-#[cfg(target_env = "msvc")]
 fn try_vcpkg() {
+    let target = env::var("TARGET").unwrap();
+    if !target.contains("windows") {
+        return;
+    }
+
     // vcpkg will not emit any metadata if it can not find libraries
     // appropriate for the target triple with the desired linkage.
 
@@ -254,9 +258,6 @@ fn try_vcpkg() {
 
     process::exit(0);
 }
-
-#[cfg(not(target_env = "msvc"))]
-fn try_vcpkg() {}
 
 fn execute_command_and_get_output(cmd: &str, args: &[&str]) -> Option<String> {
     let out = Command::new(cmd).args(args).output();
