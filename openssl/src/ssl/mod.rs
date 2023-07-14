@@ -2175,14 +2175,70 @@ impl SslSession {
         SslSession,
         ffi::d2i_SSL_SESSION
     }
+}
 
-    /// Create a new `SslSession`
+/// A builder for `SslSession`s.
+pub struct SslSessionBuilder(SslSession);
+
+impl SslSessionBuilder {
+    /// Creates a new `SslSessionBuilder`.
     #[corresponds(SSL_SESSION_new)]
     pub fn new() -> Result<Self, ErrorStack> {
         unsafe {
             let session = cvt_p(ffi::SSL_SESSION_new())?;
+            let session = SslSession(session);
 
-            Ok(SslSession(session))
+            Ok(SslSessionBuilder(session))
+        }
+    }
+
+    /// Returns a pointer to the raw OpenSSL value.
+    pub fn as_ptr(&self) -> *mut ffi::SSL_SESSION {
+        self.0.as_ptr()
+    }
+
+    /// Consumes the builder, returning a new `SslSession`.
+    pub fn build(self) -> SslSession {
+        self.0
+    }
+
+    /// Sets the cipher associated with the session
+    #[corresponds(SSL_SESSION_set_cipher)]
+    #[cfg(ossl111)]
+    pub fn set_cipher(&mut self, cipher: &SslCipherRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_SESSION_set_cipher(self.as_ptr(), cipher.as_ptr()))?;
+            Ok(())
+        }
+    }
+
+    /// Sets the master key
+    ///
+    /// This could be used to set up a session-based PSK.  You must ensure the length of the key is
+    /// suitable for the ciphersuite associated with the session.
+    #[corresponds(SSL_SESSION_set1_master_key)]
+    pub fn set_master_key(&mut self, key: &[u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_SESSION_set1_master_key(
+                self.as_ptr(),
+                key.as_ptr(),
+                key.len(),
+            ))?;
+
+            Ok(())
+        }
+    }
+
+    /// Sets the session's TLS protocol version.
+    #[corresponds(SSL_SESSION_set_protocol_version)]
+    #[cfg(ossl111)]
+    pub fn set_protocol_version(&mut self, version: SslVersion) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_SESSION_set_protocol_version(
+                self.as_ptr(),
+                version.0,
+            ))?;
+            Ok(())
         }
     }
 }
@@ -2223,23 +2279,6 @@ impl SslSessionRef {
         unsafe { SSL_SESSION_get_master_key(self.as_ptr(), buf.as_mut_ptr(), buf.len()) }
     }
 
-    /// Sets the master key
-    ///
-    /// This could be used to set up a session-based PSK.  You must ensure the length of the key is
-    /// suitable for the ciphersuite associated with the session.
-    #[corresponds(SSL_SESSION_set1_master_key)]
-    pub fn set_master_key(&mut self, key: &[u8]) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::SSL_SESSION_set1_master_key(
-                self.as_ptr(),
-                key.as_ptr(),
-                key.len(),
-            ))?;
-
-            Ok(())
-        }
-    }
-
     /// Gets the SSL cipher associated with the session
     #[corresponds(SSL_SESSION_get0_cipher)]
     #[cfg(ossl110)]
@@ -2252,16 +2291,6 @@ impl SslSessionRef {
             } else {
                 Some(SslCipherRef::from_const_ptr(cipher))
             }
-        }
-    }
-
-    /// Sets the cipher associated with the session
-    #[corresponds(SSL_SESSION_set_cipher)]
-    #[cfg(ossl111)]
-    pub fn set_cipher(&mut self, cipher: &SslCipherRef) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::SSL_SESSION_set_cipher(self.as_ptr(), cipher.as_ptr()))?;
-            Ok(())
         }
     }
 
@@ -2299,19 +2328,6 @@ impl SslSessionRef {
         unsafe {
             let version = ffi::SSL_SESSION_get_protocol_version(self.as_ptr());
             SslVersion(version)
-        }
-    }
-
-    /// Sets the session's TLS protocol version.
-    #[corresponds(SSL_SESSION_set_protocol_version)]
-    #[cfg(ossl111)]
-    pub fn set_protocol_version(&mut self, version: SslVersion) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::SSL_SESSION_set_protocol_version(
-                self.as_ptr(),
-                version.0,
-            ))?;
-            Ok(())
         }
     }
 

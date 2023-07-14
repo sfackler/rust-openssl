@@ -1426,7 +1426,7 @@ fn psk_ciphers() {
 #[test]
 #[cfg(ossl111)]
 fn psk_tls13_callbacks() {
-    use crate::ssl::{SslCipherRef, SslSession, SslVersion};
+    use crate::ssl::{SslCipherRef, SslSession, SslSessionBuilder, SslVersion};
 
     static PSK_FIND_SESSION_CALLED_BACK: AtomicBool = AtomicBool::new(false);
     static PSK_USE_SESSION_CALLED_BACK: AtomicBool = AtomicBool::new(false);
@@ -1444,14 +1444,14 @@ fn psk_tls13_callbacks() {
         // TLS_AES_128_GCM_SHA256 from RFC 8446
         let cipher = SslCipherRef::find(ssl, &[0x13, 0x01])?;
 
-        let mut session = SslSession::new()?;
+        let mut session = SslSessionBuilder::new()?;
         session.set_cipher(cipher)?;
         session.set_master_key("junkjunkjunkjunk".as_bytes())?;
         session.set_protocol_version(SslVersion::TLS1_3)?;
 
         PSK_FIND_SESSION_CALLED_BACK.store(true, Ordering::SeqCst);
 
-        Ok(Some(session))
+        Ok(Some(session.build()))
     });
 
     let server = server.build();
@@ -1475,14 +1475,14 @@ fn psk_tls13_callbacks() {
             );
         }
 
-        let mut session = SslSession::new()?;
+        let mut session = SslSessionBuilder::new()?;
         session.set_cipher(cipher)?;
         session.set_master_key("junkjunkjunkjunk".as_bytes())?;
         session.set_protocol_version(SslVersion::TLS1_3)?;
 
         PSK_USE_SESSION_CALLED_BACK.store(true, Ordering::SeqCst);
 
-        Ok(Some((session, "PSK_id".as_bytes().to_vec())))
+        Ok(Some((session.build(), "PSK_id".as_bytes().to_vec())))
     });
 
     client.connect();
