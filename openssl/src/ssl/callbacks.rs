@@ -274,6 +274,8 @@ where
     }
 }
 
+struct Psk(Vec<u8>);
+
 #[cfg(ossl111)]
 pub extern "C" fn raw_psk_use_session<F>(
     callback: *const F,
@@ -293,7 +295,7 @@ where
         + Send,
 {
     unsafe {
-        let psk_idx = Ssl::cached_ex_index::<Vec<u8>>();
+        let psk_idx = Ssl::cached_ex_index::<Psk>();
 
         let md = if md.is_null() {
             None
@@ -307,7 +309,7 @@ where
                     *id = psk_id.as_ptr() as *const c_uchar;
                     *idlen = psk_id.len() as size_t;
 
-                    ssl.set_ex_data(psk_idx, psk_id);
+                    ssl.set_ex_data(psk_idx, Psk(psk_id));
 
                     let p = ssl_session.as_ptr();
                     mem::forget(ssl_session);
