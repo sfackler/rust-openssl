@@ -2028,16 +2028,20 @@ impl SslCipherRef {
     /// Returns an SslCipher matching the two-byte TLS cipher ID (allocated by the IANA, in network
     /// byte order).
     #[corresponds(SSL_CIPHER_find)]
-    pub fn find<'a>(ssl: &'a SslRef, cipher_id: &[u8]) -> Result<&'a SslCipherRef, ErrorStack> {
+    pub fn find<'a>(ssl: &'a SslRef, cipher_id: &[u8]) -> Option<&'a SslCipherRef> {
+        if cipher_id.len() != 2 {
+            return None;
+        }
+
         unsafe {
             let ssl = ssl.as_ptr();
             let ptr = ffi::SSL_CIPHER_find(ssl, cipher_id.as_ptr());
 
             if ptr.is_null() {
-                return Err(ErrorStack::get());
+                return None;
             }
 
-            Ok(SslCipherRef::from_ptr(ptr as *mut ffi::SSL_CIPHER))
+            Some(SslCipherRef::from_ptr(ptr as *mut ffi::SSL_CIPHER))
         }
     }
 

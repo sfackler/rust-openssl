@@ -1442,16 +1442,18 @@ fn psk_tls13_callbacks() {
         }
 
         // TLS_AES_128_GCM_SHA256 from RFC 8446
-        let cipher = SslCipherRef::find(ssl, &[0x13, 0x01])?;
+        if let Some(cipher) = SslCipherRef::find(ssl, &[0x13, 0x01]) {
+            let mut session = SslSessionBuilder::new()?;
+            session.set_cipher(cipher)?;
+            session.set_master_key("junkjunkjunkjunk".as_bytes())?;
+            session.set_protocol_version(SslVersion::TLS1_3)?;
 
-        let mut session = SslSessionBuilder::new()?;
-        session.set_cipher(cipher)?;
-        session.set_master_key("junkjunkjunkjunk".as_bytes())?;
-        session.set_protocol_version(SslVersion::TLS1_3)?;
+            PSK_FIND_SESSION_CALLED_BACK.store(true, Ordering::SeqCst);
 
-        PSK_FIND_SESSION_CALLED_BACK.store(true, Ordering::SeqCst);
-
-        Ok(Some(session.build()))
+            Ok(Some(session.build()))
+        } else {
+            unreachable!("missing cipher should be impossible")
+        }
     });
 
     let server = server.build();
@@ -1463,26 +1465,28 @@ fn psk_tls13_callbacks() {
         .unwrap();
     client.ctx().set_psk_use_session_callback(|ssl, md| {
         // TLS_AES_128_GCM_SHA256 from RFC 8446
-        let cipher = SslCipherRef::find(ssl, &[0x13, 0x01])?;
+        if let Some(cipher) = SslCipherRef::find(ssl, &[0x13, 0x01]) {
+            if let Some(md) = md {
+                let cipher_md = cipher.handshake_digest().unwrap();
 
-        if let Some(md) = md {
-            let cipher_md = cipher.handshake_digest().unwrap();
+                assert_eq!(
+                    cipher_md.type_(),
+                    md.type_(),
+                    "message digest mismatch should be impossible"
+                );
+            }
 
-            assert_eq!(
-                cipher_md.type_(),
-                md.type_(),
-                "message digest mismatch should be impossible"
-            );
+            let mut session = SslSessionBuilder::new()?;
+            session.set_cipher(cipher)?;
+            session.set_master_key("junkjunkjunkjunk".as_bytes())?;
+            session.set_protocol_version(SslVersion::TLS1_3)?;
+
+            PSK_USE_SESSION_CALLED_BACK.store(true, Ordering::SeqCst);
+
+            Ok(Some((session.build(), "PSK_id".as_bytes().to_vec())))
+        } else {
+            unreachable!("missing cipher should be impossible")
         }
-
-        let mut session = SslSessionBuilder::new()?;
-        session.set_cipher(cipher)?;
-        session.set_master_key("junkjunkjunkjunk".as_bytes())?;
-        session.set_protocol_version(SslVersion::TLS1_3)?;
-
-        PSK_USE_SESSION_CALLED_BACK.store(true, Ordering::SeqCst);
-
-        Ok(Some((session.build(), "PSK_id".as_bytes().to_vec())))
     });
 
     client.connect();
@@ -1644,4 +1648,32 @@ fn set_num_tickets() {
     ssl.set_num_tickets(5).unwrap();
     let ssl = ssl;
     assert_eq!(5, ssl.num_tickets());
+}
+
+#[test]
+fn ssl_cipher_find() {
+    use crate::ssl::SslCipherRef;
+
+    let server = Server::builder().build();
+    let client = server.client().connect();
+    let ssl = client.ssl();
+
+    assert!(
+        SslCipherRef::find(ssl, &[0x13, 0x01]).is_some(),
+        "valid cipher ID"
+    );
+
+    assert!(SslCipherRef::find(ssl, &[]).is_none(), "empty cipher ID");
+    assert!(
+        SslCipherRef::find(ssl, &[0x13]).is_none(),
+        "too-short cipher ID"
+    );
+    assert!(
+        SslCipherRef::find(ssl, &[0x00, 0x00]).is_none(),
+        "invalid cipher ID"
+    );
+    assert!(
+        SslCipherRef::find(ssl, &[0x13, 0x01, 0x02]).is_none(),
+        "too-long cipher ID"
+    );
 }
