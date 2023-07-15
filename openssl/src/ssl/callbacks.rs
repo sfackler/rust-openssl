@@ -192,7 +192,7 @@ where
     F: Fn(&mut SslRef, &[u8]) -> Result<Option<SslSession>, ErrorStack> + 'static + Sync + Send,
 {
     unsafe {
-        let identity_sl = slice::from_raw_parts(identity as *const u8, identity_len as usize);
+        let identity_sl = slice::from_raw_parts(identity as *const u8, identity_len);
 
         match (*callback)(ssl, identity_sl) {
             Ok(ssl_session) => {

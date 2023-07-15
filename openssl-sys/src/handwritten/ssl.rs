@@ -842,9 +842,9 @@ extern "C" {
         key_len: size_t,
     ) -> c_int;
 
-    #[cfg(any(ossl110))]
+    #[cfg(ossl110)]
     pub fn SSL_SESSION_get0_cipher(session: *const SSL_SESSION) -> *const SSL_CIPHER;
-    #[cfg(any(ossl111))]
+    #[cfg(ossl111)]
     pub fn SSL_SESSION_set_cipher(session: *mut SSL_SESSION, cipher: *const SSL_CIPHER) -> c_int;
 }
 
