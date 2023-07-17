@@ -1660,21 +1660,21 @@ fn ssl_cipher_find() {
     let ssl = client.ssl();
 
     assert!(
-        SslCipherRef::find(ssl, &[0x13, 0x01]).is_some(),
+        SslCipherRef::find(ssl, &[0x00, 0x02]).is_some(),
         "valid cipher ID"
     );
 
     assert!(SslCipherRef::find(ssl, &[]).is_none(), "empty cipher ID");
     assert!(
-        SslCipherRef::find(ssl, &[0x13]).is_none(),
+        SslCipherRef::find(ssl, &[0x00]).is_none(),
         "too-short cipher ID"
     );
     assert!(
-        SslCipherRef::find(ssl, &[0x00, 0x00]).is_none(),
-        "invalid cipher ID"
+        SslCipherRef::find(ssl, &[0xff, 0xff]).is_none(),
+        "invalid cipher ID (reserved for private use)"
     );
     assert!(
-        SslCipherRef::find(ssl, &[0x13, 0x01, 0x02]).is_none(),
+        SslCipherRef::find(ssl, &[0x00, 0x00, 0x00]).is_none(),
         "too-long cipher ID"
     );
 }
