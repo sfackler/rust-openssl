@@ -274,6 +274,7 @@ where
     }
 }
 
+#[cfg(ossl111)]
 struct Psk(Vec<u8>);
 
 #[cfg(ossl111)]

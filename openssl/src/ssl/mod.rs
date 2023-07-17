@@ -2028,6 +2028,7 @@ impl SslCipherRef {
     /// Returns an SslCipher matching the two-byte TLS cipher ID (allocated by the IANA, in network
     /// byte order).
     #[corresponds(SSL_CIPHER_find)]
+    #[cfg(not(boringssl))]
     pub fn find<'a>(ssl: &'a SslRef, cipher_id: &[u8]) -> Option<&'a SslCipherRef> {
         if cipher_id.len() != 2 {
             return None;
@@ -2182,8 +2183,10 @@ impl SslSession {
 }
 
 /// A builder for `SslSession`s.
+#[cfg(not(boringssl))]
 pub struct SslSessionBuilder(SslSession);
 
+#[cfg(not(boringssl))]
 impl SslSessionBuilder {
     /// Creates a new `SslSessionBuilder`.
     #[corresponds(SSL_SESSION_new)]
@@ -2221,6 +2224,7 @@ impl SslSessionBuilder {
     /// This could be used to set up a session-based PSK.  You must ensure the length of the key is
     /// suitable for the ciphersuite associated with the session.
     #[corresponds(SSL_SESSION_set1_master_key)]
+    #[cfg(ossl111)]
     pub fn set_master_key(&mut self, key: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_SESSION_set1_master_key(

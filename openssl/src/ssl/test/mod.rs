@@ -1424,7 +1424,7 @@ fn psk_ciphers() {
 }
 
 #[test]
-#[cfg(ossl111)]
+#[cfg(all(ossl111, not(libressl380), not(boringssl)))]
 fn psk_tls13_callbacks() {
     use crate::ssl::{SslCipherRef, SslSession, SslSessionBuilder, SslVersion};
 
@@ -1651,6 +1651,7 @@ fn set_num_tickets() {
 }
 
 #[test]
+#[cfg(any(ossl110, libressl273))]
 fn ssl_cipher_find() {
     use crate::ssl::SslCipherRef;
 

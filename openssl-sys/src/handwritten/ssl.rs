@@ -520,6 +520,7 @@ const_ptr_api! {
     }
 }
 extern "C" {
+    #[cfg(any(not(ossl102), libressl273, not(boringssl)))]
     pub fn SSL_CIPHER_find(ssl: *mut SSL, ptr: *const c_uchar) -> *const SSL_CIPHER;
     #[cfg(ossl111)]
     pub fn SSL_CIPHER_get_handshake_digest(cipher: *const SSL_CIPHER) -> *const EVP_MD;
@@ -576,6 +577,7 @@ extern "C" {
     pub fn SSL_state_string(ssl: *const SSL) -> *const c_char;
     pub fn SSL_state_string_long(ssl: *const SSL) -> *const c_char;
 
+    #[cfg(not(boringssl))]
     pub fn SSL_SESSION_new() -> *mut SSL_SESSION;
     pub fn SSL_SESSION_get_time(s: *const SSL_SESSION) -> c_long;
     pub fn SSL_SESSION_get_timeout(s: *const SSL_SESSION) -> c_long;
@@ -835,7 +837,7 @@ extern "C" {
         out: *mut c_uchar,
         outlen: size_t,
     ) -> size_t;
-    #[cfg(any(ossl110, libressl273))]
+    #[cfg(ossl111)]
     pub fn SSL_SESSION_set1_master_key(
         session: *mut SSL_SESSION,
         key: *const c_uchar,
