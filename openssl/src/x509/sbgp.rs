@@ -122,10 +122,12 @@ pub enum IPVersion {
 impl IPAddressFamily {
     pub fn fam(&self) -> Option<IPVersion> {
         let ptr = self.0;
-        match X509v3_addr_get_afi(ptr) {
-            IANA_AFI_IPV4 => Some(IPVersion::V4),
-            IANA_AFI_IPV6 => Some(IPVersion::V6),
-            _ => None,
+        unsafe {
+            match X509v3_addr_get_afi(ptr) {
+                IANA_AFI_IPV4 => Some(IPVersion::V4),
+                IANA_AFI_IPV6 => Some(IPVersion::V6),
+                _ => None,
+            }
         }
     }
 

@@ -75,18 +75,16 @@ extern "C" {
     pub fn IPAddressOrRange_free(asi: *mut _IPAddressOrRange);
 }
 
-pub fn X509v3_addr_get_afi(f: *mut _IPAddressFamily) -> c_int {
-    unsafe {
-        if f.is_null() {
+pub unsafe fn X509v3_addr_get_afi(f: *mut _IPAddressFamily) -> c_int {
+    if f.is_null() {
+        0
+    } else {
+        let d = (*f).addressFamily as *mut ASN1_STRING;
+        if d.is_null() || ASN1_STRING_length(d) < 2 || ASN1_STRING_get0_data(d).is_null() {
             0
         } else {
-            let d = (*f).addressFamily as *mut ASN1_STRING;
-            if d.is_null() || ASN1_STRING_length(d) < 2 || ASN1_STRING_get0_data(d).is_null() {
-                0
-            } else {
-                let raw = ASN1_STRING_get0_data(d);
-                ((*raw.offset(0) as i32) << 8) | *raw.offset(1) as i32
-            }
+            let raw = ASN1_STRING_get0_data(d);
+            ((*raw.offset(0) as i32) << 8) | *raw.offset(1) as i32
         }
     }
 }
@@ -142,7 +140,7 @@ fn addr_expand(addr: *mut u8, bs: *const ASN1_BIT_STRING, length: isize, fill: u
         }
 
         // fill up bytes
-        for i in (str_len as isize)..(length as isize) {
+        for i in (str_len as isize)..length {
             *addr.offset(i) = fill;
         }
     }
@@ -157,11 +155,11 @@ fn extract_min_max(aor: *mut _IPAddressOrRange, min: *mut u8, max: *mut u8, leng
     unsafe {
         match (*aor).type_ {
             IPAddressOrRange_addressPrefix => {
-                return addr_expand(min, (*aor).u.addressPrefix, length, 0x00)
+                addr_expand(min, (*aor).u.addressPrefix, length, 0x00)
                     && addr_expand(max, (*aor).u.addressPrefix, length, 0xFF)
             }
             IPAddressOrRange_addressRange => {
-                return addr_expand(min, (*(*aor).u.addressRange).min, length, 0x00)
+                addr_expand(min, (*(*aor).u.addressRange).min, length, 0x00)
                     && addr_expand(max, (*(*aor).u.addressRange).max, length, 0xFF)
             }
             _ => false,
