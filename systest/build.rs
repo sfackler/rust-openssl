@@ -69,6 +69,10 @@ fn main() {
         .header("openssl/evp.h")
         .header("openssl/x509_vfy.h");
 
+    if libressl_version.is_some() {
+        cfg.header("openssl/poly1305.h");
+    }
+
     if let Some(version) = openssl_version {
         cfg.header("openssl/cms.h");
         if version >= 0x10100000 {

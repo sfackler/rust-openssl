@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+* Expose `poly1305_state`, `CRYPTO_poly1305_init`, `CRYPTO_poly1305_update`, and `CRYPTO_poly1305_finish` on BoringSSL and LibreSSL.
+
 ## [v0.9.90] - 2023-06-20
 
 ### Fixed
