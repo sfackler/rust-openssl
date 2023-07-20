@@ -15,6 +15,7 @@
 //! [`EcGroup`]: struct.EcGroup.html
 //! [`Nid`]: ../nid/struct.Nid.html
 //! [Elliptic Curve Cryptography]: https://wiki.openssl.org/index.php/Elliptic_Curve_Cryptography
+use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use std::fmt;
@@ -27,6 +28,13 @@ use crate::pkey::{HasParams, HasPrivate, HasPublic, Params, Private, Public};
 use crate::util::ForeignTypeRefExt;
 use crate::{cvt, cvt_n, cvt_p, init};
 use openssl_macros::corresponds;
+
+cfg_if! {
+    if #[cfg(not(boringssl))] {
+        use std::ffi::CString;
+        use crate::string::OpensslString;
+    }
+}
 
 /// Compressed or Uncompressed conversion
 ///
@@ -463,6 +471,26 @@ impl EcPointRef {
         }
     }
 
+    /// Serializes the point to a hexadecimal string representation.
+    #[corresponds(EC_POINT_point2hex)]
+    #[cfg(not(boringssl))]
+    pub fn to_hex_str(
+        &self,
+        group: &EcGroupRef,
+        form: PointConversionForm,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<OpensslString, ErrorStack> {
+        unsafe {
+            let buf = cvt_p(ffi::EC_POINT_point2hex(
+                group.as_ptr(),
+                self.as_ptr(),
+                form.0,
+                ctx.as_ptr(),
+            ))?;
+            Ok(OpensslString::from_ptr(buf))
+        }
+    }
+
     /// Creates a new point on the specified curve with the same value.
     #[corresponds(EC_POINT_dup)]
     pub fn to_owned(&self, group: &EcGroupRef) -> Result<EcPoint, ErrorStack> {
@@ -626,6 +654,27 @@ impl EcPoint {
                 point.as_ptr(),
                 buf.as_ptr(),
                 buf.len(),
+                ctx.as_ptr(),
+            ))?;
+        }
+        Ok(point)
+    }
+
+    /// Creates point from a hexadecimal string representation
+    #[corresponds(EC_POINT_hex2point)]
+    #[cfg(not(boringssl))]
+    pub fn from_hex_str(
+        group: &EcGroupRef,
+        s: &str,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<EcPoint, ErrorStack> {
+        let point = EcPoint::new(group)?;
+        unsafe {
+            let c_str = CString::new(s.as_bytes()).unwrap();
+            cvt_p(ffi::EC_POINT_hex2point(
+                group.as_ptr(),
+                c_str.as_ptr() as *const _,
+                point.as_ptr(),
                 ctx.as_ptr(),
             ))?;
         }
@@ -1118,6 +1167,20 @@ mod test {
             .to_bytes(&group, PointConversionForm::COMPRESSED, &mut ctx)
             .unwrap();
         let point2 = EcPoint::from_bytes(&group, &bytes, &mut ctx).unwrap();
+        assert!(point.eq(&group, &point2, &mut ctx).unwrap());
+    }
+
+    #[test]
+    #[cfg(not(boringssl))]
+    fn point_hex_str() {
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let key = EcKey::generate(&group).unwrap();
+        let point = key.public_key();
+        let mut ctx = BigNumContext::new().unwrap();
+        let hex = point
+            .to_hex_str(&group, PointConversionForm::COMPRESSED, &mut ctx)
+            .unwrap();
+        let point2 = EcPoint::from_hex_str(&group, &hex, &mut ctx).unwrap();
         assert!(point.eq(&group, &point2, &mut ctx).unwrap());
     }
 

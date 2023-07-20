@@ -152,6 +152,20 @@ extern "C" {
         ctx: *mut BN_CTX,
     ) -> c_int;
 
+    pub fn EC_POINT_point2hex(
+        group: *const EC_GROUP,
+        p: *const EC_POINT,
+        form: point_conversion_form_t,
+        ctx: *mut BN_CTX,
+    ) -> *mut c_char;
+
+    pub fn EC_POINT_hex2point(
+        group: *const EC_GROUP,
+        s: *const c_char,
+        p: *mut EC_POINT,
+        ctx: *mut BN_CTX,
+    ) -> *mut EC_POINT;
+
     pub fn EC_POINT_add(
         group: *const EC_GROUP,
         r: *mut EC_POINT,
