@@ -58,6 +58,7 @@ const_ptr_api! {
 }
 
 extern "C" {
+    #[cfg(not(osslconf = "OPENSSL_NO_SOCK"))]
     pub fn BIO_new_socket(sock: c_int, close_flag: c_int) -> *mut BIO;
 
     #[cfg(any(ossl110, libressl273))]
