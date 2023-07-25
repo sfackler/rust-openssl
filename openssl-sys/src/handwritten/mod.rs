@@ -18,6 +18,8 @@ pub use self::ocsp::*;
 pub use self::pem::*;
 pub use self::pkcs12::*;
 pub use self::pkcs7::*;
+#[cfg(libressl)]
+pub use self::poly1305::*;
 pub use self::provider::*;
 pub use self::rand::*;
 pub use self::rsa::*;
@@ -52,6 +54,8 @@ mod ocsp;
 mod pem;
 mod pkcs12;
 mod pkcs7;
+#[cfg(libressl)]
+mod poly1305;
 mod provider;
 mod rand;
 mod rsa;
