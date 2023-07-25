@@ -705,8 +705,15 @@ fn test_crl_entry_extensions() {
         .extension::<AuthorityInformationAccess>()
         .unwrap()
         .expect("Authority Information Access extension should be present");
-    assert!(!critical, "Authority Information Access extension is not critical");
-    assert_eq!(access_info.len(), 1, "Authority Information Access should have one entry");
+    assert!(
+        !critical,
+        "Authority Information Access extension is not critical"
+    );
+    assert_eq!(
+        access_info.len(),
+        1,
+        "Authority Information Access should have one entry"
+    );
     assert_eq!(access_info[0].method().to_string(), "CA Issuers");
     assert_eq!(
         access_info[0].location().uri(),
