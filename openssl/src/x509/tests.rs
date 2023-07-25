@@ -34,7 +34,7 @@ use hex::{self, FromHex};
 #[cfg(any(ossl102, libressl261))]
 use libc::time_t;
 
-use super::{CertificateIssuer, ReasonCode};
+use super::{AuthorityInformationAccess, CertificateIssuer, ReasonCode};
 
 fn pkey() -> PKey<Private> {
     let rsa = Rsa::generate(2048).unwrap();
@@ -701,6 +701,17 @@ fn test_crl_entry_extensions() {
     let crl = include_bytes!("../../test/entry_extensions.crl");
     let crl = X509Crl::from_pem(crl).unwrap();
 
+    let (critical, access_info) = crl
+        .extension::<AuthorityInformationAccess>()
+        .unwrap()
+        .expect("Authority Information Access extension should be present");
+    assert!(!critical, "Authority Information Access extension is not critical");
+    assert_eq!(access_info.len(), 1, "Authority Information Access should have one entry");
+    assert_eq!(access_info[0].method().to_string(), "CA Issuers");
+    assert_eq!(
+        access_info[0].location().uri(),
+        Some("http://www.example.com/ca.crt")
+    );
     let revoked_certs = crl.get_revoked().unwrap();
     let entry = &revoked_certs[0];
 
