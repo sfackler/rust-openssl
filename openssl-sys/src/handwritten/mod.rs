@@ -45,6 +45,7 @@ mod crypto;
 mod dh;
 mod dsa;
 mod ec;
+mod engine;
 mod err;
 mod evp;
 mod hmac;
