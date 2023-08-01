@@ -57,9 +57,9 @@ impl Engine {
     /// Returns the "next" ENGINE type available, after the passed in ENGINE.
     #[corresponds(ENGINE_get_next)]
     #[inline]
-    pub fn get_next(e: Engine) -> Result<Self, ErrorStack> {
+    pub fn get_next(&mut self) -> Result<Self, ErrorStack> {
         unsafe {
-            let ptr = cvt_p(ffi::ENGINE_get_next(e.as_ptr()))?;
+            let ptr = cvt_p(ffi::ENGINE_get_next(self.as_ptr()))?;
             Ok(Engine::from_ptr(ptr))
         }
     }
@@ -67,9 +67,9 @@ impl Engine {
     /// Returns the "previous" ENGINE type available, before the passed in ENGINE.
     #[corresponds(ENGINE_get_prev)]
     #[inline]
-    pub fn get_prev(e: Engine) -> Result<Self, ErrorStack> {
+    pub fn get_prev(&mut self) -> Result<Self, ErrorStack> {
         unsafe {
-            let ptr = cvt_p(ffi::ENGINE_get_prev(e.as_ptr()))?;
+            let ptr = cvt_p(ffi::ENGINE_get_prev(self.as_ptr()))?;
             Ok(Engine::from_ptr(ptr))
         }
     }
@@ -77,9 +77,9 @@ impl Engine {
     /// Adds the engine to OpenSSL's internal engine list.
     #[corresponds(ENGINE_add)]
     #[inline]
-    pub fn add(e: Engine) -> Result<(), ErrorStack> {
+    pub fn add(&mut self) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_add(e.as_ptr()))?;
+            cvt(ffi::ENGINE_add(self.as_ptr()))?;
         }
         Ok(())
     }
@@ -87,9 +87,9 @@ impl Engine {
     /// Removes the engine from OpenSSL's internal engine list.
     #[corresponds(ENGINE_remove)]
     #[inline]
-    pub fn remove(e: Engine) -> Result<(), ErrorStack> {
+    pub fn remove(&mut self) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_remove(e.as_ptr()))?;
+            cvt(ffi::ENGINE_remove(self.as_ptr()))?;
         }
         Ok(())
     }
@@ -108,9 +108,9 @@ impl Engine {
     /// Remove all references to the passed in engine.
     #[corresponds(ENGINE_finish)]
     #[inline]
-    pub fn finish(e: Engine) -> Result<(), ErrorStack> {
+    pub fn finish(&mut self) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_finish(e.as_ptr()))?;
+            cvt(ffi::ENGINE_finish(self.as_ptr()))?;
         }
         Ok(())
     }
@@ -495,10 +495,10 @@ impl Engine {
     /// Sets the ID on the engine.
     #[corresponds(ENGINE_set_id)]
     #[inline]
-    pub fn set_id(e: Engine, id: &str) -> Result<(), ErrorStack> {
+    pub fn set_id(&mut self, id: &str) -> Result<(), ErrorStack> {
         let id = CString::new(id).unwrap();
         unsafe {
-            cvt(ffi::ENGINE_set_id(e.as_ptr(), id.as_ptr()))?;
+            cvt(ffi::ENGINE_set_id(self.as_ptr(), id.as_ptr()))?;
         }
         Ok(())
     }
@@ -506,10 +506,10 @@ impl Engine {
     /// Sets the name on the engine.
     #[corresponds(ENGINE_set_name)]
     #[inline]
-    pub fn set_name(e: Engine, name: &str) -> Result<(), ErrorStack> {
+    pub fn set_name(&mut self, name: &str) -> Result<(), ErrorStack> {
         let name = CString::new(name).unwrap();
         unsafe {
-            cvt(ffi::ENGINE_set_name(e.as_ptr(), name.as_ptr()))?;
+            cvt(ffi::ENGINE_set_name(self.as_ptr(), name.as_ptr()))?;
         }
         Ok(())
     }
@@ -608,22 +608,34 @@ impl Engine {
     /// Returns the engine's ID.
     #[corresponds(ENGINE_get_id)]
     #[inline]
-    pub fn get_id(e: Engine) -> Result<String, ErrorStack> {
+    pub fn get_id(&mut self) -> Result<String, ErrorStack> {
         unsafe {
-            let ptr = ffi::ENGINE_get_id(e.as_ptr());
-            let slice = std::slice::from_raw_parts(ptr as *const u8, strlen(ptr) + 1 as usize);
-            Ok(std::str::from_utf8_unchecked(slice).to_string())
+            let ptr = ffi::ENGINE_get_id(self.as_ptr());
+            if ptr.is_null() {
+                return Err(ErrorStack::get());
+            }
+
+            let slice = std::slice::from_raw_parts(ptr as *const u8, strlen(ptr) as usize);
+            let s = std::str::from_utf8_unchecked(slice).to_string();
+
+            Ok(s)
         }
     }
 
     /// Returns the engine's name.
     #[corresponds(ENGINE_get_name)]
     #[inline]
-    pub fn get_name(e: Engine) -> Result<String, ErrorStack> {
+    pub fn get_name(&mut self) -> Result<String, ErrorStack> {
         unsafe {
-            let ptr = ffi::ENGINE_get_name(e.as_ptr());
-            let slice = std::slice::from_raw_parts(ptr as *const u8, strlen(ptr) + 1 as usize);
-            Ok(std::str::from_utf8_unchecked(slice).to_string())
+            let ptr = ffi::ENGINE_get_name(self.as_ptr());
+            if ptr.is_null() {
+                return Err(ErrorStack::get());
+            }
+
+            let slice = std::slice::from_raw_parts(ptr as *const u8, strlen(ptr) as usize);
+            let s = std::str::from_utf8_unchecked(slice).to_string();
+
+            Ok(s)
         }
     }
 
@@ -763,6 +775,47 @@ impl Drop for Engine {
     fn drop(&mut self) {
         unsafe {
             ffi::ENGINE_free(self.as_ptr());
+        }
+    }
+}
+
+mod test {
+    use super::*;
+
+    // #[test]
+    fn test_basic_engine_creation() {
+        let mut engine = Engine::new().unwrap();
+
+        let name = String::from("engine_name");
+        let id = String::from("engine_id");
+
+        // there should not be errors on setting id or name
+        assert!(!engine.set_id(&id).is_err());
+        assert!(!engine.set_name(&name).is_err());
+
+        assert_eq!(id, engine.get_id().unwrap().as_str());
+        assert_eq!(name, engine.get_name().unwrap().as_str());
+    }
+
+    #[test]
+    fn iterate_through_engines() {
+        let mut engine = Engine::get_first().unwrap();
+
+        let mut has_engines = true;
+        let mut engine_cnt = 1;
+
+        println!("Engines:");
+
+        while has_engines {
+            println!("  {}, name={}, id={}",
+                engine_cnt, engine.get_name().unwrap(), engine.get_id().unwrap()
+            );
+            match engine.get_next() {
+                Ok(e) => engine = e,
+                Err(m) => has_engines = false
+            }
+
+            engine_cnt += 1;
         }
     }
 }
