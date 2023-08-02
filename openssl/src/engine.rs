@@ -1,11 +1,8 @@
 use crate::error::ErrorStack;
-use crate::{cvt, cvt_n, cvt_p};
-use cfg_if::cfg_if;
+use crate::{cvt, cvt_p};
 use libc::strlen;
 use openssl_macros::corresponds;
-use std::convert::TryFrom;
-use std::ffi::{c_int, c_uint, c_void, CString};
-use std::ptr;
+use std::ffi::{c_void, CString};
 
 struct Engine(*mut ffi::ENGINE);
 
@@ -166,7 +163,7 @@ impl Engine {
     #[inline]
     pub fn get_cipher_engine(nid: i32) -> Result<Self, ErrorStack> {
         unsafe {
-            let ptr = cvt_p(ffi::ENGINE_get_cipher_engine(c_int::from(nid)))?;
+            let ptr = cvt_p(ffi::ENGINE_get_cipher_engine(nid))?;
             Ok(Engine::from_ptr(ptr))
         }
     }
@@ -176,7 +173,7 @@ impl Engine {
     #[inline]
     pub fn get_digest_engine(nid: i32) -> Result<Self, ErrorStack> {
         unsafe {
-            let ptr = cvt_p(ffi::ENGINE_get_digest_engine(c_int::from(nid)))?;
+            let ptr = cvt_p(ffi::ENGINE_get_digest_engine(nid))?;
             Ok(Engine::from_ptr(ptr))
         }
     }
@@ -257,7 +254,7 @@ impl Engine {
     #[inline]
     pub fn set_default(&mut self, flags: u32) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_set_default(self.as_ptr(), c_uint::from(flags)))?;
+            cvt(ffi::ENGINE_set_default(self.as_ptr(), flags))?;
         }
         Ok(())
     }
@@ -267,8 +264,7 @@ impl Engine {
     #[inline]
     pub fn get_table_flags() -> u32 {
         unsafe {
-            let rc = ffi::ENGINE_get_table_flags();
-            return u32::from(rc);
+            ffi::ENGINE_get_table_flags()
         }
     }
 
@@ -277,7 +273,7 @@ impl Engine {
     #[inline]
     pub fn set_table_flags(flags: u32) {
         unsafe {
-            ffi::ENGINE_set_table_flags(c_uint::from(flags));
+            ffi::ENGINE_set_table_flags(flags);
         }
     }
 
@@ -465,30 +461,30 @@ impl Engine {
 
     pub fn ctrl(
         &mut self,
-        cmd: i32,
-        i: i64,
-        p: *mut c_void,
-        f: extern "C" fn(),
+        _cmd: i32,
+        _i: i64,
+        _p: *mut c_void,
+        _f: extern "C" fn(),
     ) -> Result<(), ErrorStack> {
         todo!();
     }
 
     pub fn cmd_is_executable(&mut self, cmd: i32) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_cmd_is_executable(self.as_ptr(), c_int::from(cmd)))?;
+            cvt(ffi::ENGINE_cmd_is_executable(self.as_ptr(), cmd))?;
         }
         Ok(())
     }
 
-    pub fn ctrl_cmd(&mut self, cmd: &str, arg: &str, param: i32) -> Result<(), ErrorStack> {
+    pub fn ctrl_cmd(&mut self, _cmd: &str, _arg: &str, _param: i32) -> Result<(), ErrorStack> {
         todo!();
     }
 
     pub fn ctrl_cmd_string(
         &mut self,
-        cmd: &str,
-        arg: &str,
-        optional: i32,
+        _cmd: &str,
+        _arg: &str,
+        _optional: i32,
     ) -> Result<(), ErrorStack> {
         todo!();
     }
@@ -623,7 +619,7 @@ impl Engine {
                 return Err(ErrorStack::get());
             }
 
-            let slice = std::slice::from_raw_parts(ptr as *const u8, strlen(ptr) as usize);
+            let slice = std::slice::from_raw_parts(ptr as *const u8, strlen(ptr));
             let s = std::str::from_utf8_unchecked(slice).to_string();
 
             Ok(s)
@@ -640,7 +636,7 @@ impl Engine {
                 return Err(ErrorStack::get());
             }
 
-            let slice = std::slice::from_raw_parts(ptr as *const u8, strlen(ptr) as usize);
+            let slice = std::slice::from_raw_parts(ptr as *const u8, strlen(ptr));
             let s = std::str::from_utf8_unchecked(slice).to_string();
 
             Ok(s)
@@ -734,14 +730,14 @@ impl Engine {
     /// Returns the cipher for the passed `nid` value.
     #[corresponds(ENGINE_get_cipher)]
     #[inline]
-    pub fn get_cipher(&mut self, nid: i32) -> Result<(), ErrorStack> {
+    pub fn get_cipher(&mut self, _nid: i32) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Returns the digest for the passed `nid` value.
     #[corresponds(ENGINE_get_digest)]
     #[inline]
-    pub fn get_digest(&mut self, nid: i32) -> Result<(), ErrorStack> {
+    pub fn get_digest(&mut self, _nid: i32) -> Result<(), ErrorStack> {
         todo!();
     }
 
@@ -795,8 +791,8 @@ mod test {
         let id = String::from("engine_id");
 
         // there should not be errors on setting id or name
-        assert!(!engine.set_id(&id).is_err());
-        assert!(!engine.set_name(&name).is_err());
+        assert!(engine.set_id(&id).is_ok());
+        assert!(engine.set_name(&name).is_ok());
 
         assert_eq!(id, engine.get_id().unwrap().as_str());
         assert_eq!(name, engine.get_name().unwrap().as_str());
@@ -820,7 +816,7 @@ mod test {
             );
             match engine.get_next() {
                 Ok(e) => engine = e,
-                Err(m) => has_engines = false,
+                Err(_) => has_engines = false,
             }
 
             engine_cnt += 1;
