@@ -445,6 +445,8 @@ impl Engine {
         }
     }
 
+    #[corresponds(ENGINE_register_complete)]
+    #[inline]
     pub fn register_complete(&mut self) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::ENGINE_register_complete(self.as_ptr()))?;
@@ -452,6 +454,8 @@ impl Engine {
         Ok(())
     }
 
+    #[corresponds(ENGINE_register_all_complete)]
+    #[inline]
     pub fn register_all_complete() -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::ENGINE_register_all_complete())?;
@@ -459,6 +463,8 @@ impl Engine {
         Ok(())
     }
 
+    #[corresponds(ENGINE_ctrl)]
+    #[inline]
     pub fn ctrl(
         &mut self,
         _cmd: i32,
@@ -469,6 +475,8 @@ impl Engine {
         todo!();
     }
 
+    #[corresponds(ENGINE_cmd_is_executable)]
+    #[inline]
     pub fn cmd_is_executable(&mut self, cmd: i32) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::ENGINE_cmd_is_executable(self.as_ptr(), cmd))?;
@@ -476,10 +484,14 @@ impl Engine {
         Ok(())
     }
 
+    #[corresponds(ENGINE_ctrl_cmd)]
+    #[inline]
     pub fn ctrl_cmd(&mut self, _cmd: &str, _arg: &str, _param: i32) -> Result<(), ErrorStack> {
         todo!();
     }
 
+    #[corresponds(ENGINE_ctrl_cmd_string)]
+    #[inline]
     pub fn ctrl_cmd_string(
         &mut self,
         _cmd: &str,
@@ -489,6 +501,8 @@ impl Engine {
         todo!();
     }
 
+    #[corresponds(ENGINE_up_ref)]
+    #[inline]
     pub fn up_ref(&mut self) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::ENGINE_up_ref(self.as_ptr()))?;
