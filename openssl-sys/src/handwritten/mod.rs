@@ -9,6 +9,7 @@ pub use self::crypto::*;
 pub use self::dh::*;
 pub use self::dsa::*;
 pub use self::ec::*;
+#[cfg(ossl110)]
 pub use self::engine::*;
 pub use self::err::*;
 pub use self::evp::*;
