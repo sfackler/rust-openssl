@@ -1,7 +1,6 @@
 use crate::error::ErrorStack;
 use crate::{cvt, cvt_n, cvt_p};
 use cfg_if::cfg_if;
-use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::strlen;
 use openssl_macros::corresponds;
 use std::convert::TryFrom;

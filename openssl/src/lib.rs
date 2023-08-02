@@ -154,6 +154,7 @@ pub mod dsa;
 pub mod ec;
 pub mod ecdsa;
 pub mod encrypt;
+#[cfg(all(not(boringssl), not(libressl), all(ossl110)))]
 pub mod engine;
 #[cfg(not(boringssl))]
 pub mod envelope;
