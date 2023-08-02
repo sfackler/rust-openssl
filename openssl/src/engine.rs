@@ -4,11 +4,11 @@ use crate::pkey_ctx::PkeyCtxRef;
 use crate::{cvt, cvt_n, cvt_p};
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
+use libc::strlen;
 use openssl_macros::corresponds;
 use std::convert::TryFrom;
+use std::ffi::{c_int, c_uint, c_void, CString};
 use std::ptr;
-use std::ffi::{CString, c_int, c_uint, c_void};
-use libc::{strlen};
 
 struct Engine(*mut ffi::ENGINE);
 
@@ -466,7 +466,13 @@ impl Engine {
         Ok(())
     }
 
-    pub fn ctrl(e: Engine, cmd: i32, i: i64, p: *mut c_void, f: extern "C" fn ()) -> Result<(), ErrorStack> {
+    pub fn ctrl(
+        e: Engine,
+        cmd: i32,
+        i: i64,
+        p: *mut c_void,
+        f: extern "C" fn(),
+    ) -> Result<(), ErrorStack> {
         todo!();
     }
 
@@ -481,7 +487,12 @@ impl Engine {
         todo!();
     }
 
-    pub fn ctrl_cmd_string(e: Engine, cmd: &str, arg: &str, optional: i32) -> Result<(), ErrorStack> {
+    pub fn ctrl_cmd_string(
+        e: Engine,
+        cmd: &str,
+        arg: &str,
+        optional: i32,
+    ) -> Result<(), ErrorStack> {
         todo!();
     }
 
@@ -552,35 +563,35 @@ impl Engine {
     /// Sets the init function on the engine.
     #[corresponds(ENGINE_set_init_function)]
     #[inline]
-    pub fn set_init_function (e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_init_function(e: Engine) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Sets the finish function on the engine.
     #[corresponds(ENGINE_set_finish_function)]
     #[inline]
-    pub fn set_finish_function (e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_finish_function(e: Engine) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Sets the ctrl function on the engine.
     #[corresponds(ENGINE_set_ctrl_function)]
     #[inline]
-    pub fn set_ctrl_function (e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_ctrl_function(e: Engine) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Sets the `load_privkey` function on the engine.
     #[corresponds(ENGINE_set_load_privkey_function)]
     #[inline]
-    pub fn set_load_privkey_function (e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_load_privkey_function(e: Engine) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Sets the `load_pubkey` function on the engine.
     #[corresponds(ENGINE_set_load_pubkey_function)]
     #[inline]
-    pub fn set_load_pubkey_function (e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_load_pubkey_function(e: Engine) -> Result<(), ErrorStack> {
         todo!();
     }
 
@@ -742,9 +753,7 @@ impl Engine {
     #[inline]
     pub fn get_flags(e: Engine) -> i32 {
         // TODO should these flags be a different type?
-        unsafe {
-            ffi::ENGINE_get_flags(e.as_ptr())
-        }
+        unsafe { ffi::ENGINE_get_flags(e.as_ptr()) }
     }
 
     /// Returns the command definitions.
@@ -767,7 +776,6 @@ impl Engine {
     pub fn load_public_key(e: Engine) -> Result<(), ErrorStack> {
         todo!();
     }
-
 }
 
 impl Drop for Engine {
@@ -807,12 +815,15 @@ mod test {
         println!("Engines:");
 
         while has_engines {
-            println!("  {}, name={}, id={}",
-                engine_cnt, engine.get_name().unwrap(), engine.get_id().unwrap()
+            println!(
+                "  {}, name={}, id={}",
+                engine_cnt,
+                engine.get_name().unwrap(),
+                engine.get_id().unwrap()
             );
             match engine.get_next() {
                 Ok(e) => engine = e,
-                Err(m) => has_engines = false
+                Err(m) => has_engines = false,
             }
 
             engine_cnt += 1;

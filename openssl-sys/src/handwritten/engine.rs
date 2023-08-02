@@ -101,7 +101,7 @@ extern "C" {
         cmd: c_int,
         i: c_long,
         p: *mut c_void,
-        f: extern "C" fn (),
+        f: extern "C" fn(),
     ) -> c_int;
 
     pub fn ENGINE_cmd_is_executable(e: *mut ENGINE, cmd: c_int) -> c_int;
@@ -111,7 +111,7 @@ extern "C" {
         cmd_name: *const c_char,
         i: c_long,
         p: *mut c_void,
-        f: extern "C" fn (),
+        f: extern "C" fn(),
         cmd_optional: c_int,
     ) -> c_int;
 
@@ -142,32 +142,42 @@ extern "C" {
 
     pub fn ENGINE_set_destroy_function(
         e: *mut ENGINE,
-        destroy_f: extern "C" fn (*mut ENGINE) -> c_int,
+        destroy_f: extern "C" fn(*mut ENGINE) -> c_int,
     ) -> c_int;
 
     pub fn ENGINE_set_init_function(
         e: *mut ENGINE,
-        init_f: extern "C" fn (*mut ENGINE) -> c_int,
+        init_f: extern "C" fn(*mut ENGINE) -> c_int,
     ) -> c_int;
 
     pub fn ENGINE_set_finish_function(
         e: *mut ENGINE,
-        finish_f: extern "C" fn (*mut ENGINE) -> c_int,
+        finish_f: extern "C" fn(*mut ENGINE) -> c_int,
     ) -> c_int;
 
     pub fn ENGINE_set_ctrl_function(
         e: *mut ENGINE,
-        ctrl_f: extern "C" fn (*mut ENGINE, c_int, c_long, *mut c_void, extern "C" fn ()) -> c_int,
+        ctrl_f: extern "C" fn(*mut ENGINE, c_int, c_long, *mut c_void, extern "C" fn()) -> c_int,
     ) -> c_int;
 
     pub fn ENGINE_set_load_privkey_function(
         e: *mut ENGINE,
-        loadpriv_f: extern "C" fn (*mut ENGINE, *const c_char, *mut UI_METHOD, *mut c_void) -> *mut EVP_PKEY,
+        loadpriv_f: extern "C" fn(
+            *mut ENGINE,
+            *const c_char,
+            *mut UI_METHOD,
+            *mut c_void,
+        ) -> *mut EVP_PKEY,
     ) -> c_int;
 
     pub fn ENGINE_set_load_pubkey_function(
         e: *mut ENGINE,
-        loadpub_f: unsafe extern "C" fn (*mut ENGINE, *const c_char, *mut UI_METHOD, *mut c_void) -> *mut EVP_PKEY,
+        loadpub_f: unsafe extern "C" fn(
+            *mut ENGINE,
+            *const c_char,
+            *mut UI_METHOD,
+            *mut c_void,
+        ) -> *mut EVP_PKEY,
     ) -> c_int;
 
     pub fn ENGINE_set_ciphers(e: *mut ENGINE, f: ENGINE_CIPHERS_PTR) -> c_int;
