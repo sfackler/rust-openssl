@@ -1,6 +1,4 @@
 use crate::error::ErrorStack;
-use crate::pkey::{HasPrivate, HasPublic, PKeyRef};
-use crate::pkey_ctx::PkeyCtxRef;
 use crate::{cvt, cvt_n, cvt_p};
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
@@ -187,9 +185,9 @@ impl Engine {
     /// Sets the default RSA engine.
     #[corresponds(ENGINE_set_default_RSA)]
     #[inline]
-    pub fn set_default_rsa(e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_default_rsa(&mut self) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_set_default_RSA(e.as_ptr()))?;
+            cvt(ffi::ENGINE_set_default_RSA(self.as_ptr()))?;
         }
         Ok(())
     }
@@ -197,9 +195,9 @@ impl Engine {
     /// Sets the default DSA engine.
     #[corresponds(ENGINE_set_default_DSA)]
     #[inline]
-    pub fn set_default_dsa(e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_default_dsa(&mut self) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_set_default_DSA(e.as_ptr()))?;
+            cvt(ffi::ENGINE_set_default_DSA(self.as_ptr()))?;
         }
         Ok(())
     }
@@ -207,9 +205,9 @@ impl Engine {
     /// Sets the default DH engine.
     #[corresponds(ENGINE_set_default_DH)]
     #[inline]
-    pub fn set_default_dh(e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_default_dh(&mut self) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_set_default_DH(e.as_ptr()))?;
+            cvt(ffi::ENGINE_set_default_DH(self.as_ptr()))?;
         }
         Ok(())
     }
@@ -217,9 +215,9 @@ impl Engine {
     /// Sets the default RAND engine.
     #[corresponds(ENGINE_set_default_RAND)]
     #[inline]
-    pub fn set_default_rand(e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_default_rand(&mut self) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_set_default_RAND(e.as_ptr()))?;
+            cvt(ffi::ENGINE_set_default_RAND(self.as_ptr()))?;
         }
         Ok(())
     }
@@ -227,9 +225,9 @@ impl Engine {
     /// Sets the default ciphers engine.
     #[corresponds(ENGINE_set_default_ciphers)]
     #[inline]
-    pub fn set_default_ciphers(e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_default_ciphers(&mut self) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_set_default_ciphers(e.as_ptr()))?;
+            cvt(ffi::ENGINE_set_default_ciphers(self.as_ptr()))?;
         }
         Ok(())
     }
@@ -237,9 +235,9 @@ impl Engine {
     /// Sets the default digests engine.
     #[corresponds(ENGINE_set_default_digests)]
     #[inline]
-    pub fn set_default_digests(e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_default_digests(&mut self) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_set_default_digests(e.as_ptr()))?;
+            cvt(ffi::ENGINE_set_default_digests(self.as_ptr()))?;
         }
         Ok(())
     }
@@ -247,10 +245,10 @@ impl Engine {
     /// Sets the default string for the engine.
     #[corresponds(ENGINE_set_default_string)]
     #[inline]
-    pub fn set_default_string(e: Engine, list: &str) -> Result<(), ErrorStack> {
+    pub fn set_default_string(&mut self, list: &str) -> Result<(), ErrorStack> {
         let list = CString::new(list).unwrap();
         unsafe {
-            cvt(ffi::ENGINE_set_default_string(e.as_ptr(), list.as_ptr()))?;
+            cvt(ffi::ENGINE_set_default_string(self.as_ptr(), list.as_ptr()))?;
         }
         Ok(())
     }
@@ -258,9 +256,9 @@ impl Engine {
     /// Sets the default engine.
     #[corresponds(ENGINE_set_default)]
     #[inline]
-    pub fn set_default(e: Engine, flags: u32) -> Result<(), ErrorStack> {
+    pub fn set_default(&mut self, flags: u32) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_set_default(e.as_ptr(), c_uint::from(flags)))?;
+            cvt(ffi::ENGINE_set_default(self.as_ptr(), c_uint::from(flags)))?;
         }
         Ok(())
     }
@@ -287,9 +285,9 @@ impl Engine {
     /// Registers the input engine as the RSA engine.
     #[corresponds(ENGINE_register_RSA)]
     #[inline]
-    pub fn register_rsa(e: Engine) -> Result<(), ErrorStack> {
+    pub fn register_rsa(&mut self) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_register_RSA(e.as_ptr()))?;
+            cvt(ffi::ENGINE_register_RSA(self.as_ptr()))?;
         }
         Ok(())
     }
@@ -297,16 +295,16 @@ impl Engine {
     /// Unregisters the input engine as the RSA engine.
     #[corresponds(ENGINE_unregister_RSA)]
     #[inline]
-    pub fn unregister_rsa(e: Engine) {
+    pub fn unregister_rsa(&mut self) {
         unsafe {
-            ffi::ENGINE_unregister_RSA(e.as_ptr());
+            ffi::ENGINE_unregister_RSA(self.as_ptr());
         }
     }
 
     /// Registers all of the engines as RSA.
     #[corresponds(ENGINE_register_all_RSA)]
     #[inline]
-    pub fn register_all_rsa(e: Engine) {
+    pub fn register_all_rsa(&mut self) {
         unsafe {
             ffi::ENGINE_register_all_RSA();
         }
@@ -315,9 +313,9 @@ impl Engine {
     /// Registers the input engine as the DSA engine.
     #[corresponds(ENGINE_register_DSA)]
     #[inline]
-    pub fn register_dsa(e: Engine) -> Result<(), ErrorStack> {
+    pub fn register_dsa(&mut self) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_register_DSA(e.as_ptr()))?;
+            cvt(ffi::ENGINE_register_DSA(self.as_ptr()))?;
         }
         Ok(())
     }
@@ -325,9 +323,9 @@ impl Engine {
     /// Unregisters the input engine as the DSA engine.
     #[corresponds(ENGINE_unregister_DSA)]
     #[inline]
-    pub fn unregister_dsa(e: Engine) {
+    pub fn unregister_dsa(&mut self) {
         unsafe {
-            ffi::ENGINE_unregister_DSA(e.as_ptr());
+            ffi::ENGINE_unregister_DSA(self.as_ptr());
         }
     }
 
@@ -343,9 +341,9 @@ impl Engine {
     /// Registers the input engine as the DH engine.
     #[corresponds(ENGINE_register_DH)]
     #[inline]
-    pub fn register_dh(e: Engine) -> Result<(), ErrorStack> {
+    pub fn register_dh(&mut self) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_register_DH(e.as_ptr()))?;
+            cvt(ffi::ENGINE_register_DH(self.as_ptr()))?;
         }
         Ok(())
     }
@@ -353,9 +351,9 @@ impl Engine {
     /// Unregisters the input engine as the DH engine.
     #[corresponds(ENGINE_unregister_DH)]
     #[inline]
-    pub fn unregister_dh(e: Engine) {
+    pub fn unregister_dh(&mut self) {
         unsafe {
-            ffi::ENGINE_unregister_DH(e.as_ptr());
+            ffi::ENGINE_unregister_DH(self.as_ptr());
         }
     }
 
@@ -371,9 +369,9 @@ impl Engine {
     /// Registers the input engine as the RAND engine.
     #[corresponds(ENGINE_register_RAND)]
     #[inline]
-    pub fn register_rand(e: Engine) -> Result<(), ErrorStack> {
+    pub fn register_rand(&mut self) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_register_RAND(e.as_ptr()))?;
+            cvt(ffi::ENGINE_register_RAND(self.as_ptr()))?;
         }
         Ok(())
     }
@@ -381,9 +379,9 @@ impl Engine {
     /// Unregisters the input engine as the RAND engine.
     #[corresponds(ENGINE_unregister_RAND)]
     #[inline]
-    pub fn unregister_rand(e: Engine) {
+    pub fn unregister_rand(&mut self) {
         unsafe {
-            ffi::ENGINE_unregister_RAND(e.as_ptr());
+            ffi::ENGINE_unregister_RAND(self.as_ptr());
         }
     }
 
@@ -399,9 +397,9 @@ impl Engine {
     /// Registers ciphers from the input engine.
     #[corresponds(ENGINE_register_ciphers)]
     #[inline]
-    pub fn register_ciphers(e: Engine) -> Result<(), ErrorStack> {
+    pub fn register_ciphers(&mut self) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_register_ciphers(e.as_ptr()))?;
+            cvt(ffi::ENGINE_register_ciphers(self.as_ptr()))?;
         }
         Ok(())
     }
@@ -409,9 +407,9 @@ impl Engine {
     /// Unregisters the ciphers from the input engine.
     #[corresponds(ENGINE_unregister_ciphers)]
     #[inline]
-    pub fn unregister_ciphers(e: Engine) {
+    pub fn unregister_ciphers(&mut self) {
         unsafe {
-            ffi::ENGINE_unregister_ciphers(e.as_ptr());
+            ffi::ENGINE_unregister_ciphers(self.as_ptr());
         }
     }
 
@@ -427,9 +425,9 @@ impl Engine {
     /// Registers digests from the input engine.
     #[corresponds(ENGINE_register_digests)]
     #[inline]
-    pub fn register_digests(e: Engine) -> Result<(), ErrorStack> {
+    pub fn register_digests(&mut self) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_register_digests(e.as_ptr()))?;
+            cvt(ffi::ENGINE_register_digests(self.as_ptr()))?;
         }
         Ok(())
     }
@@ -437,9 +435,9 @@ impl Engine {
     /// Unregisters the digests from the input engine.
     #[corresponds(ENGINE_unregister_digests)]
     #[inline]
-    pub fn unregister_digests(e: Engine) {
+    pub fn unregister_digests(&mut self) {
         unsafe {
-            ffi::ENGINE_unregister_digests(e.as_ptr());
+            ffi::ENGINE_unregister_digests(self.as_ptr());
         }
     }
 
@@ -452,9 +450,9 @@ impl Engine {
         }
     }
 
-    pub fn register_complete(e: Engine) -> Result<(), ErrorStack> {
+    pub fn register_complete(&mut self) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_register_complete(e.as_ptr()))?;
+            cvt(ffi::ENGINE_register_complete(self.as_ptr()))?;
         }
         Ok(())
     }
@@ -467,7 +465,7 @@ impl Engine {
     }
 
     pub fn ctrl(
-        e: Engine,
+        &mut self,
         cmd: i32,
         i: i64,
         p: *mut c_void,
@@ -476,19 +474,19 @@ impl Engine {
         todo!();
     }
 
-    pub fn cmd_is_executable(e: Engine, cmd: i32) -> Result<(), ErrorStack> {
+    pub fn cmd_is_executable(&mut self, cmd: i32) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_cmd_is_executable(e.as_ptr(), c_int::from(cmd)))?;
+            cvt(ffi::ENGINE_cmd_is_executable(self.as_ptr(), c_int::from(cmd)))?;
         }
         Ok(())
     }
 
-    pub fn ctrl_cmd(e: Engine, cmd: &str, arg: &str, param: i32) -> Result<(), ErrorStack> {
+    pub fn ctrl_cmd(&mut self, cmd: &str, arg: &str, param: i32) -> Result<(), ErrorStack> {
         todo!();
     }
 
     pub fn ctrl_cmd_string(
-        e: Engine,
+        &mut self,
         cmd: &str,
         arg: &str,
         optional: i32,
@@ -496,9 +494,9 @@ impl Engine {
         todo!();
     }
 
-    pub fn up_ref(e: Engine) -> Result<(), ErrorStack> {
+    pub fn up_ref(&mut self) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_up_ref(e.as_ptr()))?;
+            cvt(ffi::ENGINE_up_ref(self.as_ptr()))?;
         }
         Ok(())
     }
@@ -528,91 +526,91 @@ impl Engine {
     /// Sets the RSA method on the engine.
     #[corresponds(ENGINE_set_RSA)]
     #[inline]
-    pub fn set_rsa(e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_rsa(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Sets the DSA method on the engine.
     #[corresponds(ENGINE_set_DSA)]
     #[inline]
-    pub fn set_dsa(e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_dsa(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Sets the DH method on the engine.
     #[corresponds(ENGINE_set_DH)]
     #[inline]
-    pub fn set_dh(e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_dh(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Sets the RAND method on the engine.
     #[corresponds(ENGINE_set_RAND)]
     #[inline]
-    pub fn set_rand(e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_rand(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Sets the destroy function on the engine.
     #[corresponds(ENGINE_set_destroy_function)]
     #[inline]
-    pub fn set_destroy_function(e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_destroy_function(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Sets the init function on the engine.
     #[corresponds(ENGINE_set_init_function)]
     #[inline]
-    pub fn set_init_function(e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_init_function(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Sets the finish function on the engine.
     #[corresponds(ENGINE_set_finish_function)]
     #[inline]
-    pub fn set_finish_function(e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_finish_function(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Sets the ctrl function on the engine.
     #[corresponds(ENGINE_set_ctrl_function)]
     #[inline]
-    pub fn set_ctrl_function(e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_ctrl_function(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Sets the `load_privkey` function on the engine.
     #[corresponds(ENGINE_set_load_privkey_function)]
     #[inline]
-    pub fn set_load_privkey_function(e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_load_privkey_function(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Sets the `load_pubkey` function on the engine.
     #[corresponds(ENGINE_set_load_pubkey_function)]
     #[inline]
-    pub fn set_load_pubkey_function(e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_load_pubkey_function(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Sets the ciphers pointer on the engine.
     #[corresponds(ENGINE_set_ciphers)]
     #[inline]
-    pub fn set_ciphers(e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_ciphers(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Sets the digests pointer on the engine.
     #[corresponds(ENGINE_set_digests)]
     #[inline]
-    pub fn set_digests(e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_digests(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Sets command definitions on the engine.
     #[corresponds(ENGINE_set_cmd_defns)]
     #[inline]
-    pub fn set_cmd_defns(e: Engine) -> Result<(), ErrorStack> {
+    pub fn set_cmd_defns(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
@@ -653,127 +651,127 @@ impl Engine {
     /// Returns the engine's currently set RSA method.
     #[corresponds(ENGINE_get_RSA)]
     #[inline]
-    pub fn get_rsa(e: Engine) -> Result<(), ErrorStack> {
+    pub fn get_rsa(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Returns the engine's currently set DSA method.
     #[corresponds(ENGINE_get_DSA)]
     #[inline]
-    pub fn get_dsa(e: Engine) -> Result<(), ErrorStack> {
+    pub fn get_dsa(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Returns the engine's currently set DH method.
     #[corresponds(ENGINE_get_DH)]
     #[inline]
-    pub fn get_dh(e: Engine) -> Result<(), ErrorStack> {
+    pub fn get_dh(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Returns the engine's currently set RAND method.
     #[corresponds(ENGINE_get_RAND)]
     #[inline]
-    pub fn get_rand(e: Engine) -> Result<(), ErrorStack> {
+    pub fn get_rand(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Returns the engine's currently set destroy function.
     #[corresponds(ENGINE_get_destroy_function)]
     #[inline]
-    pub fn get_destroy_function(e: Engine) -> Result<(), ErrorStack> {
+    pub fn get_destroy_function(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Returns the engine's currently set init function.
     #[corresponds(ENGINE_get_init_function)]
     #[inline]
-    pub fn get_init_function(e: Engine) -> Result<(), ErrorStack> {
+    pub fn get_init_function(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Returns the engine's currently set finish function.
     #[corresponds(ENGINE_get_finish_function)]
     #[inline]
-    pub fn get_finish_function(e: Engine) -> Result<(), ErrorStack> {
+    pub fn get_finish_function(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Returns the engine's currently set ctrl function.
     #[corresponds(ENGINE_get_ctrl_function)]
     #[inline]
-    pub fn get_ctrl_function(e: Engine) -> Result<(), ErrorStack> {
+    pub fn get_ctrl_function(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Returns the engine's currently set `load_privkey_function` function.
     #[corresponds(ENGINE_get_load_privkey_function)]
     #[inline]
-    pub fn get_load_privkey_function(e: Engine) -> Result<(), ErrorStack> {
+    pub fn get_load_privkey_function(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Returns the engine's currently set `load_pubkey_function` function.
     #[corresponds(ENGINE_get_load_pubkey_function)]
     #[inline]
-    pub fn get_load_pubkey_function(e: Engine) -> Result<(), ErrorStack> {
+    pub fn get_load_pubkey_function(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Returns the engine's currently set ciphers.
     #[corresponds(ENGINE_get_ciphers)]
     #[inline]
-    pub fn get_ciphers(e: Engine) -> Result<(), ErrorStack> {
+    pub fn get_ciphers(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Returns the engine's current set digests.
     #[corresponds(ENGINE_get_digests)]
     #[inline]
-    pub fn get_digests(e: Engine) -> Result<(), ErrorStack> {
+    pub fn get_digests(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Returns the cipher for the passed `nid` value.
     #[corresponds(ENGINE_get_cipher)]
     #[inline]
-    pub fn get_cipher(e: Engine, nid: i32) -> Result<(), ErrorStack> {
+    pub fn get_cipher(&mut self, nid: i32) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Returns the digest for the passed `nid` value.
     #[corresponds(ENGINE_get_digest)]
     #[inline]
-    pub fn get_digest(e: Engine, nid: i32) -> Result<(), ErrorStack> {
+    pub fn get_digest(&mut self, nid: i32) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Returns the engine's flags.
     #[corresponds(ENGINE_get_flags)]
     #[inline]
-    pub fn get_flags(e: Engine) -> i32 {
+    pub fn get_flags(&mut self) -> i32 {
         // TODO should these flags be a different type?
-        unsafe { ffi::ENGINE_get_flags(e.as_ptr()) }
+        unsafe { ffi::ENGINE_get_flags(self.as_ptr()) }
     }
 
     /// Returns the command definitions.
     #[corresponds(ENGINE_get_cmd_defns)]
     #[inline]
-    pub fn get_cmd_defns(e: Engine) -> Result<(), ErrorStack> {
+    pub fn get_cmd_defns(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Load a private key into the engine.
     #[corresponds(ENGINE_load_private_key)]
     #[inline]
-    pub fn load_private_key(e: Engine) -> Result<(), ErrorStack> {
+    pub fn load_private_key(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 
     /// Load a public key into the engine.
     #[corresponds(ENGINE_load_public_key)]
     #[inline]
-    pub fn load_public_key(e: Engine) -> Result<(), ErrorStack> {
+    pub fn load_public_key(&mut self) -> Result<(), ErrorStack> {
         todo!();
     }
 }

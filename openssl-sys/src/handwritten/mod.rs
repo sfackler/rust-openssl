@@ -47,7 +47,7 @@ mod crypto;
 mod dh;
 mod dsa;
 mod ec;
-#[cfg(all(ossl110))]
+#[cfg(ossl110)]
 mod engine;
 mod err;
 mod evp;
