@@ -12,6 +12,7 @@ use foreign_types::{ForeignTypeRef, Opaque};
 use openssl_macros::corresponds;
 #[cfg(ossl300)]
 use std::ffi::CString;
+use std::ops::{Deref, DerefMut};
 #[cfg(ossl300)]
 use std::ptr;
 
@@ -41,7 +42,6 @@ cfg_if! {
 cfg_if! {
     if #[cfg(ossl300)] {
         use foreign_types::ForeignType;
-        use std::ops::{Deref, DerefMut};
 
         type Inner = *mut ffi::EVP_CIPHER;
 
@@ -90,6 +90,22 @@ cfg_if! {
         }
     } else {
         enum Inner {}
+
+        impl Deref for Cipher {
+            type Target = CipherRef;
+
+            #[inline]
+            fn deref(&self) -> &Self::Target {
+                match self.0 {}
+            }
+        }
+
+        impl DerefMut for Cipher {
+            #[inline]
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                match self.0 {}
+            }
+        }
     }
 }
 
