@@ -2,9 +2,16 @@
 
 ## [Unreleased]
 
+## [v0.9.91] - 2023-08-06
+
 ### Added
 
 * Expose `poly1305_state`, `CRYPTO_poly1305_init`, `CRYPTO_poly1305_update`, and `CRYPTO_poly1305_finish` on BoringSSL and LibreSSL.
+* Fix detection of libraries on OpenBSD.
+* Added `EC_POINT_point2hex` and `EC_POINT_hex2point`.
+* Added `EVP_PKEY_verify_recover_init`, `EVP_PKEY_verify_recover`, and `EVP_PKEY_CTX_set_signature_md`.
+* Added `EVP_CIPHER_CTX_FLAG_WRAP_ALLOW` and `EVP_CTX_set_flags`.
+* Added `BN_mod_sqrt`.
 
 ## [v0.9.90] - 2023-06-20
 
@@ -483,7 +490,8 @@ Fixed builds against OpenSSL built with `no-cast`.
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.90..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.91..master
+[v0.9.91]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.90...openssl-sys-v0.9.91
 [v0.9.90]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.89...openssl-sys-v0.9.90
 [v0.9.89]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.88...openssl-sys-v0.9.89
 [v0.9.88]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.87...openssl-sys-v0.9.88
