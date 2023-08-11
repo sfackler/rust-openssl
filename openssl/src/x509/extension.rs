@@ -467,6 +467,7 @@ impl SbgpAsIdentifier {
     }
 
     /// Return a `SbgpAsIdentifier` extension as an `X509Extension`.
+    #[allow(deprecated)]
     pub fn build(&self, ctx: &X509v3Context<'_>) -> Result<X509Extension, ErrorStack> {
         let mut value = String::new();
         let mut first = true;
@@ -542,6 +543,7 @@ impl SbgpIpAddressIdentifier {
     }
 
     /// Return a `SbgpIpAddressIdentifier` extension as an `X509Extension`.
+    #[allow(deprecated)]
     pub fn build(&self, ctx: &X509v3Context<'_>) -> Result<X509Extension, ErrorStack> {
         let mut value = String::new();
         let mut first = true;

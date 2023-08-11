@@ -8,7 +8,7 @@ pub struct ASRange {
 }
 
 #[repr(C)]
-pub struct _ASIdOrRange {
+pub struct ASIdOrRange {
     pub type_: c_int,
     pub u: ASIdOrRange_st_anon_union,
 }
@@ -28,7 +28,7 @@ pub struct ASIdentifierChoice {
 }
 
 #[repr(C)]
-pub struct _ASIdentifiers {
+pub struct ASIdentifiers {
     pub asnum: *mut ASIdentifierChoice,
     pub rdi: *mut ASIdentifierChoice,
 }
@@ -40,7 +40,7 @@ pub struct IPAddressRange {
 }
 
 #[repr(C)]
-pub struct _IPAddressOrRange {
+pub struct IPAddressOrRange {
     pub type_: c_int,
     pub u: IPAddressOrRange_st_anon_union,
 }
@@ -60,7 +60,7 @@ pub struct IPAddressChoice {
 }
 
 #[repr(C)]
-pub struct _IPAddressFamily {
+pub struct IPAddressFamily {
     pub addressFamily: *mut ASN1_OCTET_STRING,
     pub ipAddressChoice: *mut IPAddressChoice,
 }
@@ -69,13 +69,13 @@ stack!(stack_st_IPAddressFamily);
 type IPAddrBlocks = stack_st_IPAddressFamily;
 
 extern "C" {
-    pub fn ASIdentifiers_free(asi: *mut _ASIdentifiers);
-    pub fn ASIdOrRange_free(asi: *mut _ASIdOrRange);
-    pub fn IPAddressFamily_free(asi: *mut _IPAddressFamily);
-    pub fn IPAddressOrRange_free(asi: *mut _IPAddressOrRange);
+    pub fn ASIdentifiers_free(asi: *mut ASIdentifiers);
+    pub fn ASIdOrRange_free(asi: *mut ASIdOrRange);
+    pub fn IPAddressFamily_free(asi: *mut IPAddressFamily);
+    pub fn IPAddressOrRange_free(asi: *mut IPAddressOrRange);
 }
 
-pub unsafe fn X509v3_addr_get_afi(f: *mut _IPAddressFamily) -> c_int {
+pub unsafe fn X509v3_addr_get_afi(f: *mut IPAddressFamily) -> c_int {
     if f.is_null() {
         0
     } else {
@@ -151,7 +151,7 @@ fn addr_expand(addr: *mut u8, bs: *const ASN1_BIT_STRING, length: isize, fill: u
 /*
  * Extract min and max values from an IPAddressOrRange.
  */
-fn extract_min_max(aor: *mut _IPAddressOrRange, min: *mut u8, max: *mut u8, length: isize) -> bool {
+fn extract_min_max(aor: *mut IPAddressOrRange, min: *mut u8, max: *mut u8, length: isize) -> bool {
     unsafe {
         match (*aor).type_ {
             IPAddressOrRange_addressPrefix => {
@@ -168,7 +168,7 @@ fn extract_min_max(aor: *mut _IPAddressOrRange, min: *mut u8, max: *mut u8, leng
 }
 
 pub fn X509v3_addr_get_range(
-    aor: *mut _IPAddressOrRange,
+    aor: *mut IPAddressOrRange,
     afi: c_int,
     min: *mut u8,
     max: *mut u8,

@@ -118,7 +118,12 @@ fn main() {
         s == "ProbeResult" ||
             s == "X509_OBJECT_data" || // inline union
             s == "DIST_POINT_NAME_st_anon_union" || // inline union
-            s == "_ASIdOrRange_st_anon_union" || // inline union
+            s == "ASIdOrRange_st_anon_union" || // inline union
+            s == "ASIdOrRange" ||
+            s == "ASIdentifierChoice" ||
+            s == "IPAddressOrRange_st_anon_union" || // inline union
+            s == "IPAddressOrRange" ||
+            s == "IPAddressChoice" ||
             s == "PKCS7_data" ||
             s == "ASN1_TYPE_value"
     });

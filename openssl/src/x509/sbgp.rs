@@ -16,7 +16,7 @@ use crate::{
 use super::X509;
 
 foreign_type_and_impl_send_sync! {
-    type CType = ffi::_ASIdOrRange;
+    type CType = ffi::ASIdOrRange;
     fn drop = ffi::ASIdOrRange_free;
 
     /// The AS number extension of an `X509` certificate.
@@ -30,7 +30,7 @@ impl Stackable for ASIdOrRange {
 }
 
 foreign_type_and_impl_send_sync! {
-    type CType = ffi::_ASIdentifiers;
+    type CType = ffi::ASIdentifiers;
     fn drop = ffi::ASIdentifiers_free;
 
     /// The AS number extension of an `X509` certificate.
@@ -86,7 +86,7 @@ impl ASIdentifiers {
 }
 
 foreign_type_and_impl_send_sync! {
-    type CType = ffi::_IPAddressOrRange;
+    type CType = ffi::IPAddressOrRange;
     fn drop = ffi::IPAddressOrRange_free;
 
     /// The AS number extension of an `X509` certificate.
@@ -100,7 +100,7 @@ impl Stackable for IPAddressOrRange {
 }
 
 foreign_type_and_impl_send_sync! {
-    type CType = ffi::_IPAddressFamily;
+    type CType = ffi::IPAddressFamily;
     fn drop = ffi::IPAddressFamily_free;
 
     /// The AS number extension of an `X509` certificate.
