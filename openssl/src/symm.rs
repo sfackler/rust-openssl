@@ -295,7 +295,7 @@ impl Cipher {
     }
 
     /// Requires OpenSSL 1.1.0 or newer.
-    #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_CHACHA")))]
+    #[cfg(all(any(ossl110, libressl360), not(osslconf = "OPENSSL_NO_CHACHA")))]
     pub fn chacha20_poly1305() -> Cipher {
         unsafe { Cipher(ffi::EVP_chacha20_poly1305()) }
     }
@@ -1493,7 +1493,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl360))]
     fn test_chacha20_poly1305() {
         let key = "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f";
         let iv = "070000004041424344454647";
