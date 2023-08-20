@@ -102,6 +102,15 @@ impl CipherCtx {
             Ok(CipherCtx::from_ptr(ptr))
         }
     }
+
+    #[corresponds(EVP_CIPHER_CTX_copy)]
+    pub fn clone(&self) -> Result<Self, ErrorStack> {
+        let n = CipherCtx::new()?;
+        unsafe {
+            cvt(ffi::EVP_CIPHER_CTX_copy(n.as_ptr(), self.as_ptr()))?;
+        }
+        Ok(n)
+    }
 }
 
 impl CipherCtxRef {
