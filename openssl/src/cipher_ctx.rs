@@ -102,18 +102,17 @@ impl CipherCtx {
             Ok(CipherCtx::from_ptr(ptr))
         }
     }
-
-    #[corresponds(EVP_CIPHER_CTX_copy)]
-    pub fn clone(&self) -> Result<Self, ErrorStack> {
-        let n = CipherCtx::new()?;
-        unsafe {
-            cvt(ffi::EVP_CIPHER_CTX_copy(n.as_ptr(), self.as_ptr()))?;
-        }
-        Ok(n)
-    }
 }
 
 impl CipherCtxRef {
+    #[corresponds(EVP_CIPHER_CTX_copy)]
+    pub fn copy(&mut self, src: &CipherCtx) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_CIPHER_CTX_copy(self.as_ptr(), src.as_ptr()))?;
+            Ok(())
+        }
+    }
+
     /// Initializes the context for encryption.
     ///
     /// Normally this is called once to set all of the cipher, key, and IV. However, this process can be split up
