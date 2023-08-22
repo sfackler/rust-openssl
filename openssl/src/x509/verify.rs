@@ -131,6 +131,21 @@ impl X509VerifyParamRef {
         }
     }
 
+    /// Set the expected email address.
+    #[corresponds(X509_VERIFY_PARAM_set1_email)]
+    pub fn set_email(&mut self, email: &str) -> Result<(), ErrorStack> {
+        unsafe {
+            // len == 0 means "run strlen" :(
+            let raw_email = if email.is_empty() { "\0" } else { email };
+            cvt(ffi::X509_VERIFY_PARAM_set1_email(
+                self.as_ptr(),
+                raw_email.as_ptr() as *const _,
+                email.len(),
+            ))
+            .map(|_| ())
+        }
+    }
+
     /// Set the expected IPv4 or IPv6 address.
     #[corresponds(X509_VERIFY_PARAM_set1_ip)]
     pub fn set_ip(&mut self, ip: IpAddr) -> Result<(), ErrorStack> {

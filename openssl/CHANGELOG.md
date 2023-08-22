@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+ * Added `X509VerifyParam::set_email`
+
 ## [v0.10.56] - 2023-08-06
 
 ## Added
