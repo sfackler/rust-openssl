@@ -106,7 +106,7 @@ impl CipherCtx {
 
 impl CipherCtxRef {
     #[corresponds(EVP_CIPHER_CTX_copy)]
-    pub fn copy(&mut self, src: &CipherCtx) -> Result<(), ErrorStack> {
+    pub fn copy(&mut self, src: &CipherCtxRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_CIPHER_CTX_copy(self.as_ptr(), src.as_ptr()))?;
             Ok(())
