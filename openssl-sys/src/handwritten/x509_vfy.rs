@@ -118,6 +118,12 @@ extern "C" {
     #[cfg(any(ossl102, libressl261))]
     pub fn X509_VERIFY_PARAM_set_hostflags(param: *mut X509_VERIFY_PARAM, flags: c_uint);
     #[cfg(any(ossl102, libressl261))]
+    pub fn X509_VERIFY_PARAM_set1_email(
+        param: *mut X509_VERIFY_PARAM,
+        email: *const c_char,
+        emaillen: size_t,
+    ) -> c_int;
+    #[cfg(any(ossl102, libressl261))]
     pub fn X509_VERIFY_PARAM_set1_ip(
         param: *mut X509_VERIFY_PARAM,
         ip: *const c_uchar,
