@@ -2132,6 +2132,7 @@ impl SslSessionRef {
         unsafe {
             let mut len = 0;
             let p = ffi::SSL_SESSION_get_id(self.as_ptr(), &mut len);
+            #[allow(clippy::unnecessary_cast)]
             slice::from_raw_parts(p as *const u8, len as usize)
         }
     }

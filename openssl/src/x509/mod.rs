@@ -2102,6 +2102,7 @@ impl GeneralNameRef {
             let ptr = ASN1_STRING_get0_data(d as *mut _);
             let len = ffi::ASN1_STRING_length(d as *mut _);
 
+            #[allow(clippy::unnecessary_cast)]
             let slice = slice::from_raw_parts(ptr as *const u8, len as usize);
             // IA5Strings are stated to be ASCII (specifically IA5). Hopefully
             // OpenSSL checks that when loading a certificate but if not we'll
@@ -2155,6 +2156,7 @@ impl GeneralNameRef {
             let ptr = ASN1_STRING_get0_data(d as *mut _);
             let len = ffi::ASN1_STRING_length(d as *mut _);
 
+            #[allow(clippy::unnecessary_cast)]
             Some(slice::from_raw_parts(ptr as *const u8, len as usize))
         }
     }
