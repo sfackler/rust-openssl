@@ -28,6 +28,8 @@ foreign_type_and_impl_send_sync! {
 }
 
 bitflags! {
+    #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[repr(transparent)]
     pub struct Pkcs7Flags: c_int {
         const TEXT = ffi::PKCS7_TEXT;
         const NOCERTS = ffi::PKCS7_NOCERTS;
@@ -111,7 +113,7 @@ impl Pkcs7 {
                 certs.as_ptr(),
                 input_bio.as_ptr(),
                 cipher.as_ptr(),
-                flags.bits,
+                flags.bits(),
             ))
             .map(Pkcs7)
         }
@@ -141,7 +143,7 @@ impl Pkcs7 {
                 pkey.as_ptr(),
                 certs.as_ptr(),
                 input_bio.as_ptr(),
-                flags.bits,
+                flags.bits(),
             ))
             .map(Pkcs7)
         }
@@ -159,7 +161,7 @@ impl Pkcs7Ref {
                 output.as_ptr(),
                 self.as_ptr(),
                 input_bio.as_ptr(),
-                flags.bits,
+                flags.bits(),
             ))
             .map(|_| output.get_buf().to_owned())
         }
@@ -205,7 +207,7 @@ impl Pkcs7Ref {
                 pkey.as_ptr(),
                 cert.as_ptr(),
                 output.as_ptr(),
-                flags.bits,
+                flags.bits(),
             ))
             .map(|_| output.get_buf().to_owned())
         }
@@ -241,7 +243,7 @@ impl Pkcs7Ref {
                 store.as_ptr(),
                 indata_bio_ptr,
                 out_bio.as_ptr(),
-                flags.bits,
+                flags.bits(),
             ))
             .map(|_| ())?
         }
@@ -265,7 +267,7 @@ impl Pkcs7Ref {
             let ptr = cvt_p(ffi::PKCS7_get0_signers(
                 self.as_ptr(),
                 certs.as_ptr(),
-                flags.bits,
+                flags.bits(),
             ))?;
 
             // The returned stack is owned by the caller, but the certs inside are not! Our stack interface can't deal

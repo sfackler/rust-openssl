@@ -20,6 +20,8 @@ use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
 
 bitflags! {
+    #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[repr(transparent)]
     pub struct CMSOptions : c_uint {
         const TEXT = ffi::CMS_TEXT;
         const CMS_NOCERTS = ffi::CMS_NOCERTS;
