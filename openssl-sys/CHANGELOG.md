@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [v0.9.92] - 2023-08-27
+
+### Added
+
+* Added `EVP_CIPHER_CTX_copy`
+* Expose `EVP_chacha20_poly1305` on LibreSSL
+* Added `X509_VERIFY_PARAM_set1_email`
+
 ## [v0.9.91] - 2023-08-06
 
 ### Added
@@ -490,7 +498,8 @@ Fixed builds against OpenSSL built with `no-cast`.
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.91..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.92..master
+[v0.9.92]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.91...openssl-sys-v0.9.92
 [v0.9.91]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.90...openssl-sys-v0.9.91
 [v0.9.90]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.89...openssl-sys-v0.9.90
 [v0.9.89]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.88...openssl-sys-v0.9.89
