@@ -2,8 +2,15 @@
 
 ## [Unreleased]
 
+## [v0.10.57] - 2023-08-27
+
 ### Added
- * Added `X509VerifyParam::set_email`
+* Added `X509VerifyParam::set_email`
+* `Cipher::chacha20_poly1305` is now available on LibreSSL
+* Added `CipherCtx::copy`
+
+### Changed
+* Updated `bitflags` dependecy to the 2.x series
 
 ## [v0.10.56] - 2023-08-06
 
@@ -790,7 +797,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.56...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.57...master
+[v0.10.57]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.56...openssl-v0.10.57
 [v0.10.56]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.55...openssl-v0.10.56
 [v0.10.55]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.54...openssl-v0.10.55
 [v0.10.54]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.53...openssl-v0.10.54
