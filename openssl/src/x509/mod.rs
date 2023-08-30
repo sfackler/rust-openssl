@@ -420,6 +420,35 @@ impl X509Ref {
         }
     }
 
+    /// Returns this certificate's extensions for the given [Nid].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use openssl::nid::Nid;
+    /// use openssl::x509::X509;
+    ///
+    /// let cert = X509::from_pem(include_bytes!("../../test/extensions.pem")).unwrap();
+    /// let nid = Nid::create(&"1.3.6.1.4.1.41482.5.3", &"fw", &"firmware").unwrap();
+    /// let extension = cert.get_ext_by_nid(nid).unwrap().unwrap();
+    /// let value = extension.data().as_slice();
+    /// assert_eq!(value, [4, 3, 5, 2, 7]);
+    /// ```
+    #[corresponds(X509_get_ext_by_NID)]
+    pub fn get_ext_by_nid(&self, nid: Nid) -> Result<Option<&X509ExtensionRef>, ErrorStack> {
+        unsafe {
+            let loc = ffi::X509_get_ext_by_NID(self.as_ptr(), nid.as_raw(), -1);
+            Ok(if loc >= 0 {
+                Some(X509ExtensionRef::from_ptr(cvt_p(ffi::X509_get_ext(
+                    self.as_ptr(),
+                    loc,
+                ))?))
+            } else {
+                None
+            })
+        }
+    }
+
     /// Returns this certificate's subject alternative name entries, if they exist.
     #[corresponds(X509_get_ext_d2i)]
     pub fn subject_alt_names(&self) -> Option<Stack<GeneralName>> {
