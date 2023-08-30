@@ -1056,6 +1056,29 @@ impl X509ExtensionRef {
         to_der,
         ffi::i2d_X509_EXTENSION
     }
+
+    /// Returns the field value of an `X509Extension`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use openssl::asn1::{Asn1Object, Asn1OctetString};
+    /// use openssl::x509::X509Extension;
+    ///
+    /// let extension = X509Extension::new_from_der(&Asn1Object::from_str("2.999").unwrap(),
+    ///       true,
+    ///      &Asn1OctetString::new_from_bytes(b"\x30\x03\x01\x01\xff").unwrap(),
+    ///   ).unwrap();
+    /// let value = extension.data().as_slice();
+    /// assert_eq!(value, [48, 3, 1, 1, 255]);
+    /// ```
+    #[corresponds(X509_EXTENSION_get_data)]
+    pub fn data(&self) -> &Asn1OctetStringRef {
+        unsafe {
+            let data = ffi::X509_EXTENSION_get_data(self.as_ptr());
+            Asn1OctetStringRef::from_ptr(data)
+        }
+    }
 }
 
 /// A builder used to construct an `X509Name`.
