@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [v0.9.93] - 2023-09-04
+
+### Changed
+
+* The `vendored` Cargo feature now builds OpenSSL 3.1, as 1.1.1 is reaching its EOL.
+
+### Added
+
+* Added support for LibreSSL 3.8.1.
+
 ## [v0.9.92] - 2023-08-27
 
 ### Added
@@ -498,7 +508,8 @@ Fixed builds against OpenSSL built with `no-cast`.
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.92..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.93..master
+[v0.9.93]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.92...openssl-sys-v0.9.93
 [v0.9.92]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.91...openssl-sys-v0.9.92
 [v0.9.91]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.90...openssl-sys-v0.9.91
 [v0.9.90]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.89...openssl-sys-v0.9.90
