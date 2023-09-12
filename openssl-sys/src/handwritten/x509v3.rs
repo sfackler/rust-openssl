@@ -146,6 +146,7 @@ extern "C" {
     pub fn DIST_POINT_NAME_free(dist_point: *mut DIST_POINT_NAME);
 }
 
+#[cfg(ossl102)]
 extern "C" {
     pub fn X509_check_host(
         x: *mut X509,
