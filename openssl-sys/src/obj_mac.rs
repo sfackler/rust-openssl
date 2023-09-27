@@ -135,6 +135,8 @@ pub const NID_sha512WithRSAEncryption: c_int = 670;
 pub const NID_sha224WithRSAEncryption: c_int = 671;
 pub const NID_pkcs3: c_int = 27;
 pub const NID_dhKeyAgreement: c_int = 28;
+#[cfg(ossl110)]
+pub const NID_dhpublicnumber: c_int = 920;
 pub const NID_pkcs5: c_int = 187;
 pub const NID_pbeWithMD2AndDES_CBC: c_int = 9;
 pub const NID_pbeWithMD5AndDES_CBC: c_int = 10;
