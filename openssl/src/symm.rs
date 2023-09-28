@@ -288,6 +288,26 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_rc4()) }
     }
 
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAMELLIA")))]
+    pub fn camellia_128_cbc() -> Cipher {
+        unsafe { Cipher(ffi::EVP_camellia_128_cbc()) }
+    }
+
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAMELLIA")))]
+    pub fn camellia_192_cbc() -> Cipher {
+        unsafe { Cipher(ffi::EVP_camellia_192_cbc()) }
+    }
+
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAMELLIA")))]
+    pub fn camellia_256_cbc() -> Cipher {
+        unsafe { Cipher(ffi::EVP_camellia_256_cbc()) }
+    }
+
+    #[cfg(not(osslconf = "OPENSSL_NO_CAST"))]
+    pub fn cast5_cbc() -> Cipher {
+        unsafe { Cipher(ffi::EVP_cast5_cbc()) }
+    }
+
     /// Requires OpenSSL 1.1.0 or newer.
     #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_CHACHA")))]
     pub fn chacha20() -> Cipher {
@@ -298,6 +318,11 @@ impl Cipher {
     #[cfg(all(any(ossl110, libressl360), not(osslconf = "OPENSSL_NO_CHACHA")))]
     pub fn chacha20_poly1305() -> Cipher {
         unsafe { Cipher(ffi::EVP_chacha20_poly1305()) }
+    }
+
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_IDEA")))]
+    pub fn idea_cbc() -> Cipher {
+        unsafe { Cipher(ffi::EVP_idea_cbc()) }
     }
 
     #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_SEED")))]

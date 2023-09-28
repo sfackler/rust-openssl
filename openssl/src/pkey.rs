@@ -78,12 +78,16 @@ pub struct Id(c_int);
 
 impl Id {
     pub const RSA: Id = Id(ffi::EVP_PKEY_RSA);
+    #[cfg(any(openssl111, boringssl))]
+    pub const RSA_PSS: Id = Id(ffi::EVP_PKEY_RSA_PSS);
     #[cfg(not(boringssl))]
     pub const HMAC: Id = Id(ffi::EVP_PKEY_HMAC);
     #[cfg(not(boringssl))]
     pub const CMAC: Id = Id(ffi::EVP_PKEY_CMAC);
     pub const DSA: Id = Id(ffi::EVP_PKEY_DSA);
     pub const DH: Id = Id(ffi::EVP_PKEY_DH);
+    #[cfg(ossl110)]
+    pub const DHX: Id = Id(ffi::EVP_PKEY_DHX);
     pub const EC: Id = Id(ffi::EVP_PKEY_EC);
     #[cfg(ossl111)]
     pub const SM2: Id = Id(ffi::EVP_PKEY_SM2);

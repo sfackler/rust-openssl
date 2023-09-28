@@ -7,8 +7,12 @@ pub const PKCS5_SALT_LEN: c_int = 8;
 pub const PKCS12_DEFAULT_ITER: c_int = 2048;
 
 pub const EVP_PKEY_RSA: c_int = NID_rsaEncryption;
+#[cfg(any(openssl111, boringssl))]
+pub const EVP_PKEY_RSA_PSS: c_int = NID_rsassaPss;
 pub const EVP_PKEY_DSA: c_int = NID_dsa;
 pub const EVP_PKEY_DH: c_int = NID_dhKeyAgreement;
+#[cfg(ossl110)]
+pub const EVP_PKEY_DHX: c_int = NID_dhpublicnumber;
 pub const EVP_PKEY_EC: c_int = NID_X9_62_id_ecPublicKey;
 #[cfg(ossl111)]
 pub const EVP_PKEY_SM2: c_int = NID_sm2;

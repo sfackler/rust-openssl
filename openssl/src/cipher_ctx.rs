@@ -548,7 +548,7 @@ impl CipherCtxRef {
     /// # Panics
     ///
     /// Panics if `output` doesn't contain enough space for data to be
-    /// written as specified by [`Self::minimal_output_size`].
+    /// written.
     #[corresponds(EVP_CipherUpdate)]
     pub fn cipher_update(
         &mut self,

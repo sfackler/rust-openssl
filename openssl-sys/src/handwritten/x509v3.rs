@@ -145,3 +145,22 @@ extern "C" {
     pub fn DIST_POINT_free(dist_point: *mut DIST_POINT);
     pub fn DIST_POINT_NAME_free(dist_point: *mut DIST_POINT_NAME);
 }
+
+#[cfg(ossl102)]
+extern "C" {
+    pub fn X509_check_host(
+        x: *mut X509,
+        chk: *const c_char,
+        chklen: usize,
+        flags: c_uint,
+        peername: *mut *mut c_char,
+    ) -> c_int;
+    pub fn X509_check_email(
+        x: *mut X509,
+        chk: *const c_char,
+        chklen: usize,
+        flags: c_uint,
+    ) -> c_int;
+    pub fn X509_check_ip(x: *mut X509, chk: *const c_uchar, chklen: usize, flags: c_uint) -> c_int;
+    pub fn X509_check_ip_asc(x: *mut X509, ipasc: *const c_char, flags: c_uint) -> c_int;
+}
