@@ -1746,6 +1746,17 @@ unsafe impl ExtensionType for CertificateIssuer {
     type Output = Stack<GeneralName>;
 }
 
+/// The CRL extension identifying how to access information and services for the issuer of the CRL
+pub enum AuthorityInformationAccess {}
+
+// SAFETY: AuthorityInformationAccess is defined to be a stack of AccessDescription in the RFC
+// and in OpenSSL.
+unsafe impl ExtensionType for AuthorityInformationAccess {
+    const NID: Nid = Nid::from_raw(ffi::NID_info_access);
+
+    type Output = Stack<AccessDescription>;
+}
+
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_CRL;
     fn drop = ffi::X509_CRL_free;
@@ -1914,6 +1925,36 @@ impl X509CrlRef {
         T: HasPublic,
     {
         unsafe { cvt_n(ffi::X509_CRL_verify(self.as_ptr(), key.as_ptr())).map(|n| n != 0) }
+    }
+
+    /// Get the criticality and value of an extension.
+    ///
+    /// This returns None if the extension is not present or occurs multiple times.
+    #[corresponds(X509_CRL_get_ext_d2i)]
+    pub fn extension<T: ExtensionType>(&self) -> Result<Option<(bool, T::Output)>, ErrorStack> {
+        let mut critical = -1;
+        let out = unsafe {
+            // SAFETY: self.as_ptr() is a valid pointer to an X509_CRL.
+            let ext = ffi::X509_CRL_get_ext_d2i(
+                self.as_ptr(),
+                T::NID.as_raw(),
+                &mut critical as *mut _,
+                ptr::null_mut(),
+            );
+            // SAFETY: Extensions's contract promises that the type returned by
+            // OpenSSL here is T::Output.
+            T::Output::from_ptr_opt(ext as *mut _)
+        };
+        match (critical, out) {
+            (0, Some(out)) => Ok(Some((false, out))),
+            (1, Some(out)) => Ok(Some((true, out))),
+            // -1 means the extension wasn't found, -2 means multiple were found.
+            (-1 | -2, _) => Ok(None),
+            // A critical value of 0 or 1 suggests success, but a null pointer
+            // was returned so something went wrong.
+            (0 | 1, None) => Err(ErrorStack::get()),
+            (c_int::MIN..=-2 | 2.., _) => panic!("OpenSSL should only return -2, -1, 0, or 1 for an extension's criticality but it returned {}", critical),
+        }
     }
 }
 
