@@ -77,6 +77,7 @@ use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use openssl_macros::corresponds;
 use std::convert::TryFrom;
+use std::ffi::CString;
 use std::ptr;
 
 /// HKDF modes of operation.
@@ -122,6 +123,24 @@ impl<T> PkeyCtx<T> {
     pub fn new(pkey: &PKeyRef<T>) -> Result<Self, ErrorStack> {
         unsafe {
             let ptr = cvt_p(ffi::EVP_PKEY_CTX_new(pkey.as_ptr(), ptr::null_mut()))?;
+            Ok(PkeyCtx::from_ptr(ptr))
+        }
+    }
+
+    #[cfg(ossl300)]
+    pub fn new_from_name(
+        lib_ctx: &crate::lib_ctx::LibCtxRef,
+        name: &str,
+        property: Option<&str>,
+    ) -> Result<Self, ErrorStack> {
+        unsafe {
+            let property = property.map(|s| CString::new(s).unwrap());
+            let name = CString::new(name).unwrap();
+            let ptr = cvt_p(ffi::EVP_PKEY_CTX_new_from_name(
+                lib_ctx.as_ptr(),
+                name.as_ptr(),
+                property.map_or(ptr::null_mut(), |s| s.as_ptr()),
+            ))?;
             Ok(PkeyCtx::from_ptr(ptr))
         }
     }
@@ -998,5 +1017,14 @@ mod test {
         assert_eq!(length, 51);
         // The digest is the end of the DigestInfo structure.
         assert_eq!(result_buf[length - digest.len()..length], digest);
+    }
+
+    #[test]
+    #[cfg(ossl300)]
+    fn test_pkeyctx_from_name() {
+        use crate::pkey::Public;
+
+        let lib_ctx = crate::lib_ctx::LibCtx::new().unwrap();
+        let _: PkeyCtx<Public> = PkeyCtx::new_from_name(lib_ctx.as_ref(), "RSA", None).unwrap();
     }
 }

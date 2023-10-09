@@ -511,6 +511,11 @@ extern "C" {
 
     pub fn EVP_PKEY_CTX_new(k: *mut EVP_PKEY, e: *mut ENGINE) -> *mut EVP_PKEY_CTX;
     pub fn EVP_PKEY_CTX_new_id(id: c_int, e: *mut ENGINE) -> *mut EVP_PKEY_CTX;
+    pub fn EVP_PKEY_CTX_new_from_name(
+        ctx: *mut OSSL_LIB_CTX,
+        name: *const c_char,
+        property: *const c_char,
+    ) -> *mut EVP_PKEY_CTX;
     pub fn EVP_PKEY_CTX_free(ctx: *mut EVP_PKEY_CTX);
 
     pub fn EVP_PKEY_CTX_ctrl(
