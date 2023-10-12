@@ -11,7 +11,7 @@
 #![recursion_limit = "128"] // configure fixed limit across all rust versions
 
 extern crate libc;
-pub use libc::*;
+pub use libc::c_int;
 
 #[cfg(feature = "unstable_boringssl")]
 extern crate bssl_sys;

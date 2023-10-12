@@ -832,7 +832,7 @@ impl Ord for X509 {
 
 impl PartialOrd for X509 {
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        X509Ref::partial_cmp(self, other)
+        Some(self.cmp(other))
     }
 }
 
