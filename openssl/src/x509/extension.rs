@@ -428,17 +428,20 @@ impl AuthorityKeyIdentifier {
     }
 }
 
+#[cfg(ossl110)]
 pub struct SbgpAsIdentifier {
     critical: bool,
     asn: Vec<(u32, u32)>,
 }
 
+#[cfg(ossl110)]
 impl Default for SbgpAsIdentifier {
     fn default() -> SbgpAsIdentifier {
         SbgpAsIdentifier::new()
     }
 }
 
+#[cfg(ossl110)]
 impl SbgpAsIdentifier {
     /// Construct a new `SbgpAsIdentifier` extension.
     pub fn new() -> SbgpAsIdentifier {
@@ -484,17 +487,20 @@ impl SbgpAsIdentifier {
     }
 }
 
+#[cfg(ossl110)]
 pub struct SbgpIpAddressIdentifier {
     critical: bool,
     ip_ranges: Vec<(std::net::IpAddr, std::net::IpAddr)>,
 }
 
+#[cfg(ossl110)]
 impl Default for SbgpIpAddressIdentifier {
     fn default() -> SbgpIpAddressIdentifier {
         SbgpIpAddressIdentifier::new()
     }
 }
 
+#[cfg(ossl110)]
 impl SbgpIpAddressIdentifier {
     /// Construct a new `SbgpIpAddressIdentifier` extension.
     pub fn new() -> SbgpIpAddressIdentifier {

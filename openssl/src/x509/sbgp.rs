@@ -1,20 +1,28 @@
+#[cfg(ossl110)]
+use std::convert::TryInto;
+#[cfg(ossl110)]
 use std::mem::MaybeUninit;
 
+#[cfg(ossl110)]
 use ffi::{
     ASIdOrRange_id, ASIdOrRange_range, ASIdentifierChoice_asIdsOrRanges,
     ASIdentifierChoice_inherit, IPAddressChoice_addressesOrRanges, X509v3_addr_get_afi,
     X509v3_addr_get_range, ASN1_INTEGER, IANA_AFI_IPV4, IANA_AFI_IPV6,
 };
+#[cfg(ossl110)]
 use foreign_types::{ForeignType, ForeignTypeRef};
 
+#[cfg(ossl110)]
 use crate::{
     asn1::Asn1IntegerRef,
     stack::{Stack, StackRef, Stackable},
     util::{ForeignTypeExt, ForeignTypeRefExt},
 };
 
+#[cfg(ossl110)]
 use super::X509;
 
+#[cfg(ossl110)]
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ASIdOrRange;
     fn drop = ffi::ASIdOrRange_free;
@@ -24,11 +32,12 @@ foreign_type_and_impl_send_sync! {
     /// Reference to `ASIdOrRange`.
     pub struct ASIdOrRangeRef;
 }
-
+#[cfg(ossl110)]
 impl Stackable for ASIdOrRange {
     type StackType = ffi::stack_st_ASIdOrRange;
 }
 
+#[cfg(ossl110)]
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ASIdentifiers;
     fn drop = ffi::ASIdentifiers_free;
@@ -39,6 +48,7 @@ foreign_type_and_impl_send_sync! {
     pub struct ASIdentifiersRef;
 }
 
+#[cfg(ossl110)]
 impl ASIdentifiers {
     pub fn inherited(&self) -> bool {
         unsafe {
@@ -56,7 +66,7 @@ impl ASIdentifiers {
             if (*asnum).type_ != ASIdentifierChoice_asIdsOrRanges {
                 return None;
             }
-            if let Some(s) = StackRef::<ASIdOrRange>::from_const_ptr_opt((*asnum).asIdsOrRanges) {
+            if let Some(s) = StackRef::<ASIdOrRange>::from_const_ptr_opt((*asnum).u.asIdsOrRanges) {
                 for a_ptr in s {
                     let a = a_ptr.as_ptr();
                     if (*a).type_ == ASIdOrRange_id {
@@ -85,6 +95,7 @@ impl ASIdentifiers {
     }
 }
 
+#[cfg(ossl110)]
 foreign_type_and_impl_send_sync! {
     type CType = ffi::IPAddressOrRange;
     fn drop = ffi::IPAddressOrRange_free;
@@ -95,10 +106,12 @@ foreign_type_and_impl_send_sync! {
     pub struct IPAddressOrRangeRef;
 }
 
+#[cfg(ossl110)]
 impl Stackable for IPAddressOrRange {
     type StackType = ffi::stack_st_IPAddressOrRange;
 }
 
+#[cfg(ossl110)]
 foreign_type_and_impl_send_sync! {
     type CType = ffi::IPAddressFamily;
     fn drop = ffi::IPAddressFamily_free;
@@ -109,21 +122,24 @@ foreign_type_and_impl_send_sync! {
     pub struct IPAddressFamilyRef;
 }
 
+#[cfg(ossl110)]
 impl Stackable for IPAddressFamily {
     type StackType = ffi::stack_st_IPAddressFamily;
 }
 
 #[derive(PartialEq, Eq, Debug)]
+#[cfg(ossl110)]
 pub enum IPVersion {
     V4,
     V6,
 }
 
+#[cfg(ossl110)]
 impl IPAddressFamily {
     pub fn fam(&self) -> Option<IPVersion> {
         let ptr = self.0;
         unsafe {
-            match X509v3_addr_get_afi(ptr) {
+            match X509v3_addr_get_afi(ptr) as libc::c_int {
                 IANA_AFI_IPV4 => Some(IPVersion::V4),
                 IANA_AFI_IPV6 => Some(IPVersion::V6),
                 _ => None,
@@ -140,7 +156,7 @@ impl IPAddressFamily {
                 return None;
             }
             let stack =
-                StackRef::<IPAddressOrRange>::from_const_ptr_opt((*choice).addressesOrRanges)?;
+                StackRef::<IPAddressOrRange>::from_const_ptr_opt((*choice).u.addressesOrRanges)?;
             for e in stack {
                 let mut min = MaybeUninit::<[u8; 16]>::uninit();
                 let mut max = MaybeUninit::<[u8; 16]>::uninit();
@@ -152,8 +168,10 @@ impl IPAddressFamily {
                     16,
                 );
                 r.push((
-                    Self::data_to_ip_addr(min.assume_init(), size)?,
-                    Self::data_to_ip_addr(max.assume_init(), size)?,
+                    #[allow(clippy::useless_conversion)]
+                    Self::data_to_ip_addr(min.assume_init(), size.try_into().unwrap())?,
+                    #[allow(clippy::useless_conversion)]
+                    Self::data_to_ip_addr(max.assume_init(), size.try_into().unwrap())?,
                 ))
             }
         }
@@ -180,11 +198,13 @@ impl IPAddressFamily {
     }
 }
 
+#[cfg(ossl110)]
 pub trait ExtractSBGPInfo {
     fn asn(&self) -> Option<ASIdentifiers>;
     fn ip_addresses(&self) -> Option<Stack<IPAddressFamily>>;
 }
 
+#[cfg(ossl110)]
 impl ExtractSBGPInfo for X509 {
     fn asn(&self) -> Option<ASIdentifiers> {
         unsafe {

@@ -1,5 +1,7 @@
 use std::cmp::Ordering;
+#[cfg(ossl110)]
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+#[cfg(ossl110)]
 use std::str::FromStr;
 
 use crate::asn1::{Asn1Object, Asn1OctetString, Asn1Time};
@@ -13,8 +15,12 @@ use crate::ssl::SslFiletype;
 use crate::stack::Stack;
 use crate::x509::extension::{
     AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, KeyUsage, SubjectAlternativeName,
-    SubjectKeyIdentifier, SbgpAsIdentifier, SbgpIpAddressIdentifier
+    SubjectKeyIdentifier,
 };
+#[cfg(ossl110)]
+use crate::x509::extension::{SbgpAsIdentifier, SbgpIpAddressIdentifier};
+#[cfg(ossl110)]
+use crate::x509::sbgp::ExtractSBGPInfo;
 #[cfg(not(boringssl))]
 use crate::x509::store::X509Lookup;
 use crate::x509::store::X509StoreBuilder;
@@ -29,7 +35,6 @@ use crate::x509::{CrlReason, X509Builder};
 use crate::x509::{
     CrlStatus, X509Crl, X509Extension, X509Name, X509Req, X509StoreContext, X509VerifyResult, X509,
 };
-use crate::x509::sbgp::ExtractSBGPInfo;
 
 #[cfg(ossl110)]
 use foreign_types::ForeignType;
@@ -1182,13 +1187,14 @@ fn test_dist_point_null() {
 }
 
 #[test]
+#[cfg(ossl110)]
 fn test_sbgp_extensions_parsing() {
     let cert = include_bytes!("../../test/rfc3779.pem");
     let cert = X509::from_pem(cert).unwrap();
 
     let asn_ranges = cert.asn().unwrap().ranges().unwrap();
-    assert_eq!(asn_ranges[0], (10,18));
-    assert_eq!(asn_ranges[1], (20,20));
+    assert_eq!(asn_ranges[0], (10, 18));
+    assert_eq!(asn_ranges[1], (20, 20));
 
     let families = cert.ip_addresses().unwrap();
     for family in families {
@@ -1196,7 +1202,10 @@ fn test_sbgp_extensions_parsing() {
         for (ip_min, ip_max) in ranges {
             if let (IpAddr::V6(a_v6_min), IpAddr::V6(a_v6_max)) = (ip_min, ip_max) {
                 assert_eq!(a_v6_min, Ipv6Addr::from_str("fd00::").unwrap());
-                assert_eq!(a_v6_max, Ipv6Addr::from_str("fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff").unwrap());
+                assert_eq!(
+                    a_v6_max,
+                    Ipv6Addr::from_str("fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff").unwrap()
+                );
             }
             if let (IpAddr::V4(a_v4_min), IpAddr::V4(a_v4_max)) = (ip_min, ip_max) {
                 assert_eq!(a_v4_min, Ipv4Addr::from_str("10.0.0.0").unwrap());
@@ -1207,19 +1216,29 @@ fn test_sbgp_extensions_parsing() {
 }
 
 #[test]
+#[cfg(ossl110)]
 fn test_sbgp_extensions_builder() {
     let mut builder = X509Builder::new().unwrap();
     let asn_ext = SbgpAsIdentifier::new()
         .critical()
         .add_asn(32)
-        .add_asn_range(10,20)
-        .build(&builder.x509v3_context(None, None)).unwrap();
+        .add_asn_range(10, 20)
+        .build(&builder.x509v3_context(None, None))
+        .unwrap();
     builder.append_extension(asn_ext).unwrap();
 
     let mut ip_addr_ext = SbgpIpAddressIdentifier::new();
     ip_addr_ext.critical();
-    ip_addr_ext.add_ipv6_addr_range(Ipv6Addr::from_str("fd00::").unwrap(), Ipv6Addr::from_str("fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff").unwrap());
-    ip_addr_ext.add_ipv4_addr_range(Ipv4Addr::from_str("10.0.0.0").unwrap(), Ipv4Addr::from_str("10.0.0.255").unwrap());
-    let build_ext = ip_addr_ext.build(&builder.x509v3_context(None, None)).unwrap();
+    ip_addr_ext.add_ipv6_addr_range(
+        Ipv6Addr::from_str("fd00::").unwrap(),
+        Ipv6Addr::from_str("fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff").unwrap(),
+    );
+    ip_addr_ext.add_ipv4_addr_range(
+        Ipv4Addr::from_str("10.0.0.0").unwrap(),
+        Ipv4Addr::from_str("10.0.0.255").unwrap(),
+    );
+    let build_ext = ip_addr_ext
+        .build(&builder.x509v3_context(None, None))
+        .unwrap();
     builder.append_extension(build_ext).unwrap();
 }
