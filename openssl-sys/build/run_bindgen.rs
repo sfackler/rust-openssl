@@ -173,7 +173,7 @@ pub fn run_boringssl(include_dirs: &[PathBuf]) {
         .arg(out_dir.join("bindgen.rs"))
         // Must be a valid version from
         // https://docs.rs/bindgen/latest/bindgen/enum.RustTarget.html
-        .arg("--rust-target=1.47")
+        .arg("--rust-target=1.59")
         .arg("--ctypes-prefix=::libc")
         .arg("--raw-line=use libc::*;")
         .arg("--no-derive-default")
