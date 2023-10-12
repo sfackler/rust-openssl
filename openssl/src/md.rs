@@ -188,14 +188,12 @@ impl Md {
 
     #[cfg(not(osslconf = "OPENSSL_NO_RMD160"))]
     #[inline]
-    #[cfg(not(boringssl))]
     pub fn ripemd160() -> &'static MdRef {
         unsafe { MdRef::from_ptr(ffi::EVP_ripemd160() as *mut _) }
     }
 
     #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM3")))]
     #[inline]
-    #[cfg(not(boringssl))]
     pub fn sm3() -> &'static MdRef {
         unsafe { MdRef::from_ptr(ffi::EVP_sm3() as *mut _) }
     }

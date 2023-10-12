@@ -154,7 +154,7 @@ jobs:
             - false
           library:
             - name: boringssl
-              version: bcecc7d834fc44ad257b2f23f88e1cf597ab2736
+              version: 8d71d244c0debac4079beeb02b5802fde59b94bd
             - name: openssl
               version: vendored
             - name: openssl
@@ -239,7 +239,7 @@ jobs:
         - uses: actions/cache@v3
           with:
             path: /opt/openssl
-            key: openssl-${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-2
+            key: openssl-${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-6
           if: matrix.library.version != 'vendored'
           id: openssl-cache
         - run: |
@@ -313,11 +313,8 @@ jobs:
               make install
 
               # Copy stuff around so it's all as the build system expects.
-              cp -r rust/ "$OPENSSL_DIR/rust"
-              mkdir -p "$OPENSSL_DIR/crypto/"
-              mkdir -p "$OPENSSL_DIR/ssl/"
-              cp "$OPENSSL_DIR/lib/libcrypto.a" "$OPENSSL_DIR/crypto/"
-              cp "$OPENSSL_DIR/lib/libssl.a" "$OPENSSL_DIR/ssl/"
+              cp -r ../rust/ "$OPENSSL_DIR/rust"
+              cp -r ./ "$OPENSSL_DIR/build"
             esac
 
           if: matrix.library.version != 'vendored' && !steps.openssl-cache.outputs.cache-hit
@@ -356,6 +353,7 @@ jobs:
           run: |
             if [[ "${{ matrix.library.name }}" == "boringssl" && "${{ matrix.bindgen }}" != "true" ]]; then
               features="--features unstable_boringssl"
+              BORINGSSL_BUILD_DIR="$OPENSSL_DIR/build/"
             fi
             if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
               features="--features vendored"

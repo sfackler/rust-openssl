@@ -475,6 +475,6 @@ mod tests {
         let g = BigNum::from_hex_str("02").unwrap();
         let dh2 = Dh::from_pqg(p, None, g).unwrap();
         assert!(dh1.check_key().unwrap());
-        assert!(!dh2.check_key().unwrap());
+        assert!(matches!(dh2.check_key(), Ok(false) | Err(_)));
     }
 }
