@@ -91,6 +91,7 @@ cfg_if! {
         pub const X509_V_ERR_INVALID_CALL: c_int = 69;
         pub const X509_V_ERR_STORE_LOOKUP: c_int = 70;
         pub const X509_V_ERR_NO_VALID_SCTS: c_int = 71;
+        pub const DANE_FLAG_NO_DANE_EE_NAMECHECKS: c_ulong = 1;
     } else if #[cfg(ossl102h)] {
         pub const X509_V_ERR_INVALID_CALL: c_int = 65;
         pub const X509_V_ERR_STORE_LOOKUP: c_int = 66;
