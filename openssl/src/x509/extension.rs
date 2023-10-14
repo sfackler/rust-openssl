@@ -477,9 +477,9 @@ impl SbgpAsIdentifier {
         append(&mut value, &mut first, self.critical, "critical");
         for (asn_min, asn_max) in &self.asn {
             let asn_format = if asn_min == asn_max {
-                format!("AS:{asn_min}")
+                format!("AS:{}", asn_min)
             } else {
-                format!("AS:{asn_min}-{asn_max}")
+                format!("AS:{}-{}", asn_min, asn_max)
             };
             append(&mut value, &mut first, true, &asn_format);
         }
@@ -557,9 +557,9 @@ impl SbgpIpAddressIdentifier {
         for (ip_addr_min, ip_addr_max) in &self.ip_ranges {
             let version = if ip_addr_min.is_ipv4() { 4 } else { 6 };
             let ip_addr_format = if ip_addr_min == ip_addr_max {
-                format!("IPv{version}:{ip_addr_min}")
+                format!("IPv{}:{}", version, ip_addr_min)
             } else {
-                format!("IPv{version}:{ip_addr_min}-{ip_addr_max}")
+                format!("IPv{}:{}-{}", version, ip_addr_min, ip_addr_max)
             };
             append(&mut value, &mut first, true, &ip_addr_format);
         }
