@@ -753,6 +753,60 @@ fn connector_valid_hostname() {
 }
 
 #[test]
+#[cfg(ossl110)]
+fn connector_dane() {
+    let server = Server::builder().build();
+
+    let mut connector = SslConnector::builder(SslMethod::tls()).unwrap();
+
+    connector.dane_enable().unwrap();
+    connector.set_no_dane_ee_namechecks();
+    let mut config = connector.build().configure().unwrap();
+
+    // The name in the cert is foobar.com, but we're claiming
+    // to access it via some other name. Since we turned off
+    // dane-ee-namechecks above, we expect this to still validate
+    // overall because the tlsa record matches the digest of the
+    // cert; the name is ignored.
+    config.dane_enable("mx.foobar.com").unwrap();
+
+    let cert = X509::from_pem(CERT).unwrap();
+    let data = cert.digest(MessageDigest::sha256()).unwrap();
+
+    let usable = config
+        .dane_tlsa_add(
+            crate::ssl::DaneUsage::DANE_EE,
+            crate::ssl::DaneSelector::CERT,
+            crate::ssl::DaneMatchType::SHA2_256,
+            &data,
+        )
+        .unwrap();
+
+    assert!(usable);
+
+    let s = server.connect_tcp();
+    let mut s = config.connect("mx.foobar.com", s).unwrap();
+    s.read_exact(&mut [0]).unwrap();
+
+    let authority = s.ssl.dane_authority().unwrap();
+    assert!(authority.cert.unwrap() == &cert);
+    assert_eq!(authority.depth, 0);
+    assert!(authority.pkey.is_none());
+
+    let tlsa = s.ssl.dane_tlsa().unwrap();
+    assert_eq!(
+        tlsa,
+        crate::ssl::DaneTlsaUsed {
+            usage: crate::ssl::DaneUsage::DANE_EE,
+            selector: crate::ssl::DaneSelector::CERT,
+            mtype: crate::ssl::DaneMatchType::SHA2_256,
+            data: &data,
+            depth: 0,
+        }
+    );
+}
+
+#[test]
 fn connector_invalid_hostname() {
     let mut server = Server::builder();
     server.should_error();
