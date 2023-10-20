@@ -976,12 +976,20 @@ pub const NID_sm4_ctr: c_int = 1139;
 pub const NID_sm4_ctr: c_int = 979;
 #[cfg(ossl111)]
 pub const NID_sha3_224: c_int = 1096;
+#[cfg(libressl380)]
+pub const NID_sha3_224: c_int = 1031;
 #[cfg(ossl111)]
 pub const NID_sha3_256: c_int = 1097;
+#[cfg(libressl380)]
+pub const NID_sha3_256: c_int = 1032;
 #[cfg(ossl111)]
 pub const NID_sha3_384: c_int = 1098;
+#[cfg(libressl380)]
+pub const NID_sha3_384: c_int = 1033;
 #[cfg(ossl111)]
 pub const NID_sha3_512: c_int = 1099;
+#[cfg(libressl380)]
+pub const NID_sha3_512: c_int = 1034;
 #[cfg(ossl111)]
 pub const NID_shake128: c_int = 1100;
 #[cfg(ossl111)]
