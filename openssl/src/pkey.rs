@@ -92,7 +92,7 @@ impl Id {
     #[cfg(ossl111)]
     pub const SM2: Id = Id(ffi::EVP_PKEY_SM2);
 
-    #[cfg(any(ossl110, boringssl))]
+    #[cfg(any(ossl110, boringssl, libressl360))]
     pub const HKDF: Id = Id(ffi::EVP_PKEY_HKDF);
 
     #[cfg(any(ossl111, boringssl, libressl370))]
