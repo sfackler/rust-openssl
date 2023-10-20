@@ -150,25 +150,25 @@ impl Md {
         unsafe { MdRef::from_ptr(ffi::EVP_sha512() as *mut _) }
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     #[inline]
     pub fn sha3_224() -> &'static MdRef {
         unsafe { MdRef::from_ptr(ffi::EVP_sha3_224() as *mut _) }
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     #[inline]
     pub fn sha3_256() -> &'static MdRef {
         unsafe { MdRef::from_ptr(ffi::EVP_sha3_256() as *mut _) }
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     #[inline]
     pub fn sha3_384() -> &'static MdRef {
         unsafe { MdRef::from_ptr(ffi::EVP_sha3_384() as *mut _) }
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     #[inline]
     pub fn sha3_512() -> &'static MdRef {
         unsafe { MdRef::from_ptr(ffi::EVP_sha3_512() as *mut _) }

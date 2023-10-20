@@ -1078,13 +1078,13 @@ impl Nid {
     pub const SM2: Nid = Nid(ffi::NID_sm2);
     #[cfg(any(ossl111, libressl291))]
     pub const SM3: Nid = Nid(ffi::NID_sm3);
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub const SHA3_224: Nid = Nid(ffi::NID_sha3_224);
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub const SHA3_256: Nid = Nid(ffi::NID_sha3_256);
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub const SHA3_384: Nid = Nid(ffi::NID_sha3_384);
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub const SHA3_512: Nid = Nid(ffi::NID_sha3_512);
     #[cfg(ossl111)]
     pub const SHAKE128: Nid = Nid(ffi::NID_shake128);

@@ -66,6 +66,9 @@ fn main() {
         if version >= 0x3_07_00_00_0 {
             println!("cargo:rustc-cfg=libressl370");
         }
+        if version >= 0x3_08_00_00_0 {
+            println!("cargo:rustc-cfg=libressl380");
+        }
     }
 
     if let Ok(vars) = env::var("DEP_OPENSSL_CONF") {

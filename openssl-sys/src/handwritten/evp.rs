@@ -294,13 +294,13 @@ extern "C" {
     pub fn EVP_sha256() -> *const EVP_MD;
     pub fn EVP_sha384() -> *const EVP_MD;
     pub fn EVP_sha512() -> *const EVP_MD;
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub fn EVP_sha3_224() -> *const EVP_MD;
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub fn EVP_sha3_256() -> *const EVP_MD;
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub fn EVP_sha3_384() -> *const EVP_MD;
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub fn EVP_sha3_512() -> *const EVP_MD;
     #[cfg(ossl111)]
     pub fn EVP_shake128() -> *const EVP_MD;
