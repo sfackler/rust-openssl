@@ -75,7 +75,6 @@ extern "C" {
         m: *const BIGNUM,
         ctx: *mut BN_CTX,
     ) -> c_int;
-    #[cfg(any(ossl110, libressl382))]
     pub fn BN_mod_sqrt(
         ret: *mut BIGNUM,
         a: *const BIGNUM,

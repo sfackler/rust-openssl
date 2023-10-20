@@ -655,7 +655,6 @@ impl BigNumRef {
 
     /// Places into `self` the modular square root of `a` such that `self^2 = a (mod p)`
     #[corresponds(BN_mod_sqrt)]
-    #[cfg(any(ossl110, libressl382))]
     pub fn mod_sqrt(
         &mut self,
         a: &BigNumRef,
@@ -1490,7 +1489,6 @@ mod tests {
         assert!(b.is_const_time())
     }
 
-    #[cfg(any(ossl110, libressl382))]
     #[test]
     fn test_mod_sqrt() {
         let mut ctx = BigNumContext::new().unwrap();
