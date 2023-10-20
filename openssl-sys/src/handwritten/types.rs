@@ -329,7 +329,7 @@ cfg_if! {
     }
 }
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl382))] {
         pub enum X509_ALGOR {}
     } else {
         #[repr(C)]
