@@ -81,7 +81,7 @@ use crate::rsa::Padding;
 use crate::{cvt, cvt_p};
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl382))] {
         use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
     } else {
         use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
