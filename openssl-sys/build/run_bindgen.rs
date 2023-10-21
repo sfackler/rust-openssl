@@ -119,7 +119,7 @@ pub fn run_boringssl(include_dirs: &[PathBuf]) {
         .enable_function_attribute_detection()
         .default_macro_constant_type(MacroTypeVariation::Signed)
         .rustified_enum("point_conversion_form_t")
-        .allowlist_file(".*/openssl/[^/]+\\.h")
+        .allowlist_file(".*[/\\\\]openssl/[^/]+\\.h")
         .allowlist_recursively(false)
         .blocklist_function("BIO_vsnprintf")
         .blocklist_function("OPENSSL_vasprintf")
@@ -145,17 +145,25 @@ pub fn run_boringssl(include_dirs: &[PathBuf]) {
         .write_all(INCLUDES.as_bytes())
         .expect("Failed to write contents to boring_static_wrapper.h");
 
-    cc::Build::new()
-        .file(out_dir.join("boring_static_wrapper.c"))
-        .includes(include_dirs)
-        .flag("-include")
-        .flag(
-            &out_dir
-                .join("boring_static_wrapper.h")
-                .display()
-                .to_string(),
-        )
-        .compile("boring_static_wrapper");
+    let mut builder = cc::Build::new();
+    if !builder.get_compiler().is_like_msvc() {
+        builder
+            .file(out_dir.join("boring_static_wrapper.c"))
+            .includes(include_dirs)
+            .flag("-include")
+            .flag(
+                &out_dir
+                    .join("boring_static_wrapper.h")
+                    .display()
+                    .to_string(),
+            )
+            .compile("boring_static_wrapper");
+    } else {
+        builder
+            .file(out_dir.join("boring_static_wrapper.c"))
+            .includes(include_dirs)
+            .compile("boring_static_wrapper");
+    }
 }
 
 #[cfg(not(feature = "bindgen"))]
@@ -180,7 +188,7 @@ pub fn run_boringssl(include_dirs: &[PathBuf]) {
         .arg("--enable-function-attribute-detection")
         .arg("--default-macro-constant-type=signed")
         .arg("--rustified-enum=point_conversion_form_t")
-        .arg("--allowlist-file=.*/openssl/[^/]+\\.h")
+        .arg("--allowlist-file=.*[/\\\\]openssl/[^/]+\\.h")
         .arg("--no-recursive-allowlist")
         .arg("--blocklist-function=BIO_vsnprintf")
         .arg("--blocklist-function=OPENSSL_vasprintf")
@@ -200,17 +208,25 @@ pub fn run_boringssl(include_dirs: &[PathBuf]) {
     let result = bindgen_cmd.status().expect("bindgen failed to execute");
     assert!(result.success());
 
-    cc::Build::new()
-        .file(out_dir.join("boring_static_wrapper.c"))
-        .includes(include_dirs)
-        .flag("-include")
-        .flag(
-            &out_dir
-                .join("boring_static_wrapper.h")
-                .display()
-                .to_string(),
-        )
-        .compile("boring_static_wrapper");
+    let mut builder = cc::Build::new();
+    if !builder.get_compiler().is_like_msvc() {
+        builder
+            .file(out_dir.join("boring_static_wrapper.c"))
+            .includes(include_dirs)
+            .flag("-include")
+            .flag(
+                &out_dir
+                    .join("boring_static_wrapper.h")
+                    .display()
+                    .to_string(),
+            )
+            .compile("boring_static_wrapper");
+    } else {
+        builder
+            .file(out_dir.join("boring_static_wrapper.c"))
+            .includes(include_dirs)
+            .compile("boring_static_wrapper");
+    }
 }
 
 #[derive(Debug)]
