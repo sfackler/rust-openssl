@@ -52,7 +52,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl382))] {
         extern "C" {
             pub fn EVP_MD_CTX_new() -> *mut EVP_MD_CTX;
             pub fn EVP_MD_CTX_free(ctx: *mut EVP_MD_CTX);
