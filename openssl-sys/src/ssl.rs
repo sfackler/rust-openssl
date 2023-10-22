@@ -321,6 +321,18 @@ pub const SSL_CTRL_SET_TMP_ECDH: c_int = 4;
 pub const SSL_CTRL_GET_SESSION_REUSED: c_int = 8;
 pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
 pub const SSL_CTRL_SET_MTU: c_int = 17;
+pub const SSL_CTRL_SESS_NUMBER: c_int = 20;
+pub const SSL_CTRL_SESS_CONNECT: c_int = 21;
+pub const SSL_CTRL_SESS_CONNECT_GOOD: c_int = 22;
+pub const SSL_CTRL_SESS_CONNECT_RENEGOTIATE: c_int = 23;
+pub const SSL_CTRL_SESS_ACCEPT: c_int = 24;
+pub const SSL_CTRL_SESS_ACCEPT_GOOD: c_int = 25;
+pub const SSL_CTRL_SESS_ACCEPT_RENEGOTIATE: c_int = 26;
+pub const SSL_CTRL_SESS_HIT: c_int = 27;
+pub const SSL_CTRL_SESS_CB_HIT: c_int = 28;
+pub const SSL_CTRL_SESS_MISSES: c_int = 29;
+pub const SSL_CTRL_SESS_TIMEOUTS: c_int = 30;
+pub const SSL_CTRL_SESS_CACHE_FULL: c_int = 31;
 #[cfg(any(libressl, all(ossl101, not(ossl110))))]
 pub const SSL_CTRL_OPTIONS: c_int = 32;
 pub const SSL_CTRL_MODE: c_int = 33;
@@ -554,6 +566,54 @@ pub unsafe fn SSL_CTX_sess_set_cache_size(ctx: *mut SSL_CTX, t: c_long) -> c_lon
 
 pub unsafe fn SSL_CTX_sess_get_cache_size(ctx: *mut SSL_CTX) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_GET_SESS_CACHE_SIZE, 0, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_sess_number(ctx: *mut SSL_CTX) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SESS_NUMBER, 0, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_sess_connect(ctx: *mut SSL_CTX) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SESS_CONNECT, 0, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_sess_connect_good(ctx: *mut SSL_CTX) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SESS_CONNECT_GOOD, 0, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_sess_connect_renegotiate(ctx: *mut SSL_CTX) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SESS_CONNECT_RENEGOTIATE, 0, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_sess_accept(ctx: *mut SSL_CTX) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SESS_ACCEPT, 0, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_sess_accept_good(ctx: *mut SSL_CTX) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SESS_ACCEPT_GOOD, 0, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_sess_accept_renegotiate(ctx: *mut SSL_CTX) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SESS_ACCEPT_RENEGOTIATE, 0, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_sess_hits(ctx: *mut SSL_CTX) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SESS_HIT, 0, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_sess_cb_hits(ctx: *mut SSL_CTX) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SESS_CB_HIT, 0, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_sess_misses(ctx: *mut SSL_CTX) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SESS_MISSES, 0, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_sess_timeouts(ctx: *mut SSL_CTX) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SESS_TIMEOUTS, 0, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_sess_cache_full(ctx: *mut SSL_CTX) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SESS_CACHE_FULL, 0, ptr::null_mut())
 }
 
 pub unsafe fn SSL_CTX_set_session_cache_mode(ctx: *mut SSL_CTX, m: c_long) -> c_long {

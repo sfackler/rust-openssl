@@ -1468,6 +1468,20 @@ fn client_hello() {
             .bytes_to_cipher_list(ssl.client_hello_ciphers().unwrap(), ssl.client_hello_isv2())
             .is_ok());
 
+        let context = ssl.ssl_context();
+        assert_eq!(0, context.session_count());
+        assert_eq!(0, context.connect_count());
+        assert_eq!(0, context.connect_good_count());
+        assert_eq!(0, context.connect_renegotiate_count());
+        assert_eq!(1, context.accept_count());
+        assert_eq!(0, context.accept_good_count());
+        assert_eq!(0, context.accept_renegotiate_count());
+        assert_eq!(0, context.session_hits_count());
+        assert_eq!(0, context.session_callback_hits_count());
+        assert_eq!(0, context.session_misses_count());
+        assert_eq!(0, context.session_timeouts_count());
+        assert_eq!(0, context.session_cache_full_count());
+
         CALLED_BACK.store(true, Ordering::SeqCst);
         Ok(ClientHelloResponse::SUCCESS)
     });
