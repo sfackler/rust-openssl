@@ -201,7 +201,7 @@ impl Cipher {
     }
 
     /// Requires OpenSSL 1.1.0 or newer.
-    #[cfg(ossl110)]
+    #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_OCB")))]
     pub fn aes_128_ocb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_ocb() as *mut _) }
     }
@@ -258,7 +258,7 @@ impl Cipher {
     }
 
     /// Requires OpenSSL 1.1.0 or newer.
-    #[cfg(ossl110)]
+    #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_OCB")))]
     pub fn aes_192_ocb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_192_ocb() as *mut _) }
     }
@@ -315,7 +315,7 @@ impl Cipher {
     }
 
     /// Requires OpenSSL 1.1.0 or newer.
-    #[cfg(ossl110)]
+    #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_OCB")))]
     pub fn aes_256_ocb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_256_ocb() as *mut _) }
     }
