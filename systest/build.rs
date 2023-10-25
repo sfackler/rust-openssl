@@ -141,7 +141,7 @@ fn main() {
             s == "i2d_PKCS8PrivateKey_bio" ||
             s == "SSL_get_ex_new_index" ||
             s == "SSL_CTX_get_ex_new_index" ||
-            s == "CRYPTO_get_ex_new_index"
+            s == "CRYPTO_get_ex_new_index" 
         })
     });
     cfg.skip_field_type(|s, field| {

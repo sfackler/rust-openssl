@@ -7,7 +7,7 @@ use std::mem::MaybeUninit;
 use ffi::{
     ASIdOrRange_id, ASIdOrRange_range, ASIdentifierChoice_asIdsOrRanges,
     ASIdentifierChoice_inherit, IPAddressChoice_addressesOrRanges, X509v3_addr_get_afi,
-    X509v3_addr_get_range, ASN1_INTEGER, IANA_AFI_IPV4, IANA_AFI_IPV6,
+    ASN1_INTEGER, IANA_AFI_IPV4, IANA_AFI_IPV6,
 };
 #[cfg(ossl110)]
 use foreign_types::{ForeignType, ForeignTypeRef};
@@ -160,7 +160,7 @@ impl IPAddressFamily {
             for e in stack {
                 let mut min = MaybeUninit::<[u8; 16]>::uninit();
                 let mut max = MaybeUninit::<[u8; 16]>::uninit();
-                let size = X509v3_addr_get_range(
+                let size = ffi::X509v3_addr_get_range(
                     e.as_ptr(),
                     X509v3_addr_get_afi(ptr),
                     min.as_mut_ptr() as *mut u8,
