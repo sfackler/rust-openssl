@@ -1,7 +1,7 @@
 #[cfg(ossl110)]
-use std::convert::TryInto;
-#[cfg(ossl110)]
 use std::mem::MaybeUninit;
+#[cfg(ossl110)]
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 #[cfg(ossl110)]
 use ffi::{
@@ -10,7 +10,9 @@ use ffi::{
     ASN1_INTEGER, IANA_AFI_IPV4, IANA_AFI_IPV6,
 };
 #[cfg(ossl110)]
-use foreign_types::{ForeignType, ForeignTypeRef};
+use foreign_types::ForeignTypeRef;
+#[cfg(ossl110)]
+use openssl_macros::corresponds;
 
 #[cfg(ossl110)]
 use crate::{
@@ -20,7 +22,7 @@ use crate::{
 };
 
 #[cfg(ossl110)]
-use super::X509;
+use super::X509Ref;
 
 #[cfg(ossl110)]
 foreign_type_and_impl_send_sync! {
@@ -59,39 +61,36 @@ impl ASIdentifiers {
     }
 
     pub fn ranges(&self) -> Option<Vec<(u32, u32)>> {
-        let mut r = Vec::new();
-        let asptr = self.0;
         unsafe {
-            let asnum = (*asptr).asnum;
-            if (*asnum).type_ != ASIdentifierChoice_asIdsOrRanges {
+            let mut result = Vec::new();
+            let as_num = (*self.0).asnum;
+            if (*as_num).type_ != ASIdentifierChoice_asIdsOrRanges {
                 return None;
             }
-            if let Some(s) = StackRef::<ASIdOrRange>::from_const_ptr_opt((*asnum).u.asIdsOrRanges) {
-                for a_ptr in s {
-                    let a = a_ptr.as_ptr();
-                    if (*a).type_ == ASIdOrRange_id {
-                        let asn = Self::parse_asn1_integer((*a).u.id)?;
-                        r.push((asn, asn));
-                    } else if (*a).type_ == ASIdOrRange_range {
-                        let range = (*a).u.range;
-                        let asn1 = Self::parse_asn1_integer((*range).min)?;
-                        let asn2 = Self::parse_asn1_integer((*range).max)?;
-                        r.push((asn1, asn2));
-                    }
+
+            let stack = StackRef::<ASIdOrRange>::from_const_ptr_opt((*as_num).u.asIdsOrRanges)?;
+            for asi_ref in stack {
+                let asi = asi_ref.as_ptr();
+                if (*asi).type_ == ASIdOrRange_id {
+                    let asn = Self::parse_asn1_integer((*asi).u.id)?;
+                    result.push((asn, asn));
+                } else if (*asi).type_ == ASIdOrRange_range {
+                    let range = (*asi).u.range;
+                    let min = Self::parse_asn1_integer((*range).min)?;
+                    let max = Self::parse_asn1_integer((*range).max)?;
+                    result.push((min, max));
                 }
-            } else {
-                return None;
             }
+
+            Some(result)
         }
-        Some(r)
     }
 
     fn parse_asn1_integer(v: *mut ASN1_INTEGER) -> Option<u32> {
-        let v_parsed;
         unsafe {
-            v_parsed = Asn1IntegerRef::from_ptr(v);
+            let v_ref = Asn1IntegerRef::from_ptr(v);
+            v_ref.to_bn().ok()?.to_dec_str().ok()?.parse().ok()
         }
-        v_parsed.to_bn().ok()?.to_dec_str().ok()?.parse().ok()
     }
 }
 
@@ -136,9 +135,10 @@ pub enum IPVersion {
 
 #[cfg(ossl110)]
 impl IPAddressFamily {
+    #[corresponds(X509v3_addr_get_afi)]
     pub fn fam(&self) -> Option<IPVersion> {
-        let ptr = self.0;
         unsafe {
+            let ptr = self.0;
             match X509v3_addr_get_afi(ptr) as libc::c_int {
                 IANA_AFI_IPV4 => Some(IPVersion::V4),
                 IANA_AFI_IPV6 => Some(IPVersion::V6),
@@ -147,10 +147,10 @@ impl IPAddressFamily {
         }
     }
 
-    pub fn range(&self) -> Option<Vec<(std::net::IpAddr, std::net::IpAddr)>> {
-        let ptr = self.0;
-        let mut r = Vec::new();
+    pub fn range(&self) -> Option<Vec<(IpAddr, IpAddr)>> {
         unsafe {
+            let ptr = self.0;
+            let mut r = Vec::new();
             let choice = (*ptr).ipAddressChoice;
             if (*choice).type_ != IPAddressChoice_addressesOrRanges {
                 return None;
@@ -168,45 +168,29 @@ impl IPAddressFamily {
                     16,
                 );
                 r.push((
-                    #[allow(clippy::useless_conversion)]
-                    Self::data_to_ip_addr(min.assume_init(), size.try_into().unwrap())?,
-                    #[allow(clippy::useless_conversion)]
-                    Self::data_to_ip_addr(max.assume_init(), size.try_into().unwrap())?,
+                    Self::data_to_ip_addr(min.assume_init(), size)?,
+                    Self::data_to_ip_addr(max.assume_init(), size)?,
                 ))
             }
+            Some(r)
         }
-        Some(r)
     }
 
-    fn data_to_ip_addr(data: [u8; 16], len: isize) -> Option<std::net::IpAddr> {
+    fn data_to_ip_addr(data: [u8; 16], len: i32) -> Option<IpAddr> {
         match len {
-            4 => Some(std::net::IpAddr::V4(std::net::Ipv4Addr::new(
+            4 => Some(IpAddr::V4(Ipv4Addr::new(
                 data[0], data[1], data[2], data[3],
             ))),
-            16 => Some(std::net::IpAddr::V6(std::net::Ipv6Addr::new(
-                (data[0] as u16) << 8 | data[1] as u16,
-                (data[2] as u16) << 8 | data[3] as u16,
-                (data[4] as u16) << 8 | data[5] as u16,
-                (data[6] as u16) << 8 | data[7] as u16,
-                (data[8] as u16) << 8 | data[9] as u16,
-                (data[10] as u16) << 8 | data[11] as u16,
-                (data[12] as u16) << 8 | data[13] as u16,
-                (data[14] as u16) << 8 | data[15] as u16,
-            ))),
+            16 => Some(IpAddr::V6(Ipv6Addr::from(data))),
             _ => None,
         }
     }
 }
 
 #[cfg(ossl110)]
-pub trait ExtractSBGPInfo {
-    fn asn(&self) -> Option<ASIdentifiers>;
-    fn ip_addresses(&self) -> Option<Stack<IPAddressFamily>>;
-}
-
-#[cfg(ossl110)]
-impl ExtractSBGPInfo for X509 {
-    fn asn(&self) -> Option<ASIdentifiers> {
+impl X509Ref {
+    #[corresponds(X509_get_ext_d2i)]
+    pub fn sbgp_asn(&self) -> Option<ASIdentifiers> {
         unsafe {
             let asn = ffi::X509_get_ext_d2i(
                 self.as_ptr(),
@@ -218,7 +202,8 @@ impl ExtractSBGPInfo for X509 {
         }
     }
 
-    fn ip_addresses(&self) -> Option<Stack<IPAddressFamily>> {
+    #[corresponds(X509_get_ext_d2i)]
+    pub fn sbgp_ip_addresses(&self) -> Option<Stack<IPAddressFamily>> {
         unsafe {
             let asn = ffi::X509_get_ext_d2i(
                 self.as_ptr(),

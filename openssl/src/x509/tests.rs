@@ -19,8 +19,6 @@ use crate::x509::extension::{
 };
 #[cfg(ossl110)]
 use crate::x509::extension::{SbgpAsIdentifier, SbgpIpAddressIdentifier};
-#[cfg(ossl110)]
-use crate::x509::sbgp::ExtractSBGPInfo;
 #[cfg(not(boringssl))]
 use crate::x509::store::X509Lookup;
 use crate::x509::store::X509StoreBuilder;
@@ -1192,11 +1190,11 @@ fn test_sbgp_extensions_parsing() {
     let cert = include_bytes!("../../test/rfc3779.pem");
     let cert = X509::from_pem(cert).unwrap();
 
-    let asn_ranges = cert.asn().unwrap().ranges().unwrap();
+    let asn_ranges = cert.sbgp_asn().unwrap().ranges().unwrap();
     assert_eq!(asn_ranges[0], (10, 18));
     assert_eq!(asn_ranges[1], (20, 20));
 
-    let families = cert.ip_addresses().unwrap();
+    let families = cert.sbgp_ip_addresses().unwrap();
     for family in families {
         let ranges = family.range().unwrap();
         for (ip_min, ip_max) in ranges {
