@@ -390,6 +390,50 @@ extern "C" {
 
 extern "C" {
     #[cfg(ossl111)]
+    pub fn SSL_CTX_set_psk_find_session_callback(
+        ctx: *mut SSL_CTX,
+        psk_find_session_cb: Option<
+            extern "C" fn(*mut SSL, *const c_uchar, size_t, *mut *mut SSL_SESSION) -> c_int,
+        >,
+    );
+
+    #[cfg(ossl111)]
+    pub fn SSL_set_psk_find_session_callback(
+        ssl: *mut SSL,
+        psk_find_session_cb: Option<
+            extern "C" fn(*mut SSL, *const c_uchar, size_t, *mut *mut SSL_SESSION) -> c_int,
+        >,
+    );
+
+    #[cfg(ossl111)]
+    pub fn SSL_CTX_set_psk_use_session_callback(
+        ctx: *mut SSL_CTX,
+        psk_use_session_cb: Option<
+            extern "C" fn(
+                *mut SSL,
+                *const EVP_MD,
+                *mut *const c_uchar,
+                *mut size_t,
+                *mut *mut SSL_SESSION,
+            ) -> c_int,
+        >,
+    );
+
+    #[cfg(ossl111)]
+    pub fn SSL_set_psk_use_session_callback(
+        ctx: *mut SSL,
+        psk_use_session_cb: Option<
+            extern "C" fn(
+                *mut SSL,
+                *const EVP_MD,
+                *mut *const c_uchar,
+                *mut size_t,
+                *mut *mut SSL_SESSION,
+            ) -> c_int,
+        >,
+    );
+
+    #[cfg(ossl111)]
     pub fn SSL_CTX_add_custom_ext(
         ctx: *mut SSL_CTX,
         ext_type: c_uint,
@@ -476,6 +520,8 @@ const_ptr_api! {
     }
 }
 extern "C" {
+    #[cfg(any(not(ossl102), libressl273, not(boringssl)))]
+    pub fn SSL_CIPHER_find(ssl: *mut SSL, ptr: *const c_uchar) -> *const SSL_CIPHER;
     #[cfg(ossl111)]
     pub fn SSL_CIPHER_get_handshake_digest(cipher: *const SSL_CIPHER) -> *const EVP_MD;
     pub fn SSL_CIPHER_get_name(cipher: *const SSL_CIPHER) -> *const c_char;
@@ -531,10 +577,14 @@ extern "C" {
     pub fn SSL_state_string(ssl: *const SSL) -> *const c_char;
     pub fn SSL_state_string_long(ssl: *const SSL) -> *const c_char;
 
+    #[cfg(not(boringssl))]
+    pub fn SSL_SESSION_new() -> *mut SSL_SESSION;
     pub fn SSL_SESSION_get_time(s: *const SSL_SESSION) -> c_long;
     pub fn SSL_SESSION_get_timeout(s: *const SSL_SESSION) -> c_long;
     #[cfg(any(ossl110, libressl270))]
     pub fn SSL_SESSION_get_protocol_version(s: *const SSL_SESSION) -> c_int;
+    #[cfg(ossl111)]
+    pub fn SSL_SESSION_set_protocol_version(s: *mut SSL_SESSION, version: c_int) -> c_int;
 
     #[cfg(any(ossl111, libressl340))]
     pub fn SSL_SESSION_set_max_early_data(ctx: *mut SSL_SESSION, max_early_data: u32) -> c_int;
@@ -787,6 +837,17 @@ extern "C" {
         out: *mut c_uchar,
         outlen: size_t,
     ) -> size_t;
+    #[cfg(ossl111)]
+    pub fn SSL_SESSION_set1_master_key(
+        session: *mut SSL_SESSION,
+        key: *const c_uchar,
+        key_len: size_t,
+    ) -> c_int;
+
+    #[cfg(ossl110)]
+    pub fn SSL_SESSION_get0_cipher(session: *const SSL_SESSION) -> *const SSL_CIPHER;
+    #[cfg(ossl111)]
+    pub fn SSL_SESSION_set_cipher(session: *mut SSL_SESSION, cipher: *const SSL_CIPHER) -> c_int;
 }
 
 extern "C" {

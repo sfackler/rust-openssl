@@ -1430,6 +1430,87 @@ fn psk_ciphers() {
 }
 
 #[test]
+#[cfg(all(ossl111, not(libressl380), not(boringssl)))]
+fn psk_tls13_callbacks() {
+    use crate::ssl::{SslCipherRef, SslSession, SslSessionBuilder, SslVersion};
+
+    static PSK_FIND_SESSION_CALLED_BACK: AtomicBool = AtomicBool::new(false);
+    static PSK_USE_SESSION_CALLED_BACK: AtomicBool = AtomicBool::new(false);
+
+    let mut server = Server::builder();
+    server
+        .ctx()
+        .set_min_proto_version(Some(SslVersion::TLS1_3))
+        .unwrap();
+    server.ctx().set_psk_find_session_callback(|ssl, identity| {
+        if "PSK_id".as_bytes() != identity {
+            unreachable!("PSK is hard-coded for this test");
+        }
+
+        // TLS_AES_128_GCM_SHA256 from RFC 8446
+        if let Some(cipher) = SslCipherRef::find(ssl, &[0x13, 0x01]) {
+            let mut session = SslSessionBuilder::new()?;
+            session.set_cipher(cipher)?;
+            session.set_master_key("junkjunkjunkjunk".as_bytes())?;
+            session.set_protocol_version(SslVersion::TLS1_3)?;
+
+            PSK_FIND_SESSION_CALLED_BACK.store(true, Ordering::SeqCst);
+
+            Ok(Some(session.build()))
+        } else {
+            unreachable!("missing cipher should be impossible")
+        }
+    });
+
+    let server = server.build();
+
+    let mut client = server.client();
+    client
+        .ctx()
+        .set_min_proto_version(Some(SslVersion::TLS1_3))
+        .unwrap();
+    client.ctx().set_psk_use_session_callback(|ssl, md| {
+        // TLS_AES_128_GCM_SHA256 from RFC 8446
+        if let Some(cipher) = SslCipherRef::find(ssl, &[0x13, 0x01]) {
+            if let Some(md) = md {
+                let cipher_md = cipher.handshake_digest().unwrap();
+
+                assert_eq!(
+                    cipher_md.type_(),
+                    md.type_(),
+                    "message digest mismatch should be impossible"
+                );
+            }
+
+            let mut session = SslSessionBuilder::new()?;
+            session.set_cipher(cipher)?;
+            session.set_master_key("junkjunkjunkjunk".as_bytes())?;
+            session.set_protocol_version(SslVersion::TLS1_3)?;
+
+            PSK_USE_SESSION_CALLED_BACK.store(true, Ordering::SeqCst);
+
+            Ok(Some((session.build(), "PSK_id".as_bytes().to_vec())))
+        } else {
+            unreachable!("missing cipher should be impossible")
+        }
+    });
+
+    client.connect();
+
+    assert!(PSK_FIND_SESSION_CALLED_BACK.load(Ordering::SeqCst));
+    assert!(PSK_USE_SESSION_CALLED_BACK.load(Ordering::SeqCst));
+
+    // OpenSSL says:
+    //
+    // > A connection established via a TLSv1.3 PSK will appear as if session resumption has
+    // > occurred so that SSL_session_reused(3) will return true.
+    //
+    // But this does not appear to be true using the sessions created in the above callbacks.
+    //
+    // However, the TLS handshake involves only 1-RTT according to tcpdump.
+}
+
+#[test]
 fn sni_callback_swapped_ctx() {
     static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
@@ -1573,4 +1654,33 @@ fn set_num_tickets() {
     ssl.set_num_tickets(5).unwrap();
     let ssl = ssl;
     assert_eq!(5, ssl.num_tickets());
+}
+
+#[test]
+#[cfg(any(ossl110, libressl273))]
+fn ssl_cipher_find() {
+    use crate::ssl::SslCipherRef;
+
+    let server = Server::builder().build();
+    let client = server.client().connect();
+    let ssl = client.ssl();
+
+    assert!(
+        SslCipherRef::find(ssl, &[0x00, 0x02]).is_some(),
+        "valid cipher ID"
+    );
+
+    assert!(SslCipherRef::find(ssl, &[]).is_none(), "empty cipher ID");
+    assert!(
+        SslCipherRef::find(ssl, &[0x00]).is_none(),
+        "too-short cipher ID"
+    );
+    assert!(
+        SslCipherRef::find(ssl, &[0xff, 0xff]).is_none(),
+        "invalid cipher ID (reserved for private use)"
+    );
+    assert!(
+        SslCipherRef::find(ssl, &[0x00, 0x00, 0x00]).is_none(),
+        "too-long cipher ID"
+    );
 }

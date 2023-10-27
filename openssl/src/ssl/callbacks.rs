@@ -137,6 +137,201 @@ where
     }
 }
 
+#[cfg(ossl111)]
+pub extern "C" fn raw_ssl_ctx_psk_find_session<F>(
+    ssl: *mut ffi::SSL,
+    identity: *const c_uchar,
+    identity_len: size_t,
+    session: *mut *mut ffi::SSL_SESSION,
+) -> c_int
+where
+    F: Fn(&mut SslRef, &[u8]) -> Result<Option<SslSession>, ErrorStack> + 'static + Sync + Send,
+{
+    unsafe {
+        let ssl = SslRef::from_ptr_mut(ssl);
+        let callback_idx = SslContext::cached_ex_index::<F>();
+
+        let callback = ssl
+            .ssl_context()
+            .ex_data(callback_idx)
+            .expect("BUG: psk find session callback missing") as *const F;
+
+        raw_psk_find_session(callback, ssl, identity, identity_len, session)
+    }
+}
+
+#[cfg(ossl111)]
+pub extern "C" fn raw_ssl_psk_find_session<F>(
+    ssl: *mut ffi::SSL,
+    identity: *const c_uchar,
+    identity_len: size_t,
+    session: *mut *mut ffi::SSL_SESSION,
+) -> c_int
+where
+    F: Fn(&mut SslRef, &[u8]) -> Result<Option<SslSession>, ErrorStack> + 'static + Sync + Send,
+{
+    unsafe {
+        let ssl = SslRef::from_ptr_mut(ssl);
+        let callback_idx = Ssl::cached_ex_index::<F>();
+
+        let callback = ssl
+            .ex_data(callback_idx)
+            .expect("BUG: psk find session callback missing") as *const F;
+
+        raw_psk_find_session(callback, ssl, identity, identity_len, session)
+    }
+}
+
+#[cfg(ossl111)]
+pub extern "C" fn raw_psk_find_session<F>(
+    callback: *const F,
+    ssl: &mut SslRef,
+    identity: *const c_uchar,
+    identity_len: size_t,
+    session: *mut *mut ffi::SSL_SESSION,
+) -> c_int
+where
+    F: Fn(&mut SslRef, &[u8]) -> Result<Option<SslSession>, ErrorStack> + 'static + Sync + Send,
+{
+    unsafe {
+        let identity_sl = slice::from_raw_parts(identity as *const u8, identity_len);
+
+        match (*callback)(ssl, identity_sl) {
+            Ok(ssl_session) => {
+                *session = if let Some(ssl_session) = ssl_session {
+                    let p = ssl_session.as_ptr();
+                    mem::forget(ssl_session);
+
+                    p
+                } else {
+                    ptr::null_mut()
+                };
+
+                1
+            }
+            Err(e) => {
+                e.put();
+                0
+            }
+        }
+    }
+}
+
+#[cfg(ossl111)]
+pub extern "C" fn raw_ssl_ctx_psk_use_session<F>(
+    ssl: *mut ffi::SSL,
+    md: *const ffi::EVP_MD,
+    id: *mut *const c_uchar,
+    idlen: *mut size_t,
+    session: *mut *mut ffi::SSL_SESSION,
+) -> c_int
+where
+    F: for<'a> Fn(
+            &'a mut SslRef,
+            Option<crate::hash::MessageDigest>,
+        ) -> Result<Option<(SslSession, Vec<u8>)>, ErrorStack>
+        + 'static
+        + Sync
+        + Send,
+{
+    unsafe {
+        let ssl = SslRef::from_ptr_mut(ssl);
+        let callback_idx = SslContext::cached_ex_index::<F>();
+
+        let callback = ssl
+            .ssl_context()
+            .ex_data(callback_idx)
+            .expect("BUG: psk use session callback missing") as *const F;
+
+        raw_psk_use_session(callback, ssl, md, id, idlen, session)
+    }
+}
+
+#[cfg(ossl111)]
+pub extern "C" fn raw_ssl_psk_use_session<F>(
+    ssl: *mut ffi::SSL,
+    md: *const ffi::EVP_MD,
+    id: *mut *const c_uchar,
+    idlen: *mut size_t,
+    session: *mut *mut ffi::SSL_SESSION,
+) -> c_int
+where
+    F: for<'a> Fn(
+            &'a mut SslRef,
+            Option<crate::hash::MessageDigest>,
+        ) -> Result<Option<(SslSession, Vec<u8>)>, ErrorStack>
+        + 'static
+        + Sync
+        + Send,
+{
+    unsafe {
+        let ssl = SslRef::from_ptr_mut(ssl);
+        let callback_idx = Ssl::cached_ex_index::<F>();
+
+        let callback = ssl
+            .ex_data(callback_idx)
+            .expect("BUG: psk use session callback missing") as *const F;
+
+        raw_psk_use_session(callback, ssl, md, id, idlen, session)
+    }
+}
+
+#[cfg(ossl111)]
+struct Psk(Vec<u8>);
+
+#[cfg(ossl111)]
+pub extern "C" fn raw_psk_use_session<F>(
+    callback: *const F,
+    ssl: &mut SslRef,
+    md: *const ffi::EVP_MD,
+    id: *mut *const c_uchar,
+    idlen: *mut size_t,
+    session: *mut *mut ffi::SSL_SESSION,
+) -> c_int
+where
+    F: for<'a> Fn(
+            &'a mut SslRef,
+            Option<crate::hash::MessageDigest>,
+        ) -> Result<Option<(SslSession, Vec<u8>)>, ErrorStack>
+        + 'static
+        + Sync
+        + Send,
+{
+    unsafe {
+        let psk_idx = Ssl::cached_ex_index::<Psk>();
+
+        let md = if md.is_null() {
+            None
+        } else {
+            Some(crate::hash::MessageDigest::from_ptr(md))
+        };
+
+        match (*callback)(ssl, md) {
+            Ok(ssl_session) => {
+                *session = if let Some((ssl_session, psk_id)) = ssl_session {
+                    *id = psk_id.as_ptr() as *const c_uchar;
+                    *idlen = psk_id.len() as size_t;
+
+                    ssl.set_ex_data(psk_idx, Psk(psk_id));
+
+                    let p = ssl_session.as_ptr();
+                    mem::forget(ssl_session);
+
+                    p
+                } else {
+                    ptr::null_mut()
+                };
+
+                1
+            }
+            Err(e) => {
+                e.put();
+                0
+            }
+        }
+    }
+}
+
 pub extern "C" fn ssl_raw_verify<F>(
     preverify_ok: c_int,
     x509_ctx: *mut ffi::X509_STORE_CTX,
