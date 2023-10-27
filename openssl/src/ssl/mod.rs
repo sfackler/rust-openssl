@@ -67,7 +67,7 @@ use crate::ex_data::Index;
 use crate::hash::MessageDigest;
 #[cfg(any(ossl110, libressl270))]
 use crate::nid::Nid;
-use crate::pkey::{HasPrivate, PKeyRef, Params, Private};
+use crate::pkey::{HasPrivate, PKey, PKeyRef, Params, Private, Public};
 use crate::srtp::{SrtpProtectionProfile, SrtpProtectionProfileRef};
 use crate::ssl::bio::BioMethod;
 use crate::ssl::callbacks::*;
@@ -3445,6 +3445,37 @@ impl SslRef {
     pub fn security_level(&self) -> u32 {
         unsafe { ffi::SSL_get_security_level(self.as_ptr()) as u32 }
     }
+
+    /// Get the temporary key provided by the peer that is used during key
+    /// exchange.
+    // We use an owned value because EVP_KEY free need to be called when it is
+    // dropped
+    #[corresponds(SSL_get_peer_tmp_key)]
+    pub fn peer_temp_key(&self) -> Result<PKey<Public>, ErrorStack> {
+        unsafe {
+            let mut key = ptr::null_mut();
+            match cvt(ffi::SSL_get_peer_tmp_key(self.as_ptr(), &mut key)) {
+                Ok(_) => Ok(PKey::<Public>::from_ptr(key)),
+                Err(e) => Err(e),
+            }
+        }
+    }
+
+    /// Returns the temporary key from the local end of the connection that is
+    /// used during key exchange.
+    // We use an owned value because EVP_KEY free need to be called when it is
+    // dropped
+    #[corresponds(SSL_get_peer_tmp_key)]
+    pub fn temp_key(&self) -> Result<PKey<Public>, ErrorStack> {
+        unsafe {
+            let mut key = ptr::null_mut();
+            match cvt(ffi::SSL_get_tmp_key(self.as_ptr(), &mut key)) {
+                Ok(_) => Ok(PKey::<Public>::from_ptr(key)),
+                Err(e) => Err(e),
+            }
+        }
+    }
+
 }
 
 /// An SSL stream midway through the handshake process.
