@@ -926,15 +926,15 @@ extern "C" {
 }
 
 extern "C" {
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl360))]
     pub fn SSL_CTX_set_security_level(ctx: *mut SSL_CTX, level: c_int);
 
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl360))]
     pub fn SSL_set_security_level(s: *mut SSL, level: c_int);
 
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl360))]
     pub fn SSL_CTX_get_security_level(ctx: *const SSL_CTX) -> c_int;
 
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl360))]
     pub fn SSL_get_security_level(s: *const SSL) -> c_int;
 }

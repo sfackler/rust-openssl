@@ -1718,12 +1718,12 @@ impl SslContextBuilder {
         unsafe { cvt(ffi::SSL_CTX_set_num_tickets(self.as_ptr(), num_tickets)).map(|_| ()) }
     }
 
-    /// Set the context's security level, which controls the allowed parameters
-    /// and algorithms.
+    /// Set the context's security level to a value between 0 and 5, inclusive.
+    /// A security value of 0 allows allows all parameters and algorithms.
     ///
     /// Requires OpenSSL 1.1.0 or newer.
     #[corresponds(SSL_CTX_set_security_level)]
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl360))]
     pub fn set_security_level(&mut self, level: u32) {
         unsafe { ffi::SSL_CTX_set_security_level(self.as_ptr(), level as c_int) }
     }
@@ -1937,7 +1937,7 @@ impl SslContextRef {
     ///
     /// Requires OpenSSL 1.1.0 or newer.
     #[corresponds(SSL_CTX_get_security_level)]
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl360))]
     pub fn security_level(&self) -> u32 {
         unsafe { ffi::SSL_CTX_get_security_level(self.as_ptr()) as u32 }
     }
@@ -3426,12 +3426,12 @@ impl SslRef {
         unsafe { ffi::SSL_get_num_tickets(self.as_ptr()) }
     }
 
-    /// Set the connection's security level, which controls the allowed parameters
-    /// and algorithms.
+    /// Set the context's security level to a value between 0 and 5, inclusive.
+    /// A security value of 0 allows allows all parameters and algorithms.
     ///
     /// Requires OpenSSL 1.1.0 or newer.
     #[corresponds(SSL_set_security_level)]
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl360))]
     pub fn set_security_level(&mut self, level: u32) {
         unsafe { ffi::SSL_set_security_level(self.as_ptr(), level as c_int) }
     }
@@ -3441,7 +3441,7 @@ impl SslRef {
     ///
     /// Requires OpenSSL 1.1.0 or newer.
     #[corresponds(SSL_get_security_level)]
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl360))]
     pub fn security_level(&self) -> u32 {
         unsafe { ffi::SSL_get_security_level(self.as_ptr()) as u32 }
     }
