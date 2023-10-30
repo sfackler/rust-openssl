@@ -57,6 +57,8 @@
 //!     }
 //! }
 //! ```
+#[cfg(ossl300)]
+use crate::cvt_long;
 use crate::dh::{Dh, DhRef};
 #[cfg(all(ossl101, not(ossl110)))]
 use crate::ec::EcKey;
@@ -67,7 +69,9 @@ use crate::ex_data::Index;
 use crate::hash::MessageDigest;
 #[cfg(any(ossl110, libressl270))]
 use crate::nid::Nid;
-use crate::pkey::{HasPrivate, PKey, PKeyRef, Params, Private, Public};
+use crate::pkey::{HasPrivate, PKeyRef, Params, Private};
+#[cfg(ossl300)]
+use crate::pkey::{PKey, Public};
 use crate::srtp::{SrtpProtectionProfile, SrtpProtectionProfileRef};
 use crate::ssl::bio::BioMethod;
 use crate::ssl::callbacks::*;
@@ -78,7 +82,7 @@ use crate::x509::store::{X509Store, X509StoreBuilderRef, X509StoreRef};
 #[cfg(any(ossl102, libressl261))]
 use crate::x509::verify::X509VerifyParamRef;
 use crate::x509::{X509Name, X509Ref, X509StoreContextRef, X509VerifyResult, X509};
-use crate::{cvt, cvt_long, cvt_n, cvt_p, init};
+use crate::{cvt, cvt_n, cvt_p, init};
 use bitflags::bitflags;
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
@@ -3468,16 +3472,15 @@ impl SslRef {
     // dropped
     #[corresponds(SSL_get_tmp_key)]
     #[cfg(ossl300)]
-    pub fn tmp_key(&self) -> Result<PKey<Public>, ErrorStack> {
+    pub fn tmp_key(&self) -> Result<PKey<Private>, ErrorStack> {
         unsafe {
             let mut key = ptr::null_mut();
             match cvt_long(ffi::SSL_get_tmp_key(self.as_ptr(), &mut key)) {
-                Ok(_) => Ok(PKey::<Public>::from_ptr(key)),
+                Ok(_) => Ok(PKey::<Private>::from_ptr(key)),
                 Err(e) => Err(e),
             }
         }
     }
-
 }
 
 /// An SSL stream midway through the handshake process.

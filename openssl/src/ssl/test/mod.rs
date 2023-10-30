@@ -355,7 +355,10 @@ fn peer_tmp_key_rsa() {
     server.ctx().set_cipher_list("RSA").unwrap();
     // RSA key exchange is not allowed in TLS 1.3, so force the connection
     // to negotiate TLS 1.2
-    server.ctx().set_max_proto_version(Some(SslVersion::TLS1_2)).unwrap();
+    server
+        .ctx()
+        .set_max_proto_version(Some(SslVersion::TLS1_2))
+        .unwrap();
     let server = server.build();
     let mut client = server.client();
     client.ctx().set_groups_list("P-521").unwrap();
