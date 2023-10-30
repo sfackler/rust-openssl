@@ -124,7 +124,7 @@
 #[doc(inline)]
 pub use ffi::init;
 
-use libc::c_int;
+use libc::{c_int, c_long};
 
 use crate::error::ErrorStack;
 
@@ -205,6 +205,15 @@ fn cvt_p<T>(r: *mut T) -> Result<*mut T, ErrorStack> {
 
 #[inline]
 fn cvt(r: c_int) -> Result<c_int, ErrorStack> {
+    if r <= 0 {
+        Err(ErrorStack::get())
+    } else {
+        Ok(r)
+    }
+}
+
+#[inline]
+fn cvt_long(r: c_long) -> Result<c_long, ErrorStack> {
     if r <= 0 {
         Err(ErrorStack::get())
     } else {

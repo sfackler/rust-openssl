@@ -78,7 +78,7 @@ use crate::x509::store::{X509Store, X509StoreBuilderRef, X509StoreRef};
 #[cfg(any(ossl102, libressl261))]
 use crate::x509::verify::X509VerifyParamRef;
 use crate::x509::{X509Name, X509Ref, X509StoreContextRef, X509VerifyResult, X509};
-use crate::{cvt, cvt_n, cvt_p, init};
+use crate::{cvt, cvt_long, cvt_n, cvt_p, init};
 use bitflags::bitflags;
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
@@ -3455,7 +3455,7 @@ impl SslRef {
     pub fn peer_tmp_key(&self) -> Result<PKey<Public>, ErrorStack> {
         unsafe {
             let mut key = ptr::null_mut();
-            match cvt(ffi::SSL_get_peer_tmp_key(self.as_ptr(), &mut key)) {
+            match cvt_long(ffi::SSL_get_peer_tmp_key(self.as_ptr(), &mut key)) {
                 Ok(_) => Ok(PKey::<Public>::from_ptr(key)),
                 Err(e) => Err(e),
             }
@@ -3471,7 +3471,7 @@ impl SslRef {
     pub fn tmp_key(&self) -> Result<PKey<Public>, ErrorStack> {
         unsafe {
             let mut key = ptr::null_mut();
-            match cvt(ffi::SSL_get_tmp_key(self.as_ptr(), &mut key)) {
+            match cvt_long(ffi::SSL_get_tmp_key(self.as_ptr(), &mut key)) {
                 Ok(_) => Ok(PKey::<Public>::from_ptr(key)),
                 Err(e) => Err(e),
             }

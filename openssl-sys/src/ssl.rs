@@ -512,12 +512,12 @@ cfg_if! {
 }
 cfg_if! {
     if #[cfg(ossl300)] {
-        pub unsafe fn SSL_get_peer_tmp_key(ssl: *mut SSL, key: *mut *mut EVP_PKEY) -> c_int {
-            SSL_ctrl(ssl, SSL_CTRL_GET_PEER_TMP_KEY, 0, key as *mut c_void) as c_int
+        pub unsafe fn SSL_get_peer_tmp_key(ssl: *mut SSL, key: *mut *mut EVP_PKEY) -> c_long {
+            SSL_ctrl(ssl, SSL_CTRL_GET_PEER_TMP_KEY, 0, key as *mut c_void)
         }
 
-        pub unsafe fn SSL_get_tmp_key(ssl: *mut SSL, key: *mut *mut EVP_PKEY) -> c_int {
-            SSL_ctrl(ssl, SSL_CTRL_GET_TMP_KEY, 0, key as *mut c_void) as c_int
+        pub unsafe fn SSL_get_tmp_key(ssl: *mut SSL, key: *mut *mut EVP_PKEY) -> c_long {
+            SSL_ctrl(ssl, SSL_CTRL_GET_TMP_KEY, 0, key as *mut c_void)
         }
     }
 }

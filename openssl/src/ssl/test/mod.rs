@@ -326,7 +326,7 @@ fn state() {
 // return P-384 keys, and the peer and local keys are different.
 #[test]
 #[cfg(ossl300)]
-fn peer_temp_key_p384() {
+fn peer_tmp_key_p384() {
     let mut server = Server::builder();
     server.ctx().set_groups_list("P-384").unwrap();
     let server = server.build();
@@ -350,7 +350,7 @@ fn peer_temp_key_p384() {
 // temp key sent in the initial key share.
 #[test]
 #[cfg(ossl300)]
-fn peer_temp_key_rsa() {
+fn peer_tmp_key_rsa() {
     let mut server = Server::builder();
     server.ctx().set_cipher_list("RSA").unwrap();
     // RSA key exchange is not allowed in TLS 1.3, so force the connection
