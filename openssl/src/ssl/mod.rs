@@ -3451,6 +3451,7 @@ impl SslRef {
     // We use an owned value because EVP_KEY free need to be called when it is
     // dropped
     #[corresponds(SSL_get_peer_tmp_key)]
+    #[cfg(ossl300)]
     pub fn peer_temp_key(&self) -> Result<PKey<Public>, ErrorStack> {
         unsafe {
             let mut key = ptr::null_mut();
@@ -3465,7 +3466,8 @@ impl SslRef {
     /// used during key exchange.
     // We use an owned value because EVP_KEY free need to be called when it is
     // dropped
-    #[corresponds(SSL_get_peer_tmp_key)]
+    #[corresponds(SSL_get_tmp_key)]
+    #[cfg(ossl300)]
     pub fn temp_key(&self) -> Result<PKey<Public>, ErrorStack> {
         unsafe {
             let mut key = ptr::null_mut();

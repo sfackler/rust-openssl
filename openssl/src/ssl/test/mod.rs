@@ -322,9 +322,10 @@ fn state() {
     );
 }
 
-// when a connection uses ECDHE P-256 key exchange, then the temp key APIs
-// return P-256 keys, and the peer and local keys are different.
+// when a connection uses ECDHE P-384 key exchange, then the temp key APIs
+// return P-384 keys, and the peer and local keys are different.
 #[test]
+#[cfg(ossl300)]
 fn peer_temp_key_p384() {
     let mut server = Server::builder();
     server.ctx().set_groups_list("P-384").unwrap();
@@ -348,6 +349,7 @@ fn peer_temp_key_p384() {
 // an Error because there is no temp key, and the local (client) temp key is the
 // temp key sent in the initial key share.
 #[test]
+#[cfg(ossl300)]
 fn peer_temp_key_rsa() {
     let mut server = Server::builder();
     server.ctx().set_cipher_list("RSA").unwrap();
