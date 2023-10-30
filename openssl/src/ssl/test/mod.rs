@@ -331,11 +331,11 @@ fn peer_temp_key_p384() {
     server.ctx().set_groups_list("P-384").unwrap();
     let server = server.build();
     let s = server.client().connect();
-    let peer_temp = s.ssl().peer_temp_key().unwrap();
+    let peer_temp = s.ssl().peer_tmp_key().unwrap();
     assert_eq!(peer_temp.id(), Id::EC);
     assert_eq!(peer_temp.bits(), 384);
 
-    let local_temp = s.ssl().temp_key().unwrap();
+    let local_temp = s.ssl().tmp_key().unwrap();
     assert_eq!(local_temp.id(), Id::EC);
     assert_eq!(local_temp.bits(), 384);
 
@@ -360,11 +360,11 @@ fn peer_temp_key_rsa() {
     let mut client = server.client();
     client.ctx().set_groups_list("P-521").unwrap();
     let s = client.connect();
-    let peer_temp = s.ssl().peer_temp_key();
+    let peer_temp = s.ssl().peer_tmp_key();
     assert!(peer_temp.is_err());
 
     // this is the temp key that the client sent in the initial key share
-    let local_temp = s.ssl().temp_key().unwrap();
+    let local_temp = s.ssl().tmp_key().unwrap();
     assert_eq!(local_temp.id(), Id::EC);
     assert_eq!(local_temp.bits(), 521);
 }

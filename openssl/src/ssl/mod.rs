@@ -3452,7 +3452,7 @@ impl SslRef {
     // dropped
     #[corresponds(SSL_get_peer_tmp_key)]
     #[cfg(ossl300)]
-    pub fn peer_temp_key(&self) -> Result<PKey<Public>, ErrorStack> {
+    pub fn peer_tmp_key(&self) -> Result<PKey<Public>, ErrorStack> {
         unsafe {
             let mut key = ptr::null_mut();
             match cvt(ffi::SSL_get_peer_tmp_key(self.as_ptr(), &mut key)) {
@@ -3468,7 +3468,7 @@ impl SslRef {
     // dropped
     #[corresponds(SSL_get_tmp_key)]
     #[cfg(ossl300)]
-    pub fn temp_key(&self) -> Result<PKey<Public>, ErrorStack> {
+    pub fn tmp_key(&self) -> Result<PKey<Public>, ErrorStack> {
         unsafe {
             let mut key = ptr::null_mut();
             match cvt(ffi::SSL_get_tmp_key(self.as_ptr(), &mut key)) {
