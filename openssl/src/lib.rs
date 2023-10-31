@@ -179,6 +179,7 @@ pub mod sign;
 pub mod srtp;
 pub mod ssl;
 pub mod stack;
+pub mod store;
 pub mod string;
 pub mod symm;
 pub mod version;
