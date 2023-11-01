@@ -78,7 +78,7 @@ pub struct Id(c_int);
 
 impl Id {
     pub const RSA: Id = Id(ffi::EVP_PKEY_RSA);
-    #[cfg(any(openssl111, boringssl))]
+    #[cfg(any(ossl111, libressl310, boringssl))]
     pub const RSA_PSS: Id = Id(ffi::EVP_PKEY_RSA_PSS);
     #[cfg(not(boringssl))]
     pub const HMAC: Id = Id(ffi::EVP_PKEY_HMAC);
