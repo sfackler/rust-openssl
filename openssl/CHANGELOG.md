@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## [v0.10.58] - 2023-11-01
+
+### Added
+
+* Added `Id::{RSA_PSS,DHX}` constants
+* Added `SslContextBuilder::set_security_level`
+* Added `SslContextRef::security_level`
+* Added `SslRef::set_security_level`, `SslRef::security_level`
+* Added `Cipher::{camellia_128_cbc, camellia_192_cbc, camellia_256_cbc, cast5_cbc, idea_cbc}`
+* Added `X509CrlRef::extension`
+* Added `X509PurposeId::CODE_SIGN`
+
+### Changed
+
+* `Pkey` HKDF functionality now works on LibreSSL
+* `BigNum::mod_sqrt` is now available on all OpenSSLs
+* `MessageDigest::sha3*` are now available on LibreSSL
+
 ## [v0.10.57] - 2023-08-27
 
 ### Added
@@ -797,7 +815,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.57...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.58...master
+[v0.10.57]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.57...openssl-v0.10.58
 [v0.10.57]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.56...openssl-v0.10.57
 [v0.10.56]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.55...openssl-v0.10.56
 [v0.10.55]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.54...openssl-v0.10.55

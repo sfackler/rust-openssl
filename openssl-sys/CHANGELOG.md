@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [v0.9.94] - 2023-11-01
+
+### Changed
+
+* `X509_ALGOR` is now opaque on new LibreSSL releases
+
+### Added
+
+* Added support for building with `OPENSSL_NO_SCRYPT`
+* Added `EVP_PKEY_RSA_PSS` and `EVP_PKEY_DHX`
+* Functions and constants for using HKDF `EVP_PKEY` are now available on LibreSSL.
+* Added `SSL_CTX_set_security_level`, `SSL_set_security_level`, `SSL_CTX_get_security_level`, `SSL_get_security_level`
+* Added `X509_check_host`, `X509_check_email`, `X509_check_ip`, `X509_check_ip_asc`
+
 ## [v0.9.93] - 2023-09-04
 
 ### Changed
@@ -508,7 +522,8 @@ Fixed builds against OpenSSL built with `no-cast`.
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.93..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.94..master
+[v0.9.93]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.93...openssl-sys-v0.9.94
 [v0.9.93]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.92...openssl-sys-v0.9.93
 [v0.9.92]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.91...openssl-sys-v0.9.92
 [v0.9.91]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.90...openssl-sys-v0.9.91
