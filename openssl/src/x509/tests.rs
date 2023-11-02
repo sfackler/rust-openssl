@@ -1221,7 +1221,7 @@ fn test_sbgp_extensions_builder() {
         .critical()
         .add_asn(32)
         .add_asn_range(10, 20)
-        .build(&builder.x509v3_context(None, None))
+        .build()
         .unwrap();
     builder.append_extension(asn_ext).unwrap();
 
@@ -1235,8 +1235,6 @@ fn test_sbgp_extensions_builder() {
         Ipv4Addr::from_str("10.0.0.0").unwrap(),
         Ipv4Addr::from_str("10.0.0.255").unwrap(),
     );
-    let build_ext = ip_addr_ext
-        .build(&builder.x509v3_context(None, None))
-        .unwrap();
+    let build_ext = ip_addr_ext.build().unwrap();
     builder.append_extension(build_ext).unwrap();
 }

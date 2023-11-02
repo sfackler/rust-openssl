@@ -17,12 +17,17 @@
 //! let extension: X509Extension = bc.build().unwrap();
 //! ```
 use std::fmt::Write;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use crate::asn1::Asn1Object;
+use crate::bn::BigNum;
 use crate::error::ErrorStack;
 use crate::nid::Nid;
 use crate::x509::{GeneralName, Stack, X509Extension, X509v3Context};
+use ffi::{IANA_AFI_IPV4, IANA_AFI_IPV6};
 use foreign_types::ForeignType;
+
+use super::sbgp::IPAddressFamily;
 
 /// An extension which indicates whether a certificate is a CA certificate.
 pub struct BasicConstraints {
@@ -470,27 +475,32 @@ impl SbgpAsIdentifier {
     }
 
     /// Return a `SbgpAsIdentifier` extension as an `X509Extension`.
-    #[allow(deprecated)]
-    pub fn build(&self, ctx: &X509v3Context<'_>) -> Result<X509Extension, ErrorStack> {
-        let mut value = String::new();
-        let mut first = true;
-        append(&mut value, &mut first, self.critical, "critical");
-        for (asn_min, asn_max) in &self.asn {
-            let asn_format = if asn_min == asn_max {
-                format!("AS:{}", asn_min)
-            } else {
-                format!("AS:{}-{}", asn_min, asn_max)
-            };
-            append(&mut value, &mut first, true, &asn_format);
+    pub fn build(&self) -> Result<X509Extension, ErrorStack> {
+        unsafe {
+            let asid = ffi::ASIdentifiers_new();
+            for (min, max) in &self.asn {
+                let min = BigNum::from_u32(*min)?.to_asn1_integer()?;
+                let max = BigNum::from_u32(*max)?.to_asn1_integer()?;
+
+                if min == max {
+                    ffi::X509v3_asid_add_id_or_range(asid, 0, min.as_ptr(), std::ptr::null_mut());
+                } else {
+                    ffi::X509v3_asid_add_id_or_range(asid, 0, min.as_ptr(), max.as_ptr());
+                }
+
+                std::mem::forget(min);
+                std::mem::forget(max);
+            }
+
+            X509Extension::new_internal(Nid::SBGP_AUTONOMOUSSYSNUM, self.critical, asid as *mut _)
         }
-        X509Extension::new_nid(None, Some(ctx), Nid::SBGP_AUTONOMOUSSYSNUM, &value)
     }
 }
 
 #[cfg(ossl110)]
 pub struct SbgpIpAddressIdentifier {
     critical: bool,
-    ip_ranges: Vec<(std::net::IpAddr, std::net::IpAddr)>,
+    ip_ranges: Vec<(IpAddr, IpAddr)>,
 }
 
 #[cfg(ossl110)]
@@ -517,7 +527,7 @@ impl SbgpIpAddressIdentifier {
     }
 
     /// Adds an IP adress.
-    pub fn add_ip_addr(&mut self, ip_addr: std::net::IpAddr) -> &mut SbgpIpAddressIdentifier {
+    pub fn add_ip_addr(&mut self, ip_addr: IpAddr) -> &mut SbgpIpAddressIdentifier {
         self.ip_ranges.push((ip_addr, ip_addr));
         self
     }
@@ -525,45 +535,87 @@ impl SbgpIpAddressIdentifier {
     /// Adds a range of IPv4 adresses.
     pub fn add_ipv4_addr_range(
         &mut self,
-        ip_addr_min: std::net::Ipv4Addr,
-        ip_addr_max: std::net::Ipv4Addr,
+        ip_addr_min: Ipv4Addr,
+        ip_addr_max: Ipv4Addr,
     ) -> &mut SbgpIpAddressIdentifier {
-        self.ip_ranges.push((
-            std::net::IpAddr::V4(ip_addr_min),
-            std::net::IpAddr::V4(ip_addr_max),
-        ));
+        self.ip_ranges
+            .push((IpAddr::V4(ip_addr_min), IpAddr::V4(ip_addr_max)));
         self
     }
 
     /// Adds a range of IPv6 adresses.
     pub fn add_ipv6_addr_range(
         &mut self,
-        ip_addr_min: std::net::Ipv6Addr,
-        ip_addr_max: std::net::Ipv6Addr,
+        ip_addr_min: Ipv6Addr,
+        ip_addr_max: Ipv6Addr,
     ) -> &mut SbgpIpAddressIdentifier {
-        self.ip_ranges.push((
-            std::net::IpAddr::V6(ip_addr_min),
-            std::net::IpAddr::V6(ip_addr_max),
-        ));
+        self.ip_ranges
+            .push((IpAddr::V6(ip_addr_min), IpAddr::V6(ip_addr_max)));
+        self
+    }
+
+    /// Adds a ip prefix
+    pub fn add_ip_prefix(
+        &mut self,
+        prefix: IpAddr,
+        prefixlen: usize,
+    ) -> &mut SbgpIpAddressIdentifier {
+        match prefix {
+            IpAddr::V4(prefix) => {
+                let mask = !(u32::MAX >> prefixlen);
+                let min = mask & u32::from(prefix);
+                let max = min | !mask;
+                self.ip_ranges
+                    .push((Ipv4Addr::from(min).into(), Ipv4Addr::from(max).into()));
+            }
+            IpAddr::V6(prefix) => {
+                let mask = !(u128::MAX >> prefixlen);
+                let min = mask & u128::from(prefix);
+                let max = min | !mask;
+                self.ip_ranges
+                    .push((Ipv6Addr::from(min).into(), Ipv6Addr::from(max).into()));
+            }
+        }
         self
     }
 
     /// Return a `SbgpIpAddressIdentifier` extension as an `X509Extension`.
-    #[allow(deprecated)]
-    pub fn build(&self, ctx: &X509v3Context<'_>) -> Result<X509Extension, ErrorStack> {
-        let mut value = String::new();
-        let mut first = true;
-        append(&mut value, &mut first, self.critical, "critical");
-        for (ip_addr_min, ip_addr_max) in &self.ip_ranges {
-            let version = if ip_addr_min.is_ipv4() { 4 } else { 6 };
-            let ip_addr_format = if ip_addr_min == ip_addr_max {
-                format!("IPv{}:{}", version, ip_addr_min)
-            } else {
-                format!("IPv{}:{}-{}", version, ip_addr_min, ip_addr_max)
-            };
-            append(&mut value, &mut first, true, &ip_addr_format);
+    pub fn build(&self) -> Result<X509Extension, ErrorStack> {
+        unsafe {
+            let stack = Stack::<IPAddressFamily>::new()?;
+            macro_rules! cast_ptr {
+                ($e:expr) => {{
+                    let ptr: *mut _ = &mut ($e);
+                    ptr as *mut u8
+                }};
+            }
+
+            for (min, max) in &self.ip_ranges {
+                let (min, max, afi) = match (*min, *max) {
+                    (IpAddr::V4(mut min), IpAddr::V4(mut max)) => {
+                        (cast_ptr!(min), cast_ptr!(max), IANA_AFI_IPV4 as u32)
+                    }
+                    (IpAddr::V6(mut min), IpAddr::V6(mut max)) => {
+                        (cast_ptr!(min), cast_ptr!(max), IANA_AFI_IPV6 as u32)
+                    }
+                    _ => unreachable!(),
+                };
+
+                ffi::X509v3_addr_add_range(
+                    stack.as_ptr().cast(),
+                    afi,
+                    std::ptr::null_mut(),
+                    min,
+                    max,
+                );
+            }
+
+            X509Extension::new_internal(
+                Nid::SBGP_IPADDRBLOCK,
+                self.critical,
+                stack.as_ptr() as *mut _,
+            )
         }
-        X509Extension::new_nid(None, Some(ctx), Nid::SBGP_IPADDRBLOCK, &value)
     }
 }
 

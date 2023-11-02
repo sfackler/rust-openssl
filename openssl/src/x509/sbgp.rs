@@ -135,6 +135,7 @@ pub enum IPVersion {
 
 #[cfg(ossl110)]
 impl IPAddressFamily {
+    /// Returns the IP version of this record.
     #[corresponds(X509v3_addr_get_afi)]
     pub fn fam(&self) -> Option<IPVersion> {
         unsafe {
@@ -147,43 +148,47 @@ impl IPAddressFamily {
         }
     }
 
+    /// Returns the list of IP ranges contained in this IP family.
+    #[corresponds(X509v3_addr_get_range)]
     pub fn range(&self) -> Option<Vec<(IpAddr, IpAddr)>> {
         unsafe {
+            let fam = self.fam()?;
             let ptr = self.0;
-            let mut r = Vec::new();
             let choice = (*ptr).ipAddressChoice;
             if (*choice).type_ != IPAddressChoice_addressesOrRanges {
                 return None;
             }
             let stack =
                 StackRef::<IPAddressOrRange>::from_const_ptr_opt((*choice).u.addressesOrRanges)?;
-            for e in stack {
-                let mut min = MaybeUninit::<[u8; 16]>::uninit();
-                let mut max = MaybeUninit::<[u8; 16]>::uninit();
-                let size = ffi::X509v3_addr_get_range(
-                    e.as_ptr(),
-                    X509v3_addr_get_afi(ptr),
-                    min.as_mut_ptr() as *mut u8,
-                    max.as_mut_ptr() as *mut u8,
-                    16,
-                );
-                r.push((
-                    Self::data_to_ip_addr(min.assume_init(), size)?,
-                    Self::data_to_ip_addr(max.assume_init(), size)?,
-                ))
+            match fam {
+                IPVersion::V4 => Self::addr_get_range::<Ipv4Addr>(stack, 4, IANA_AFI_IPV4 as u32),
+                IPVersion::V6 => Self::addr_get_range::<Ipv6Addr>(stack, 16, IANA_AFI_IPV6 as u32),
             }
-            Some(r)
         }
     }
 
-    fn data_to_ip_addr(data: [u8; 16], len: i32) -> Option<IpAddr> {
-        match len {
-            4 => Some(IpAddr::V4(Ipv4Addr::new(
-                data[0], data[1], data[2], data[3],
-            ))),
-            16 => Some(IpAddr::V6(Ipv6Addr::from(data))),
-            _ => None,
+    unsafe fn addr_get_range<T: Into<IpAddr>>(
+        stack: &StackRef<IPAddressOrRange>,
+        len: i32,
+        afi: u32,
+    ) -> Option<Vec<(IpAddr, IpAddr)>> {
+        let mut r = Vec::new();
+        for val in stack {
+            let mut min = MaybeUninit::<T>::uninit();
+            let mut max = MaybeUninit::<T>::uninit();
+            let size = ffi::X509v3_addr_get_range(
+                val.as_ptr(),
+                afi,
+                min.as_mut_ptr() as *mut _,
+                max.as_mut_ptr() as *mut _,
+                len,
+            );
+            if size != len {
+                return None;
+            }
+            r.push((min.assume_init().into(), max.assume_init().into()))
         }
+        Some(r)
     }
 }
 

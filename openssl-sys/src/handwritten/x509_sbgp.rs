@@ -26,6 +26,8 @@ pub union ASIdOrRange_st_anon_union {
 
 #[cfg(ossl110)]
 stack!(stack_st_ASIdOrRange);
+#[cfg(ossl110)]
+type ASIdOrRanges = stack_st_ASIdOrRange;
 
 #[repr(C)]
 #[cfg(ossl110)]
@@ -99,10 +101,34 @@ type IPAddrBlocks = stack_st_IPAddressFamily;
 
 #[cfg(ossl110)]
 extern "C" {
+    /*
+     * Constructors / Destructors for SBGP autonomousSysNum
+     */
+    pub fn ASIdentifiers_new() -> *mut ASIdentifiers;
     pub fn ASIdentifiers_free(asi: *mut ASIdentifiers);
     pub fn ASIdOrRange_free(asi: *mut ASIdOrRange);
+
+    /*
+     * Constructors / Destructors for SBGP ipAddrBlock
+     */
     pub fn IPAddressFamily_free(asi: *mut IPAddressFamily);
     pub fn IPAddressOrRange_free(asi: *mut IPAddressOrRange);
+
+    /*
+     * Utility functions for working with RFC 3779 values,
+     * since their encodings are a bit tedious.
+     *
+     * Not yet used:
+     * - X509v3_asid_add_inherit
+     * - X509v3_addr_add_inherit
+     * - X509v3_addr_add_prefix
+     */
+    pub fn X509v3_asid_add_id_or_range(
+        asid: *mut ASIdentifiers,
+        which: c_int,
+        min: *mut ASN1_INTEGER,
+        max: *mut ASN1_INTEGER,
+    ) -> c_int;
     pub fn X509v3_addr_get_range(
         aor: *mut IPAddressOrRange,
         afi: c_uint,
@@ -111,4 +137,11 @@ extern "C" {
         length: c_int,
     ) -> c_int;
     pub fn X509v3_addr_get_afi(f: *const IPAddressFamily) -> c_uint;
+    pub fn X509v3_addr_add_range(
+        addr: *mut IPAddrBlocks,
+        afi: c_uint,
+        safi: *const c_uint,
+        min: *mut c_uchar,
+        max: *mut c_uchar,
+    ) -> c_int;
 }
