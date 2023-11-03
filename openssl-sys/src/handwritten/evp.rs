@@ -312,7 +312,10 @@ extern "C" {
     pub fn EVP_des_ecb() -> *const EVP_CIPHER;
     pub fn EVP_des_ede3() -> *const EVP_CIPHER;
     pub fn EVP_des_ede3_cbc() -> *const EVP_CIPHER;
+    pub fn EVP_des_ede3_ecb() -> *const EVP_CIPHER;
     pub fn EVP_des_ede3_cfb64() -> *const EVP_CIPHER;
+    pub fn EVP_des_ede3_cfb8() -> *const EVP_CIPHER;
+    pub fn EVP_des_ede3_ofb() -> *const EVP_CIPHER;
     pub fn EVP_des_cbc() -> *const EVP_CIPHER;
     #[cfg(not(osslconf = "OPENSSL_NO_RC4"))]
     pub fn EVP_rc4() -> *const EVP_CIPHER;
@@ -398,17 +401,23 @@ extern "C" {
     #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
     pub fn EVP_camellia_128_cbc() -> *const EVP_CIPHER;
     #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    pub fn EVP_camellia_128_ofb() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
     pub fn EVP_camellia_192_cfb128() -> *const EVP_CIPHER;
     #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
     pub fn EVP_camellia_192_ecb() -> *const EVP_CIPHER;
     #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
     pub fn EVP_camellia_192_cbc() -> *const EVP_CIPHER;
     #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    pub fn EVP_camellia_192_ofb() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
     pub fn EVP_camellia_256_cfb128() -> *const EVP_CIPHER;
     #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
     pub fn EVP_camellia_256_ecb() -> *const EVP_CIPHER;
     #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
     pub fn EVP_camellia_256_cbc() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    pub fn EVP_camellia_256_ofb() -> *const EVP_CIPHER;
 
     #[cfg(not(osslconf = "OPENSSL_NO_CAST"))]
     pub fn EVP_cast5_cfb64() -> *const EVP_CIPHER;
@@ -416,6 +425,8 @@ extern "C" {
     pub fn EVP_cast5_ecb() -> *const EVP_CIPHER;
     #[cfg(not(osslconf = "OPENSSL_NO_CAST"))]
     pub fn EVP_cast5_cbc() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_CAST"))]
+    pub fn EVP_cast5_ofb() -> *const EVP_CIPHER;
 
     #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
     pub fn EVP_idea_cfb64() -> *const EVP_CIPHER;
@@ -423,6 +434,8 @@ extern "C" {
     pub fn EVP_idea_ecb() -> *const EVP_CIPHER;
     #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
     pub fn EVP_idea_cbc() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
+    pub fn EVP_idea_ofb() -> *const EVP_CIPHER;
 
     #[cfg(not(ossl110))]
     pub fn OPENSSL_add_all_algorithms_noconf();
