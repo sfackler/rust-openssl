@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [v0.10.59] - 2023-11-03
+
+### Added
+
+* Added `Nid::CHACHA20_POLY1305`
+
+### Changed
+
+* Fixed the availability of `Id::RSA_PSS` on OpenSSL
+
 ## [v0.10.58] - 2023-11-01
 
 ### Added
@@ -815,8 +825,9 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.58...master
-[v0.10.57]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.57...openssl-v0.10.58
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.59...master
+[v0.10.59]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.58...openssl-v0.10.59
+[v0.10.58]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.57...openssl-v0.10.58
 [v0.10.57]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.56...openssl-v0.10.57
 [v0.10.56]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.55...openssl-v0.10.56
 [v0.10.55]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.54...openssl-v0.10.55
