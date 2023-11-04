@@ -556,11 +556,8 @@ impl CipherCtxRef {
         output: Option<&mut [u8]>,
     ) -> Result<usize, ErrorStack> {
         if let Some(output) = &output {
-            let mut block_size = self.block_size();
-            if block_size == 1 {
-                block_size = 0;
-            }
-            let min_output_size = input.len() + block_size;
+            let block_size = self.block_size();
+            let min_output_size = input.len() + block_size - 1;
             assert!(
                 output.len() >= min_output_size,
                 "Output buffer size should be at least {} bytes.",
@@ -910,19 +907,19 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Output buffer size should be at least 33 bytes.")]
+    #[should_panic(expected = "Output buffer size should be at least 32 bytes.")]
     fn full_block_updates_aes_128() {
         output_buffer_too_small(Cipher::aes_128_cbc());
     }
 
     #[test]
-    #[should_panic(expected = "Output buffer size should be at least 33 bytes.")]
+    #[should_panic(expected = "Output buffer size should be at least 32 bytes.")]
     fn full_block_updates_aes_256() {
         output_buffer_too_small(Cipher::aes_256_cbc());
     }
 
     #[test]
-    #[should_panic(expected = "Output buffer size should be at least 17 bytes.")]
+    #[should_panic(expected = "Output buffer size should be at least 16 bytes.")]
     fn full_block_updates_3des() {
         output_buffer_too_small(Cipher::des_ede3_cbc());
     }
