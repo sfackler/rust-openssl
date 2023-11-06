@@ -1413,7 +1413,7 @@ impl X509Pubkey {
     where
         T: HasPublic,
     {
-        let mut p = ptr::null_mut() as *mut ffi::X509_PUBKEY;
+        let mut p = ptr::null_mut();
         unsafe {
             cvt(ffi::X509_PUBKEY_set(&mut p as *mut _, key.as_ptr()))?;
         }
@@ -1468,7 +1468,7 @@ impl X509PubkeyRef {
                 self.as_ptr(),
             ))?;
 
-            Ok(slice::from_raw_parts(pk as *const u8, pkt_len as usize))
+            Ok(slice::from_raw_parts(pk, pkt_len as usize))
         }
     }
 }
