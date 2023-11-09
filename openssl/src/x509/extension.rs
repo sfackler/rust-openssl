@@ -26,6 +26,7 @@ use crate::nid::Nid;
 use crate::x509::{GeneralName, Stack, X509Extension, X509v3Context};
 use ffi::{IANA_AFI_IPV4, IANA_AFI_IPV6};
 use foreign_types::ForeignType;
+use openssl_macros::corresponds;
 
 use super::sbgp::IPAddressFamily;
 
@@ -582,32 +583,9 @@ impl SbgpIpAddressIdentifier {
     /// Return a `SbgpIpAddressIdentifier` extension as an `X509Extension`.
     pub fn build(&self) -> Result<X509Extension, ErrorStack> {
         unsafe {
-            let stack = Stack::<IPAddressFamily>::new()?;
-            macro_rules! cast_ptr {
-                ($e:expr) => {{
-                    let ptr: *mut _ = &mut ($e);
-                    ptr as *mut u8
-                }};
-            }
-
+            let mut stack = Stack::<IPAddressFamily>::new()?;
             for (min, max) in &self.ip_ranges {
-                let (min, max, afi) = match (*min, *max) {
-                    (IpAddr::V4(mut min), IpAddr::V4(mut max)) => {
-                        (cast_ptr!(min), cast_ptr!(max), IANA_AFI_IPV4 as u32)
-                    }
-                    (IpAddr::V6(mut min), IpAddr::V6(mut max)) => {
-                        (cast_ptr!(min), cast_ptr!(max), IANA_AFI_IPV6 as u32)
-                    }
-                    _ => unreachable!(),
-                };
-
-                ffi::X509v3_addr_add_range(
-                    stack.as_ptr().cast(),
-                    afi,
-                    std::ptr::null_mut(),
-                    min,
-                    max,
-                );
+                stack.sbgp_add_addr_range(*min, *max)
             }
 
             X509Extension::new_internal(
@@ -615,6 +593,31 @@ impl SbgpIpAddressIdentifier {
                 self.critical,
                 stack.as_ptr() as *mut _,
             )
+        }
+    }
+}
+
+impl Stack<IPAddressFamily> {
+    /// Adds an address range to the stack
+    /// This helper exists as a utility function, because RFC 3779 types are hard to deal with.
+    #[corresponds(X509v3_addr_add_range)]
+    pub fn sbgp_add_addr_range(&mut self, min: IpAddr, max: IpAddr) {
+        unsafe {
+            let (min, max, afi) = match (min, max) {
+                (IpAddr::V4(mut min), IpAddr::V4(mut max)) => (
+                    &mut min as *mut _ as *mut u8,
+                    &mut max as *mut _ as *mut u8,
+                    IANA_AFI_IPV4 as u32,
+                ),
+                (IpAddr::V6(mut min), IpAddr::V6(mut max)) => (
+                    &mut min as *mut _ as *mut u8,
+                    &mut max as *mut _ as *mut u8,
+                    IANA_AFI_IPV6 as u32,
+                ),
+                _ => unreachable!(),
+            };
+
+            ffi::X509v3_addr_add_range(self.as_ptr().cast(), afi, std::ptr::null_mut(), min, max);
         }
     }
 }
