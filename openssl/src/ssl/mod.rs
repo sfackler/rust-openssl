@@ -57,6 +57,8 @@
 //!     }
 //! }
 //! ```
+#[cfg(ossl300)]
+use crate::cvt_long;
 use crate::dh::{Dh, DhRef};
 #[cfg(all(ossl101, not(ossl110)))]
 use crate::ec::EcKey;
@@ -68,6 +70,8 @@ use crate::hash::MessageDigest;
 #[cfg(any(ossl110, libressl270))]
 use crate::nid::Nid;
 use crate::pkey::{HasPrivate, PKeyRef, Params, Private};
+#[cfg(ossl300)]
+use crate::pkey::{PKey, Public};
 use crate::srtp::{SrtpProtectionProfile, SrtpProtectionProfileRef};
 use crate::ssl::bio::BioMethod;
 use crate::ssl::callbacks::*;
@@ -3444,6 +3448,38 @@ impl SslRef {
     #[cfg(any(ossl110, libressl360))]
     pub fn security_level(&self) -> u32 {
         unsafe { ffi::SSL_get_security_level(self.as_ptr()) as u32 }
+    }
+
+    /// Get the temporary key provided by the peer that is used during key
+    /// exchange.
+    // We use an owned value because EVP_KEY free need to be called when it is
+    // dropped
+    #[corresponds(SSL_get_peer_tmp_key)]
+    #[cfg(ossl300)]
+    pub fn peer_tmp_key(&self) -> Result<PKey<Public>, ErrorStack> {
+        unsafe {
+            let mut key = ptr::null_mut();
+            match cvt_long(ffi::SSL_get_peer_tmp_key(self.as_ptr(), &mut key)) {
+                Ok(_) => Ok(PKey::<Public>::from_ptr(key)),
+                Err(e) => Err(e),
+            }
+        }
+    }
+
+    /// Returns the temporary key from the local end of the connection that is
+    /// used during key exchange.
+    // We use an owned value because EVP_KEY free need to be called when it is
+    // dropped
+    #[corresponds(SSL_get_tmp_key)]
+    #[cfg(ossl300)]
+    pub fn tmp_key(&self) -> Result<PKey<Private>, ErrorStack> {
+        unsafe {
+            let mut key = ptr::null_mut();
+            match cvt_long(ffi::SSL_get_tmp_key(self.as_ptr(), &mut key)) {
+                Ok(_) => Ok(PKey::<Private>::from_ptr(key)),
+                Err(e) => Err(e),
+            }
+        }
     }
 }
 

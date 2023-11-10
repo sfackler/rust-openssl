@@ -349,6 +349,8 @@ pub const SSL_CTRL_SET_ECDH_AUTO: c_int = 94;
 pub const SSL_CTRL_SET_SIGALGS_LIST: c_int = 98;
 #[cfg(ossl102)]
 pub const SSL_CTRL_SET_VERIFY_CERT_STORE: c_int = 106;
+#[cfg(ossl300)]
+pub const SSL_CTRL_GET_PEER_TMP_KEY: c_int = 109;
 #[cfg(ossl110)]
 pub const SSL_CTRL_GET_EXTMS_SUPPORT: c_int = 122;
 #[cfg(any(ossl110, libressl261))]
@@ -359,6 +361,8 @@ pub const SSL_CTRL_SET_MAX_PROTO_VERSION: c_int = 124;
 pub const SSL_CTRL_GET_MIN_PROTO_VERSION: c_int = 130;
 #[cfg(any(ossl110g, libressl270))]
 pub const SSL_CTRL_GET_MAX_PROTO_VERSION: c_int = 131;
+#[cfg(ossl300)]
+pub const SSL_CTRL_GET_TMP_KEY: c_int = 133;
 
 pub unsafe fn SSL_CTX_set_tmp_dh(ctx: *mut SSL_CTX, dh: *mut DH) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TMP_DH, 0, dh as *mut c_void)
@@ -503,6 +507,17 @@ cfg_if! {
         }
         pub unsafe fn SSL_get_max_proto_version(s: *mut SSL) -> c_int {
             SSL_ctrl(s, SSL_CTRL_GET_MAX_PROTO_VERSION, 0, ptr::null_mut()) as c_int
+        }
+    }
+}
+cfg_if! {
+    if #[cfg(ossl300)] {
+        pub unsafe fn SSL_get_peer_tmp_key(ssl: *mut SSL, key: *mut *mut EVP_PKEY) -> c_long {
+            SSL_ctrl(ssl, SSL_CTRL_GET_PEER_TMP_KEY, 0, key as *mut c_void)
+        }
+
+        pub unsafe fn SSL_get_tmp_key(ssl: *mut SSL, key: *mut *mut EVP_PKEY) -> c_long {
+            SSL_ctrl(ssl, SSL_CTRL_GET_TMP_KEY, 0, key as *mut c_void)
         }
     }
 }

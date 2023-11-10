@@ -125,6 +125,8 @@
 pub use ffi::init;
 
 use libc::c_int;
+#[cfg(ossl300)]
+use libc::c_long;
 
 use crate::error::ErrorStack;
 
@@ -205,6 +207,19 @@ fn cvt_p<T>(r: *mut T) -> Result<*mut T, ErrorStack> {
 
 #[inline]
 fn cvt(r: c_int) -> Result<c_int, ErrorStack> {
+    if r <= 0 {
+        Err(ErrorStack::get())
+    } else {
+        Ok(r)
+    }
+}
+
+// cvt_long is currently only used in functions that require openssl >= 3.0.0,
+// so this cfg statement is used to avoid "unused function" errors when
+// compiling with openssl < 3.0.0
+#[inline]
+#[cfg(ossl300)]
+fn cvt_long(r: c_long) -> Result<c_long, ErrorStack> {
     if r <= 0 {
         Err(ErrorStack::get())
     } else {
