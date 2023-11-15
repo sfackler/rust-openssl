@@ -17,19 +17,23 @@
 //! let extension: X509Extension = bc.build().unwrap();
 //! ```
 use std::fmt::Write;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use crate::asn1::Asn1Object;
-use crate::bn::BigNum;
 use crate::error::ErrorStack;
 use crate::nid::Nid;
 use crate::x509::{GeneralName, Stack, X509Extension, X509v3Context};
-use ffi::{IANA_AFI_IPV4, IANA_AFI_IPV6};
+
 use foreign_types::ForeignType;
 use openssl_macros::corresponds;
 
+#[cfg(ossl110)]
 use super::sbgp::IPAddressFamily;
-
+#[cfg(ossl110)]
+use crate::bn::BigNum;
+#[cfg(ossl110)]
+use ffi::{IANA_AFI_IPV4, IANA_AFI_IPV6};
+#[cfg(ossl110)]
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 /// An extension which indicates whether a certificate is a CA certificate.
 pub struct BasicConstraints {
     critical: bool,
@@ -597,6 +601,7 @@ impl SbgpIpAddressIdentifier {
     }
 }
 
+#[cfg(ossl110)]
 impl Stack<IPAddressFamily> {
     /// Adds an address range to the stack
     /// This helper exists as a utility function, because RFC 3779 types are hard to deal with.

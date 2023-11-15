@@ -1229,7 +1229,7 @@ fn test_sbgp_as_identifier_builder() {
     let cert = builder.build();
 
     let asn = cert.sbgp_asn().unwrap();
-    assert_eq!(asn.inherited(), false);
+    assert!(!asn.inherited());
     assert_eq!(
         asn.ranges(),
         Some(vec![(1000, 1000), (2500, 2700), (9000, 9000)])
