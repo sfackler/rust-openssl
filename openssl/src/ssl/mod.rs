@@ -3484,6 +3484,60 @@ impl SslRef {
             }
         }
     }
+
+    /// this returns the hash, e.g. SHA1, SHA512
+    #[corresponds(SSL_get_signature_nid)]
+    #[cfg(ossl111)]
+    pub fn signature_nid(&self) -> Result<Nid, ErrorStack> {
+        unsafe {
+            let mut pnid: c_int = 0;
+            match cvt(ffi::SSL_get_signature_nid(self.as_ptr(), &mut pnid)) {
+                Ok(_) => Ok(Nid::from_raw(pnid)),
+                Err(e) => Err(e),
+            }
+        }
+    }
+
+    /// this returns the hash, e.g. SHA1, SHA512
+    #[corresponds(SSL_get_peer_signature_nid)]
+    #[cfg(ossl102)]
+    pub fn peer_signature_nid(&self) -> Result<Nid, ErrorStack> {
+        unsafe {
+            let mut pnid: c_int = 0;
+            match cvt(ffi::SSL_get_peer_signature_nid(self.as_ptr(), &mut pnid)) {
+                Ok(_) => Ok(Nid::from_raw(pnid)),
+                Err(e) => Err(e),
+            }
+        }
+    }
+
+    /// this returns the signature algorithm e.g. RSA/RSA_PSS
+    #[corresponds(SSL_get_signature_type_nid)]
+    #[cfg(ossl111)]
+    pub fn signature_type_nid(&self) -> Result<Nid, ErrorStack> {
+        unsafe {
+            let mut pnid: c_int = 0;
+
+            match cvt(ffi::SSL_get_signature_type_nid(self.as_ptr(), &mut pnid)) {
+                Ok(_) => Ok(Nid::from_raw(pnid)),
+                Err(e) => Err(e),
+            }
+        }
+    }
+
+    /// this returns the signature algorithm e.g. RSA/RSA_PSS
+    #[corresponds(SSL_get_peer_signature_type_nid)]
+    #[cfg(ossl111)]
+    pub fn peer_signature_type_nid(&self) -> Result<Nid, ErrorStack> {
+        unsafe {
+            let mut pnid: c_int = 0;
+
+            match cvt(ffi::SSL_get_peer_signature_type_nid(self.as_ptr(), &mut pnid)) {
+                Ok(_) => Ok(Nid::from_raw(pnid)),
+                Err(e) => Err(e),
+            }
+        }
+    }
 }
 
 /// An SSL stream midway through the handshake process.

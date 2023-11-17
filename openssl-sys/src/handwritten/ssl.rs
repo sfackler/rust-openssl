@@ -951,3 +951,12 @@ extern "C" {
     #[cfg(any(ossl110, libressl360))]
     pub fn SSL_get_security_level(s: *const SSL) -> c_int;
 }
+
+cfg_if! {
+    if #[cfg(ossl111)] {
+        extern "C" {
+            pub fn SSL_get_peer_signature_type_nid(s: *const SSL, pnid: *mut c_int) -> c_int;
+            pub fn SSL_get_signature_type_nid(s: *const SSL, pnid: *mut c_int) -> c_int;
+        }
+    }
+}
