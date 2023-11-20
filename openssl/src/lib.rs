@@ -48,6 +48,9 @@
 //!
 //! # Alpine Linux
 //! $ apk add pkgconfig openssl-dev
+//!
+//! # NixOS (shell.nix)
+//! { pkgs ? import <nixpkgs> {} }: pkgs.mkShell { nativeBuildInputs = [ pkgs.pkgconfig ]; buildInputs = [ pkgs.openssl ]; }
 //! ```
 //!
 //! ## Manual
