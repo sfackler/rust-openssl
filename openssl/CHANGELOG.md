@@ -2,6 +2,29 @@
 
 ## [Unreleased]
 
+## [v0.10.60] - 2023-11-22
+
+### Deprecated
+
+* Deprecated `X509StoreRef::objects`. It is unsound. All callers should migrate to using `X509StoreRef::all_certificates` instead.
+
+### Fixed
+
+* Fixed a memory leak when calling `SslContextBuilder::set_ex_data` and `SslRef::set_ex_data` multiple times with the same index.
+
+### Added
+
+* Added `X509StoreRef::all_certificates`
+* Added `cipher::Cipher::{camellia128_cbc,camellia192_cbc,camellia256_cbc,cast5_cbc,idea_cbc}`
+* Added `symm::Cipher::{des_ede3_ecb,des_ede3_cfb8,des_ede3_ofb,camellia_128_ecb,camellia_128_ofb,camellia_128_cfb128,camellia_192_ecb,camellia_192_ofb,camellia_192_cfb128,camellia_256_ecb,camellia_256_ofb,camellia_256_cfb128,cast5_ecb,cast5_ofb,cast5_cfb64,idea_ecb,idea_ofb,idea_cfb64}`
+* Added `Crypter::update_unchecked`
+* Added `SslRef::{peer_tmp_key,tmp_key}`
+
+### Changed
+
+* `cipher::Cipher::chacha20` is now available on LibreSSL
+* `symm::Cipher::chacha20` is now available on LibreSSL
+
 ## [v0.10.59] - 2023-11-03
 
 ### Added
@@ -825,7 +848,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.59...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.60...master
+[v0.10.60]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.59...openssl-v0.10.60
 [v0.10.59]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.58...openssl-v0.10.59
 [v0.10.58]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.57...openssl-v0.10.58
 [v0.10.57]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.56...openssl-v0.10.57
