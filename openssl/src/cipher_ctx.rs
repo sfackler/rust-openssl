@@ -582,6 +582,7 @@ impl CipherCtxRef {
     /// buffer size control is maintained by the caller.
     ///
     /// # Safety
+    ///
     /// The caller is expected to provide `output` buffer
     /// large enough to contain correct number of bytes. For streaming
     /// ciphers the output buffer size should be at least as big as
@@ -695,6 +696,7 @@ impl CipherCtxRef {
     /// the output buffer size check removed.
     ///
     /// # Safety
+    ///
     /// The caller is expected to provide `output` buffer
     /// large enough to contain correct number of bytes. For streaming
     /// ciphers the output buffer can be empty, for block ciphers the
