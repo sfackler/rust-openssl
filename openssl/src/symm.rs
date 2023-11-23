@@ -696,6 +696,27 @@ impl Crypter {
         self.ctx.cipher_update(input, Some(output))
     }
 
+    /// Feeds data from `input` through the cipher, writing encrypted/decrypted
+    /// bytes into `output`.
+    ///
+    /// The number of bytes written to `output` is returned. Note that this may
+    /// not be equal to the length of `input`.
+    ///
+    /// # Safety
+    ///
+    /// The caller must provide an `output` buffer large enough to contain
+    /// correct number of bytes. For streaming ciphers the output buffer size
+    /// should be at least as big as the input buffer. For block ciphers the
+    /// size of the output buffer depends on the state of partially updated
+    /// blocks.
+    pub unsafe fn update_unchecked(
+        &mut self,
+        input: &[u8],
+        output: &mut [u8],
+    ) -> Result<usize, ErrorStack> {
+        self.ctx.cipher_update_unchecked(input, Some(output))
+    }
+
     /// Finishes the encryption/decryption process, writing any remaining data
     /// to `output`.
     ///
