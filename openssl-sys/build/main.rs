@@ -130,7 +130,7 @@ fn main() {
             || env::var("CARGO_CFG_TARGET_OS").unwrap() == "android")
         && env::var("CARGO_CFG_TARGET_POINTER_WIDTH").unwrap() == "32"
     {
-        println!("cargo:rustc-link-lib=dylib=atomic");
+        println!("cargo:rustc-link-lib=atomic");
     }
 
     if kind == "static" && target.contains("windows") {
