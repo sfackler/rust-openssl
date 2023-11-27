@@ -1177,3 +1177,52 @@ fn test_dist_point_null() {
     let cert = X509::from_pem(cert).unwrap();
     assert!(cert.crl_distribution_points().is_none());
 }
+
+#[test]
+fn test_crl_creation_utils() {
+    use crate::asn1::Asn1Integer;
+    use crate::x509::X509Revoked;
+
+    let crl = X509Crl::new().unwrap();
+
+    let mut name = X509Name::builder().unwrap();
+    name.append_entry_by_text("C", "UK").unwrap();
+    name.append_entry_by_text("O", "Orga").unwrap();
+    crl.set_issuer(&name.build()).unwrap();
+
+    let date = Asn1Time::from_unix(100_000_000).unwrap();
+    crl.set_last_update(&date).unwrap();
+
+    let pkey = pkey();
+    let success = crl.sign(&pkey, &MessageDigest::sha256()).unwrap();
+    assert!(success);
+
+    let rvk0 = X509Revoked::new().unwrap();
+    let serial0 = Asn1Integer::from_bn(&BigNum::from_u32(1001).unwrap()).unwrap();
+    rvk0.set_serial_number(&serial0).unwrap();
+    rvk0.set_revocation_date(&date).unwrap();
+    crl.add_revoked(rvk0).unwrap();
+
+    let rvk1 = X509Revoked::new().unwrap();
+    let serial1 = Asn1Integer::from_bn(&BigNum::from_u32(300).unwrap()).unwrap();
+    rvk1.set_serial_number(&serial1).unwrap();
+    rvk1.set_revocation_date(&date).unwrap();
+    crl.add_revoked(rvk1).unwrap();
+
+    let issuer = crl.issuer_name().entries().collect::<Vec<_>>();
+    assert_eq!(issuer.len(), 2);
+    assert_eq!(issuer[1].object().nid(), Nid::ORGANIZATIONNAME);
+    assert_eq!(issuer[1].data().as_slice(), b"Orga");
+
+    assert!(crl.last_update() == &Asn1Time::from_unix(100_000_000).unwrap());
+
+    let revoked = crl.get_revoked().unwrap().into_iter().collect::<Vec<_>>();
+    assert!(revoked[0].serial_number().eq(&serial0));
+    assert!(revoked[1].serial_number().eq(&serial1));
+
+    crl.sort().unwrap();
+
+    let revoked = crl.get_revoked().unwrap().into_iter().collect::<Vec<_>>();
+    assert!(revoked[0].serial_number().eq(&serial1));
+    assert!(revoked[1].serial_number().eq(&serial0));
+}

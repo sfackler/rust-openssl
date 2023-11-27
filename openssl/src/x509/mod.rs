@@ -1647,6 +1647,15 @@ impl Stackable for X509Revoked {
 }
 
 impl X509Revoked {
+    /// Creates a new `X509Revoked` instance.`
+    #[corresponds(X509_REVOKED_new)]
+    pub fn new() -> Result<X509Revoked, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(ffi::X509_REVOKED_new()).map(X509Revoked)
+        }
+    }
+
     from_der! {
         /// Deserializes a DER-encoded certificate revocation status
         #[corresponds(d2i_X509_REVOKED)]
@@ -1662,6 +1671,36 @@ impl X509RevokedRef {
         #[corresponds(d2i_X509_REVOKED)]
         to_der,
         ffi::i2d_X509_REVOKED
+    }
+
+    // Sets the serial number of the revoked certificate.
+    #[corresponds(X509_REVOKED_set_serialNumber)]
+    pub fn set_serial_number(&self, serial: &Asn1IntegerRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_REVOKED_set_serialNumber(
+                self.as_ptr(),
+                serial.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Set the date of the revocation
+    #[corresponds(X509_REVOKED_set_revocationDate)]
+    pub fn set_revocation_date(&self, time: &Asn1TimeRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_REVOKED_set_revocationDate(
+                self.as_ptr(),
+                time.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Creates a duplicate of the revoked certificate
+    #[corresponds(X509_REVOKED_dup)]
+    pub fn dup(&self) -> Result<X509Revoked, ErrorStack> {
+        unsafe { cvt_p(ffi::X509_REVOKED_dup(self.as_ptr())).map(X509Revoked) }
     }
 
     /// Copies the entry to a new `X509Revoked`.
@@ -1812,6 +1851,15 @@ impl<'a> CrlStatus<'a> {
 }
 
 impl X509Crl {
+    /// Creates a new `X509Crl` instance.
+    #[corresponds(X509_CRL_new)]
+    pub fn new() -> Result<X509Crl, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(ffi::X509_CRL_new()).map(X509Crl)
+        }
+    }
+
     from_pem! {
         /// Deserializes a PEM-encoded Certificate Revocation List
         ///
@@ -1846,6 +1894,49 @@ impl X509CrlRef {
         #[corresponds(i2d_X509_CRL)]
         to_der,
         ffi::i2d_X509_CRL
+    }
+
+    /// Adds revocation.
+    #[corresponds(X509_CRL_add0_revoked)]
+    pub fn add_revoked(&self, revoked: X509Revoked) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_CRL_add0_revoked(self.as_ptr(), revoked.as_ptr()))?;
+            std::mem::forget(revoked);
+            Ok(())
+        }
+    }
+
+    /// Sorts list by serial number.
+    #[corresponds(X509_CRL_sort)]
+    pub fn sort(&self) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_CRL_sort(self.as_ptr())).map(|_| ()) }
+    }
+
+    /// Sets the CRL's `nextUpdate` time.
+    #[corresponds(X509_CRL_set1_lastUpdate)]
+    pub fn set_last_update(&self, tm: &Asn1TimeRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_CRL_set1_lastUpdate(self.as_ptr(), tm.as_ptr())).map(|_| ()) }
+    }
+
+    /// Sets the CRL's `issuer`.
+    #[corresponds(X509_CRL_set_issuer_name)]
+    pub fn set_issuer(&self, issuer_name: &X509NameRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_CRL_set_issuer_name(self.as_ptr(), issuer_name.as_ptr())).map(|_| ())
+        }
+    }
+
+    /// Sign the CRL using the given public key and message digest.
+    ///
+    /// Returns `true` if signing succeeded.
+    #[corresponds(X509_CRL_sign)]
+    pub fn sign<T>(&self, key: &PKeyRef<T>, md: &MessageDigest) -> Result<bool, ErrorStack>
+    where
+        T: HasPublic,
+    {
+        unsafe {
+            cvt_n(ffi::X509_CRL_sign(self.as_ptr(), key.as_ptr(), md.as_ptr())).map(|n| n > 0)
+        }
     }
 
     /// Get the stack of revocation entries
