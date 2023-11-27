@@ -249,24 +249,14 @@ impl X509Builder {
     #[corresponds(X509_set_serialNumber)]
     pub fn set_serial_number(&mut self, serial_number: &Asn1IntegerRef) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::X509_set_serialNumber(
-                self.0.as_ptr(),
-                serial_number.as_ptr(),
-            ))
-            .map(|_| ())
+            cvt(ffi::X509_set_serialNumber(self.0.as_ptr(), serial_number.as_ptr())).map(|_| ())
         }
     }
 
     /// Sets the issuer name of the certificate.
     #[corresponds(X509_set_issuer_name)]
     pub fn set_issuer_name(&mut self, issuer_name: &X509NameRef) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::X509_set_issuer_name(
-                self.0.as_ptr(),
-                issuer_name.as_ptr(),
-            ))
-            .map(|_| ())
-        }
+        unsafe { cvt(ffi::X509_set_issuer_name(self.0.as_ptr(), issuer_name.as_ptr())).map(|_| ()) }
     }
 
     /// Sets the subject name of the certificate.
@@ -290,11 +280,7 @@ impl X509Builder {
     #[corresponds(X509_set_subject_name)]
     pub fn set_subject_name(&mut self, subject_name: &X509NameRef) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::X509_set_subject_name(
-                self.0.as_ptr(),
-                subject_name.as_ptr(),
-            ))
-            .map(|_| ())
+            cvt(ffi::X509_set_subject_name(self.0.as_ptr(), subject_name.as_ptr())).map(|_| ())
         }
     }
 
@@ -429,12 +415,13 @@ impl X509Ref {
     #[corresponds(X509_get_ext_d2i)]
     pub fn subject_alt_names(&self) -> Option<Stack<GeneralName>> {
         unsafe {
-            let stack = ffi::X509_get_ext_d2i(
-                self.as_ptr(),
-                ffi::NID_subject_alt_name,
-                ptr::null_mut(),
-                ptr::null_mut(),
-            );
+            let stack =
+                ffi::X509_get_ext_d2i(
+                    self.as_ptr(),
+                    ffi::NID_subject_alt_name,
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                );
             Stack::from_ptr_opt(stack as *mut _)
         }
     }
@@ -443,12 +430,13 @@ impl X509Ref {
     #[corresponds(X509_get_ext_d2i)]
     pub fn crl_distribution_points(&self) -> Option<Stack<DistPoint>> {
         unsafe {
-            let stack = ffi::X509_get_ext_d2i(
-                self.as_ptr(),
-                ffi::NID_crl_distribution_points,
-                ptr::null_mut(),
-                ptr::null_mut(),
-            );
+            let stack =
+                ffi::X509_get_ext_d2i(
+                    self.as_ptr(),
+                    ffi::NID_crl_distribution_points,
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                );
             Stack::from_ptr_opt(stack as *mut _)
         }
     }
@@ -457,12 +445,13 @@ impl X509Ref {
     #[corresponds(X509_get_ext_d2i)]
     pub fn issuer_alt_names(&self) -> Option<Stack<GeneralName>> {
         unsafe {
-            let stack = ffi::X509_get_ext_d2i(
-                self.as_ptr(),
-                ffi::NID_issuer_alt_name,
-                ptr::null_mut(),
-                ptr::null_mut(),
-            );
+            let stack =
+                ffi::X509_get_ext_d2i(
+                    self.as_ptr(),
+                    ffi::NID_issuer_alt_name,
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                );
             Stack::from_ptr_opt(stack as *mut _)
         }
     }
@@ -788,10 +777,12 @@ impl Clone for X509 {
 impl fmt::Debug for X509 {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let serial = match &self.serial_number().to_bn() {
-            Ok(bn) => match bn.to_hex_str() {
-                Ok(hex) => hex.to_string(),
-                Err(_) => "".to_string(),
-            },
+            Ok(bn) => {
+                match bn.to_hex_str() {
+                    Ok(hex) => hex.to_string(),
+                    Err(_) => "".to_string(),
+                }
+            }
             Err(_) => "".to_string(),
         };
         let mut debug_struct = formatter.debug_struct("X509");
@@ -1375,13 +1366,7 @@ impl X509ReqBuilder {
     ///[`X509_REQ_set_version`]: https://www.openssl.org/docs/manmaster/crypto/X509_REQ_set_version.html
     #[allow(clippy::useless_conversion)]
     pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::X509_REQ_set_version(
-                self.0.as_ptr(),
-                version as c_long,
-            ))
-            .map(|_| ())
-        }
+        unsafe { cvt(ffi::X509_REQ_set_version(self.0.as_ptr(), version as c_long)).map(|_| ()) }
     }
 
     /// Set the issuer name.
@@ -1441,11 +1426,7 @@ impl X509ReqBuilder {
         extensions: &StackRef<X509Extension>,
     ) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::X509_REQ_add_extensions(
-                self.0.as_ptr(),
-                extensions.as_ptr(),
-            ))
-            .map(|_| ())
+            cvt(ffi::X509_REQ_add_extensions(self.0.as_ptr(), extensions.as_ptr())).map(|_| ())
         }
     }
 
@@ -1697,12 +1678,6 @@ impl X509RevokedRef {
         }
     }
 
-    /// Creates a duplicate of the revoked certificate
-    #[corresponds(X509_REVOKED_dup)]
-    pub fn dup(&self) -> Result<X509Revoked, ErrorStack> {
-        unsafe { cvt_p(ffi::X509_REVOKED_dup(self.as_ptr())).map(X509Revoked) }
-    }
-
     /// Copies the entry to a new `X509Revoked`.
     #[corresponds(X509_NAME_dup)]
     #[cfg(any(boringssl, ossl110, libressl270))]
@@ -1736,18 +1711,19 @@ impl X509RevokedRef {
     #[corresponds(X509_REVOKED_get_ext_d2i)]
     pub fn extension<T: ExtensionType>(&self) -> Result<Option<(bool, T::Output)>, ErrorStack> {
         let mut critical = -1;
-        let out = unsafe {
-            // SAFETY: self.as_ptr() is a valid pointer to an X509_REVOKED.
-            let ext = ffi::X509_REVOKED_get_ext_d2i(
-                self.as_ptr(),
-                T::NID.as_raw(),
-                &mut critical as *mut _,
-                ptr::null_mut(),
-            );
-            // SAFETY: Extensions's contract promises that the type returned by
-            // OpenSSL here is T::Output.
-            T::Output::from_ptr_opt(ext as *mut _)
-        };
+        let out =
+            unsafe {
+                // SAFETY: self.as_ptr() is a valid pointer to an X509_REVOKED.
+                let ext = ffi::X509_REVOKED_get_ext_d2i(
+                    self.as_ptr(),
+                    T::NID.as_raw(),
+                    &mut critical as *mut _,
+                    ptr::null_mut(),
+                );
+                // SAFETY: Extensions's contract promises that the type returned by
+                // OpenSSL here is T::Output.
+                T::Output::from_ptr_opt(ext as *mut _)
+            };
         match (critical, out) {
             (0, Some(out)) => Ok(Some((false, out))),
             (1, Some(out)) => Ok(Some((true, out))),
@@ -1914,6 +1890,7 @@ impl X509CrlRef {
 
     /// Sets the CRL's `nextUpdate` time.
     #[corresponds(X509_CRL_set1_lastUpdate)]
+    #[cfg(any(ossl110, libressl270))]
     pub fn set_last_update(&self, tm: &Asn1TimeRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_CRL_set1_lastUpdate(self.as_ptr(), tm.as_ptr())).map(|_| ()) }
     }
@@ -2026,12 +2003,13 @@ impl X509CrlRef {
         let mut critical = -1;
         let out = unsafe {
             // SAFETY: self.as_ptr() is a valid pointer to an X509_CRL.
-            let ext = ffi::X509_CRL_get_ext_d2i(
-                self.as_ptr(),
-                T::NID.as_raw(),
-                &mut critical as *mut _,
-                ptr::null_mut(),
-            );
+            let ext =
+                ffi::X509_CRL_get_ext_d2i(
+                    self.as_ptr(),
+                    T::NID.as_raw(),
+                    &mut critical as *mut _,
+                    ptr::null_mut(),
+                );
             // SAFETY: Extensions's contract promises that the type returned by
             // OpenSSL here is T::Output.
             T::Output::from_ptr_opt(ext as *mut _)
