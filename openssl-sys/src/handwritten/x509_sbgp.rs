@@ -119,7 +119,6 @@ extern "C" {
      * since their encodings are a bit tedious.
      *
      * Not yet used:
-     * - X509v3_asid_add_inherit
      * - X509v3_addr_add_inherit
      * - X509v3_addr_add_prefix
      */
@@ -129,6 +128,10 @@ extern "C" {
         min: *mut ASN1_INTEGER,
         max: *mut ASN1_INTEGER,
     ) -> c_int;
+    pub fn X509v3_asid_add_inherit(asid: *mut ASIdentifiers, which: c_int) -> c_int;
+    pub fn X509v3_asid_canonize(asid: *mut ASIdentifiers) -> c_int;
+    pub fn X509v3_asid_is_canonical(asid: *mut ASIdentifiers) -> c_int;
+
     pub fn X509v3_addr_get_range(
         aor: *mut IPAddressOrRange,
         afi: c_uint,
@@ -144,4 +147,11 @@ extern "C" {
         min: *mut c_uchar,
         max: *mut c_uchar,
     ) -> c_int;
+    pub fn X509v3_addr_add_inherit(
+        addr: *mut IPAddrBlocks,
+        afi: c_uint,
+        safi: *const c_uint,
+    ) -> c_int;
+    pub fn X509v3_addr_canonize(addr: *mut IPAddrBlocks) -> c_int;
+    pub fn X509v3_addr_is_canonical(addr: *mut IPAddrBlocks) -> c_int;
 }

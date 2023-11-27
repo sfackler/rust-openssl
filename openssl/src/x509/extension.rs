@@ -25,10 +25,13 @@ use crate::x509::{GeneralName, Stack, X509Extension, X509v3Context};
 
 use foreign_types::ForeignType;
 
+use super::sbgp::ASIdentifiers;
 #[cfg(ossl110)]
-use super::sbgp::IPAddressFamily;
+use super::sbgp::{IPAddressFamily, IPVersion};
 #[cfg(ossl110)]
 use crate::bn::BigNum;
+#[cfg(ossl110)]
+use crate::cvt;
 #[cfg(ossl110)]
 use ffi::{IANA_AFI_IPV4, IANA_AFI_IPV6};
 #[cfg(ossl110)]
@@ -444,6 +447,7 @@ impl AuthorityKeyIdentifier {
 pub struct SbgpAsIdentifier {
     critical: bool,
     asn: Vec<(u32, u32)>,
+    inherit: bool,
 }
 
 #[cfg(ossl110)]
@@ -458,14 +462,21 @@ impl SbgpAsIdentifier {
     /// Construct a new `SbgpAsIdentifier` extension.
     pub fn new() -> SbgpAsIdentifier {
         SbgpAsIdentifier {
-            critical: false,
+            critical: true,
             asn: Vec::new(),
+            inherit: false,
         }
     }
 
-    /// Sets the `critical` flag to `true`. The extension will be critical.
-    pub fn critical(&mut self) -> &mut SbgpAsIdentifier {
-        self.critical = true;
+    /// Sets the `critical` flag. The extension will be critical.
+    pub fn critical(&mut self, value: bool) -> &mut SbgpAsIdentifier {
+        self.critical = value;
+        self
+    }
+
+    /// Sets the `inherit`` flag to `true`.
+    pub fn add_inherit(&mut self) -> &mut SbgpAsIdentifier {
+        self.inherit = true;
         self
     }
 
@@ -484,22 +495,46 @@ impl SbgpAsIdentifier {
     /// Return a `SbgpAsIdentifier` extension as an `X509Extension`.
     pub fn build(&self) -> Result<X509Extension, ErrorStack> {
         unsafe {
-            let asid = ffi::ASIdentifiers_new();
+            let asid = ASIdentifiers::from_ptr(ffi::ASIdentifiers_new());
+            if self.inherit {
+                cvt(ffi::X509v3_asid_add_inherit(
+                    asid.as_ptr(),
+                    ffi::V3_ASID_ASNUM,
+                ))?;
+            }
+
             for (min, max) in &self.asn {
                 let min = BigNum::from_u32(*min)?.to_asn1_integer()?;
                 let max = BigNum::from_u32(*max)?.to_asn1_integer()?;
 
                 if min == max {
-                    ffi::X509v3_asid_add_id_or_range(asid, 0, min.as_ptr(), std::ptr::null_mut());
+                    cvt(ffi::X509v3_asid_add_id_or_range(
+                        asid.as_ptr(),
+                        0,
+                        min.as_ptr(),
+                        std::ptr::null_mut(),
+                    ))?;
                 } else {
-                    ffi::X509v3_asid_add_id_or_range(asid, 0, min.as_ptr(), max.as_ptr());
-                }
+                    cvt(ffi::X509v3_asid_add_id_or_range(
+                        asid.as_ptr(),
+                        0,
+                        min.as_ptr(),
+                        max.as_ptr(),
+                    ))?;
+                };
 
                 std::mem::forget(min);
                 std::mem::forget(max);
             }
 
-            X509Extension::new_internal(Nid::SBGP_AUTONOMOUSSYSNUM, self.critical, asid as *mut _)
+            if ffi::X509v3_asid_is_canonical(asid.as_ptr()) != 1 {
+                cvt(ffi::X509v3_asid_canonize(asid.as_ptr()))?;
+            }
+
+            let ptr = asid.as_ptr();
+            std::mem::forget(asid);
+
+            X509Extension::new_internal(Nid::SBGP_AUTONOMOUSSYSNUM, self.critical, ptr as *mut _)
         }
     }
 }
@@ -508,6 +543,7 @@ impl SbgpAsIdentifier {
 pub struct SbgpIpAddressIdentifier {
     critical: bool,
     ip_ranges: Vec<(IpAddr, IpAddr)>,
+    inherit: Option<IPVersion>,
 }
 
 #[cfg(ossl110)]
@@ -522,14 +558,21 @@ impl SbgpIpAddressIdentifier {
     /// Construct a new `SbgpIpAddressIdentifier` extension.
     pub fn new() -> SbgpIpAddressIdentifier {
         SbgpIpAddressIdentifier {
-            critical: false,
+            critical: true,
             ip_ranges: Vec::new(),
+            inherit: None,
         }
     }
 
-    /// Sets the `critical` flag to `true`. The extension will be critical.
-    pub fn critical(&mut self) -> &mut SbgpIpAddressIdentifier {
-        self.critical = true;
+    /// Sets the `critical` flag. The extension will be critical.
+    pub fn critical(&mut self, value: bool) -> &mut SbgpIpAddressIdentifier {
+        self.critical = value;
+        self
+    }
+
+    /// Sets the `inherit` flag in the list corresponding to the ip version.
+    pub fn add_inherit(&mut self, afi: IPVersion) -> &mut SbgpIpAddressIdentifier {
+        self.inherit = Some(afi);
         self
     }
 
@@ -590,8 +633,23 @@ impl SbgpIpAddressIdentifier {
     pub fn build(&self) -> Result<X509Extension, ErrorStack> {
         unsafe {
             let mut stack = Stack::<IPAddressFamily>::new()?;
+            if let Some(ref inherit) = self.inherit {
+                cvt(ffi::X509v3_addr_add_inherit(
+                    stack.as_ptr(),
+                    match inherit {
+                        IPVersion::V4 => IANA_AFI_IPV4 as u32,
+                        IPVersion::V6 => IANA_AFI_IPV6 as u32,
+                    },
+                    std::ptr::null(),
+                ))?;
+            }
+
             for (min, max) in &self.ip_ranges {
-                stack.sbgp_add_addr_range(*min, *max)
+                stack.sbgp_add_addr_range(*min, *max)?;
+            }
+
+            if ffi::X509v3_addr_is_canonical(stack.as_ptr()) != 1 {
+                cvt(ffi::X509v3_addr_canonize(stack.as_ptr()))?;
             }
 
             X509Extension::new_internal(
@@ -608,7 +666,7 @@ impl Stack<IPAddressFamily> {
     /// Adds an address range to the stack
     /// This helper exists as a utility function, because RFC 3779 types are hard to deal with.
     #[corresponds(X509v3_addr_add_range)]
-    pub fn sbgp_add_addr_range(&mut self, min: IpAddr, max: IpAddr) {
+    pub fn sbgp_add_addr_range(&mut self, min: IpAddr, max: IpAddr) -> Result<(), ErrorStack> {
         unsafe {
             let (min, max, afi) = match (min, max) {
                 (IpAddr::V4(mut min), IpAddr::V4(mut max)) => (
@@ -624,7 +682,14 @@ impl Stack<IPAddressFamily> {
                 _ => unreachable!(),
             };
 
-            ffi::X509v3_addr_add_range(self.as_ptr().cast(), afi, std::ptr::null_mut(), min, max);
+            cvt(ffi::X509v3_addr_add_range(
+                self.as_ptr().cast(),
+                afi,
+                std::ptr::null_mut(),
+                min,
+                max,
+            ))
+            .map(|_| ())
         }
     }
 }

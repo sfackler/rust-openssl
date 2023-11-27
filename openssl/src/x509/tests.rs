@@ -1218,7 +1218,6 @@ fn test_sbgp_extensions_parsing() {
 fn test_sbgp_as_identifier_builder() {
     let mut builder = X509Builder::new().unwrap();
     let as_id_ext = SbgpAsIdentifier::new()
-        .critical()
         .add_asn(1000)
         .add_asn_range(2500, 2700)
         .add_asn(9000)
@@ -1238,12 +1237,31 @@ fn test_sbgp_as_identifier_builder() {
 
 #[test]
 #[cfg(ossl110)]
+fn test_sbgp_as_identifier_builder_inherit() {
+    let mut builder = X509Builder::new().unwrap();
+    let as_id_ext = SbgpAsIdentifier::new().add_inherit().build().unwrap();
+
+    builder.append_extension(as_id_ext).unwrap();
+    let cert = builder.build();
+
+    let asn = cert.sbgp_asn().unwrap();
+    assert!(asn.inherited());
+    assert_eq!(asn.ranges(), None);
+
+    assert!(SbgpAsIdentifier::new()
+        .add_inherit()
+        .add_asn(123)
+        .build()
+        .is_err());
+}
+
+#[test]
+#[cfg(ossl110)]
 fn test_sbgp_ip_addr_ranges_builder() {
     use crate::x509::sbgp::IPVersion;
 
     let mut builder = X509Builder::new().unwrap();
     let ip_addr_ext = SbgpIpAddressIdentifier::new()
-        .critical()
         .add_ip_addr(IpAddr::from_str("10.0.0.0").unwrap())
         .add_ip_prefix(IpAddr::from_str("20.0.0.0").unwrap(), 16)
         .add_ipv6_addr_range(
