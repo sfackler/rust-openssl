@@ -1572,16 +1572,34 @@ impl SslContextBuilder {
     ///
     /// This can be used to provide data to callbacks registered with the context. Use the
     /// `SslContext::new_ex_index` method to create an `Index`.
+    // FIXME should return a result
     #[corresponds(SSL_CTX_set_ex_data)]
     pub fn set_ex_data<T>(&mut self, index: Index<SslContext, T>, data: T) {
         self.set_ex_data_inner(index, data);
     }
 
     fn set_ex_data_inner<T>(&mut self, index: Index<SslContext, T>, data: T) -> *mut c_void {
+        match self.ex_data_mut(index) {
+            Some(v) => {
+                *v = data;
+                (v as *mut T).cast()
+            }
+            _ => unsafe {
+                let data = Box::into_raw(Box::new(data)) as *mut c_void;
+                ffi::SSL_CTX_set_ex_data(self.as_ptr(), index.as_raw(), data);
+                data
+            },
+        }
+    }
+
+    fn ex_data_mut<T>(&mut self, index: Index<SslContext, T>) -> Option<&mut T> {
         unsafe {
-            let data = Box::into_raw(Box::new(data)) as *mut c_void;
-            ffi::SSL_CTX_set_ex_data(self.as_ptr(), index.as_raw(), data);
-            data
+            let data = ffi::SSL_CTX_get_ex_data(self.as_ptr(), index.as_raw());
+            if data.is_null() {
+                None
+            } else {
+                Some(&mut *data.cast())
+            }
         }
     }
 
@@ -2965,15 +2983,19 @@ impl SslRef {
     ///
     /// This can be used to provide data to callbacks registered with the context. Use the
     /// `Ssl::new_ex_index` method to create an `Index`.
+    // FIXME should return a result
     #[corresponds(SSL_set_ex_data)]
     pub fn set_ex_data<T>(&mut self, index: Index<Ssl, T>, data: T) {
-        unsafe {
-            let data = Box::new(data);
-            ffi::SSL_set_ex_data(
-                self.as_ptr(),
-                index.as_raw(),
-                Box::into_raw(data) as *mut c_void,
-            );
+        match self.ex_data_mut(index) {
+            Some(v) => *v = data,
+            None => unsafe {
+                let data = Box::new(data);
+                ffi::SSL_set_ex_data(
+                    self.as_ptr(),
+                    index.as_raw(),
+                    Box::into_raw(data) as *mut c_void,
+                );
+            },
         }
     }
 

@@ -111,6 +111,12 @@ pub fn run(include_dirs: &[PathBuf]) {
 #[cfg(feature = "bindgen")]
 pub fn run_boringssl(include_dirs: &[PathBuf]) {
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+
+    fs::File::create(out_dir.join("boring_static_wrapper.h"))
+        .expect("Failed to create boring_static_wrapper.h")
+        .write_all(INCLUDES.as_bytes())
+        .expect("Failed to write contents to boring_static_wrapper.h");
+
     let mut builder = bindgen::builder()
         .rust_target(RustTarget::Stable_1_47)
         .ctypes_prefix("::libc")
@@ -119,14 +125,19 @@ pub fn run_boringssl(include_dirs: &[PathBuf]) {
         .enable_function_attribute_detection()
         .default_macro_constant_type(MacroTypeVariation::Signed)
         .rustified_enum("point_conversion_form_t")
-        .allowlist_file(".*/openssl/[^/]+\\.h")
+        .allowlist_file(".*[/\\\\]openssl/[^/]+\\.h")
         .allowlist_recursively(false)
         .blocklist_function("BIO_vsnprintf")
         .blocklist_function("OPENSSL_vasprintf")
         .wrap_static_fns(true)
         .wrap_static_fns_path(out_dir.join("boring_static_wrapper").display().to_string())
         .layout_tests(false)
-        .header_contents("includes.h", INCLUDES);
+        .header(
+            out_dir
+                .join("boring_static_wrapper.h")
+                .display()
+                .to_string(),
+        );
 
     for include_dir in include_dirs {
         builder = builder
@@ -140,21 +151,9 @@ pub fn run_boringssl(include_dirs: &[PathBuf]) {
         .write_to_file(out_dir.join("bindgen.rs"))
         .unwrap();
 
-    fs::File::create(out_dir.join("boring_static_wrapper.h"))
-        .expect("Failed to create boring_static_wrapper.h")
-        .write_all(INCLUDES.as_bytes())
-        .expect("Failed to write contents to boring_static_wrapper.h");
-
     cc::Build::new()
         .file(out_dir.join("boring_static_wrapper.c"))
         .includes(include_dirs)
-        .flag("-include")
-        .flag(
-            &out_dir
-                .join("boring_static_wrapper.h")
-                .display()
-                .to_string(),
-        )
         .compile("boring_static_wrapper");
 }
 
@@ -180,7 +179,7 @@ pub fn run_boringssl(include_dirs: &[PathBuf]) {
         .arg("--enable-function-attribute-detection")
         .arg("--default-macro-constant-type=signed")
         .arg("--rustified-enum=point_conversion_form_t")
-        .arg("--allowlist-file=.*/openssl/[^/]+\\.h")
+        .arg("--allowlist-file=.*[/\\\\]openssl/[^/]+\\.h")
         .arg("--no-recursive-allowlist")
         .arg("--blocklist-function=BIO_vsnprintf")
         .arg("--blocklist-function=OPENSSL_vasprintf")
@@ -203,13 +202,6 @@ pub fn run_boringssl(include_dirs: &[PathBuf]) {
     cc::Build::new()
         .file(out_dir.join("boring_static_wrapper.c"))
         .includes(include_dirs)
-        .flag("-include")
-        .flag(
-            &out_dir
-                .join("boring_static_wrapper.h")
-                .display()
-                .to_string(),
-        )
         .compile("boring_static_wrapper");
 }
 

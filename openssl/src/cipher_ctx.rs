@@ -581,7 +581,9 @@ impl CipherCtxRef {
     /// output size check removed. It can be used when the exact
     /// buffer size control is maintained by the caller.
     ///
-    /// SAFETY: The caller is expected to provide `output` buffer
+    /// # Safety
+    ///
+    /// The caller is expected to provide `output` buffer
     /// large enough to contain correct number of bytes. For streaming
     /// ciphers the output buffer size should be at least as big as
     /// the input buffer. For block ciphers the size of the output
@@ -693,7 +695,9 @@ impl CipherCtxRef {
     /// This function is the same as [`Self::cipher_final`] but with
     /// the output buffer size check removed.
     ///
-    /// SAFETY: The caller is expected to provide `output` buffer
+    /// # Safety
+    ///
+    /// The caller is expected to provide `output` buffer
     /// large enough to contain correct number of bytes. For streaming
     /// ciphers the output buffer can be empty, for block ciphers the
     /// output buffer should be at least as big as the block.

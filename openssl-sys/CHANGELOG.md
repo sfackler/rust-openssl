@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [v0.9.96] - 2023-11-22
+
+### Changed
+
+* `EVP_chacha20` is now available on LibreSSL
+
+### Added
+
+* Added `EVP_des_ede3_ecb`, `EVP_des_ede3_cfb8`, `EVP_des_ede3_ofb`, `EVP_camellia_128_ofb`, `EVP_camellia_192_ofb`, `EVP_camellia_256_ofb`, `EVP_cast5_ofb`, `EVP_idea_ofb`
+* Added `X509_STORE_get1_all_certs`
+* Added `SSL_CTRL_GET_PEER_TMP_KEY`, `SSL_CTRL_GET_TMP_KEY`, `SSL_get_peer_tmp_key`, `SSL_get_tmp_key`
+
 ## [v0.9.95] - 2023-11-03
 
 ### Changed
@@ -533,7 +545,8 @@ Fixed builds against OpenSSL built with `no-cast`.
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.95..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.96..master
+[v0.9.96]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.95...openssl-sys-v0.9.96
 [v0.9.95]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.94...openssl-sys-v0.9.95
 [v0.9.94]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.93...openssl-sys-v0.9.94
 [v0.9.93]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.92...openssl-sys-v0.9.93

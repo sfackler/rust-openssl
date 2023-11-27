@@ -119,7 +119,7 @@
 //! ```
 #![doc(html_root_url = "https://docs.rs/openssl/0.10")]
 #![warn(rust_2018_idioms)]
-#![allow(clippy::uninlined_format_args)]
+#![allow(clippy::uninlined_format_args, clippy::needless_doctest_main)]
 
 #[doc(inline)]
 pub use ffi::init;

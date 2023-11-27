@@ -10,7 +10,7 @@ use std::net::UdpSocket;
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::path::Path;
 use std::process::{Child, ChildStdin, Command, Stdio};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::thread;
 use std::time::Duration;
 
@@ -1637,4 +1637,51 @@ fn set_security_level() {
     ssl.set_security_level(4);
     let ssl = ssl;
     assert_eq!(4, ssl.security_level());
+}
+
+#[test]
+fn ssl_ctx_ex_data_leak() {
+    static DROPS: AtomicUsize = AtomicUsize::new(0);
+
+    struct DropTest;
+
+    impl Drop for DropTest {
+        fn drop(&mut self) {
+            DROPS.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    let idx = SslContext::new_ex_index().unwrap();
+
+    let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    ctx.set_ex_data(idx, DropTest);
+    ctx.set_ex_data(idx, DropTest);
+    assert_eq!(DROPS.load(Ordering::Relaxed), 1);
+
+    drop(ctx);
+    assert_eq!(DROPS.load(Ordering::Relaxed), 2);
+}
+
+#[test]
+fn ssl_ex_data_leak() {
+    static DROPS: AtomicUsize = AtomicUsize::new(0);
+
+    struct DropTest;
+
+    impl Drop for DropTest {
+        fn drop(&mut self) {
+            DROPS.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    let idx = Ssl::new_ex_index().unwrap();
+
+    let ctx = SslContext::builder(SslMethod::tls()).unwrap().build();
+    let mut ssl = Ssl::new(&ctx).unwrap();
+    ssl.set_ex_data(idx, DropTest);
+    ssl.set_ex_data(idx, DropTest);
+    assert_eq!(DROPS.load(Ordering::Relaxed), 1);
+
+    drop(ssl);
+    assert_eq!(DROPS.load(Ordering::Relaxed), 2);
 }
