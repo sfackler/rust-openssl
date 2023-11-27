@@ -1215,7 +1215,7 @@ fn test_crl_creation_utils() {
     assert_eq!(issuer[1].object().nid(), Nid::ORGANIZATIONNAME);
     assert_eq!(issuer[1].data().as_slice(), b"Orga");
 
-    assert!(crl.last_update() == &Asn1Time::from_unix(100_000_000).unwrap());
+    assert!(crl.last_update() == Asn1Time::from_unix(100_000_000).unwrap());
 
     let revoked = crl.get_revoked().unwrap().into_iter().collect::<Vec<_>>();
     assert!(revoked[0].serial_number().eq(&serial0));
