@@ -504,27 +504,28 @@ impl SbgpAsIdentifier {
             }
 
             for (min, max) in &self.asn {
-                let min = BigNum::from_u32(*min)?.to_asn1_integer()?;
-                let max = BigNum::from_u32(*max)?.to_asn1_integer()?;
-
+                let asn_min = BigNum::from_u32(*min)?.to_asn1_integer()?;
                 if min == max {
                     cvt(ffi::X509v3_asid_add_id_or_range(
                         asid.as_ptr(),
                         0,
-                        min.as_ptr(),
+                        asn_min.as_ptr(),
                         std::ptr::null_mut(),
+                        
                     ))?;
                 } else {
+                    let asn_max = BigNum::from_u32(*max)?.to_asn1_integer()?;
                     cvt(ffi::X509v3_asid_add_id_or_range(
                         asid.as_ptr(),
                         0,
-                        min.as_ptr(),
-                        max.as_ptr(),
+                        asn_min.as_ptr(),
+                        asn_max.as_ptr(),
                     ))?;
+                    std::mem::forget(asn_max);
                 };
-
-                std::mem::forget(min);
-                std::mem::forget(max);
+                // On success ownership of min and max was moved, so forget
+                // On failure the fn early returned, thus the Rust types will free min and max
+                std::mem::forget(asn_min);      
             }
 
             if ffi::X509v3_asid_is_canonical(asid.as_ptr()) != 1 {
