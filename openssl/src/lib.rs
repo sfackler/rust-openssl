@@ -48,7 +48,7 @@
 //!
 //! # Alpine Linux
 //! $ apk add pkgconfig openssl-dev
-//! 
+//!
 //! # openSUSE
 //! $ sudo zypper in libopenssl-devel
 //! ```
