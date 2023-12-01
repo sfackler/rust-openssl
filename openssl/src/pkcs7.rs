@@ -4,15 +4,30 @@ use libc::c_int;
 use std::mem;
 use std::ptr;
 
+use crate::asn1::Asn1ObjectRef;
 use crate::bio::{MemBio, MemBioSlice};
 use crate::error::ErrorStack;
+use crate::nid::Nid;
 use crate::pkey::{HasPrivate, PKeyRef};
-use crate::stack::{Stack, StackRef};
+use crate::stack::{Stack, StackRef, Stackable};
 use crate::symm::Cipher;
+use crate::util::ForeignTypeRefExt;
 use crate::x509::store::X509StoreRef;
 use crate::x509::{X509Ref, X509};
 use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::PKCS7_SIGNER_INFO;
+    fn drop = ffi::PKCS7_SIGNER_INFO_free;
+
+    pub struct Pkcs7SignerInfo;
+    pub struct Pkcs7SignerInfoRef;
+}
+
+impl Stackable for Pkcs7SignerInfo {
+    type StackType = ffi::stack_st_PKCS7_SIGNER_INFO;
+}
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::PKCS7;
@@ -25,6 +40,19 @@ foreign_type_and_impl_send_sync! {
 
     /// Reference to `Pkcs7`
     pub struct Pkcs7Ref;
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::PKCS7_SIGNED;
+    fn drop = ffi::PKCS7_SIGNED_free;
+
+    /// A PKCS#7 signed data structure.
+    ///
+    /// Contains signed data.
+    pub struct Pkcs7Signed;
+
+    /// Reference to `Pkcs7Signed`
+    pub struct Pkcs7SignedRef;
 }
 
 bitflags! {
@@ -281,11 +309,43 @@ impl Pkcs7Ref {
             Ok(stack)
         }
     }
+
+    /// Return the type of a PKCS#7 structure as an Asn1Object
+    pub fn type_(&self) -> Option<&Asn1ObjectRef> {
+        unsafe {
+            let ptr = (*self.as_ptr()).type_;
+            Asn1ObjectRef::from_const_ptr_opt(ptr)
+        }
+    }
+
+    /// Get the signed data of a PKCS#7 structure of type PKCS7_SIGNED
+    pub fn signed(&self) -> Option<&Pkcs7SignedRef> {
+        unsafe {
+            if self.type_().map(|x| x.nid()) != Some(Nid::PKCS7_SIGNED) {
+                return None;
+            }
+            let signed_data = (*self.as_ptr()).d.sign;
+            Pkcs7SignedRef::from_const_ptr_opt(signed_data)
+        }
+    }
+}
+
+impl Pkcs7SignedRef {
+    /// Get the stack of certificates from the PKCS7_SIGNED object
+    pub fn certificates(&self) -> Option<&StackRef<X509>> {
+        unsafe {
+            self.as_ptr()
+                .as_ref()
+                .and_then(|x| x.cert.as_mut())
+                .and_then(|x| StackRef::<X509>::from_const_ptr_opt(x))
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::hash::MessageDigest;
+    use crate::nid::Nid;
     use crate::pkcs7::{Pkcs7, Pkcs7Flags};
     use crate::pkey::PKey;
     use crate::stack::Stack;
@@ -307,6 +367,10 @@ mod tests {
 
         let pkcs7 =
             Pkcs7::encrypt(&certs, message.as_bytes(), cipher, flags).expect("should succeed");
+        assert_eq!(
+            pkcs7.type_().expect("PKCS7 should have a type").nid(),
+            Nid::PKCS7_ENVELOPED
+        );
 
         let encrypted = pkcs7
             .to_smime(message.as_bytes(), flags)
@@ -340,6 +404,10 @@ mod tests {
 
         let pkcs7 =
             Pkcs7::sign(&cert, &pkey, &certs, message.as_bytes(), flags).expect("should succeed");
+        assert_eq!(
+            pkcs7.type_().expect("PKCS7 should have a type").nid(),
+            Nid::PKCS7_SIGNED
+        );
 
         let signed = pkcs7
             .to_smime(message.as_bytes(), flags)
@@ -384,6 +452,10 @@ mod tests {
 
         let pkcs7 =
             Pkcs7::sign(&cert, &pkey, &certs, message.as_bytes(), flags).expect("should succeed");
+        assert_eq!(
+            pkcs7.type_().expect("PKCS7 should have a type").nid(),
+            Nid::PKCS7_SIGNED
+        );
 
         let signed = pkcs7
             .to_smime(message.as_bytes(), flags)
@@ -421,6 +493,10 @@ mod tests {
 
         let pkcs7 =
             Pkcs7::sign(&cert, &pkey, &certs, message.as_bytes(), flags).expect("should succeed");
+        assert_eq!(
+            pkcs7.type_().expect("PKCS7 should have a type").nid(),
+            Nid::PKCS7_SIGNED
+        );
 
         let signed = pkcs7
             .to_smime(message.as_bytes(), flags)
@@ -444,5 +520,54 @@ mod tests {
         let result = Pkcs7::from_smime(input.as_bytes());
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn signed_data_certificates() {
+        let cert = include_bytes!("../test/cert.pem");
+        let cert = X509::from_pem(cert).unwrap();
+        let mut extra_certs = Stack::<X509>::new().unwrap();
+        for cert in
+            X509::stack_from_pem(include_bytes!("../test/certs.pem")).expect("should succeed")
+        {
+            extra_certs.push(cert).expect("should succeed");
+        }
+
+        let message = "foo";
+        let flags = Pkcs7Flags::STREAM;
+        let pkey = include_bytes!("../test/key.pem");
+        let pkey = PKey::private_key_from_pem(pkey).unwrap();
+
+        let pkcs7 = Pkcs7::sign(&cert, &pkey, &extra_certs, message.as_bytes(), flags)
+            .expect("should succeed");
+        assert_eq!(
+            pkcs7.type_().expect("PKCS7 should have a type").nid(),
+            Nid::PKCS7_SIGNED
+        );
+        let signed_data_certs = pkcs7.signed().and_then(|x| x.certificates());
+        assert_eq!(signed_data_certs.expect("should succeed").len(), 3);
+    }
+
+    #[test]
+    fn signed_data_certificates_no_signed_data() {
+        let cert = include_bytes!("../test/certs.pem");
+        let cert = X509::from_pem(cert).unwrap();
+        let mut certs = Stack::new().unwrap();
+        certs.push(cert).unwrap();
+        let message: String = String::from("foo");
+        let cipher = Cipher::des_ede3_cbc();
+        let flags = Pkcs7Flags::STREAM;
+
+        // Use `Pkcs7::encrypt` since it populates the PKCS7_ENVELOPE struct rather than
+        // PKCS7_SIGNED
+        let pkcs7 =
+            Pkcs7::encrypt(&certs, message.as_bytes(), cipher, flags).expect("should succeed");
+        assert_eq!(
+            pkcs7.type_().expect("PKCS7 should have a type").nid(),
+            Nid::PKCS7_ENVELOPED
+        );
+
+        let signed_data_certs = pkcs7.signed().and_then(|x| x.certificates());
+        assert!(signed_data_certs.is_none())
     }
 }
