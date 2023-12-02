@@ -702,6 +702,7 @@ pub struct X509_PURPOSE {
 const_ptr_api! {
     extern "C" {
         pub fn X509_PURPOSE_get_by_sname(sname: #[const_ptr_if(any(ossl110, libressl280))] c_char) -> c_int;
+        pub fn X509_PURPOSE_get_id(purpose: #[const_ptr_if(any(ossl110, libressl280))] X509_PURPOSE) -> c_int;
     }
 }
 extern "C" {

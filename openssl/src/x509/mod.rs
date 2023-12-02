@@ -2538,7 +2538,7 @@ impl X509PurposeRef {
         unsafe {
             let sname = CString::new(sname).unwrap();
             cfg_if! {
-                if #[cfg(any(ossl110, libressl280))] {
+                if #[cfg(any(ossl110, libressl280, boringssl))] {
                     let purpose = cvt_n(ffi::X509_PURPOSE_get_by_sname(sname.as_ptr() as *const _))?;
                 } else {
                     let purpose = cvt_n(ffi::X509_PURPOSE_get_by_sname(sname.as_ptr() as *mut _))?;
@@ -2569,8 +2569,14 @@ impl X509PurposeRef {
     /// - `X509_PURPOSE_TIMESTAMP_SIGN`
     pub fn purpose(&self) -> X509PurposeId {
         unsafe {
-            let x509_purpose: *mut ffi::X509_PURPOSE = self.as_ptr();
-            X509PurposeId::from_raw((*x509_purpose).purpose)
+            cfg_if! {
+                if #[cfg(any(ossl110, libressl280, boringssl))] {
+                    let x509_purpose = self.as_ptr() as *const ffi::X509_PURPOSE;
+                } else {
+                    let x509_purpose = self.as_ptr() as *mut ffi::X509_PURPOSE;
+                }
+            }
+            X509PurposeId::from_raw(ffi::X509_PURPOSE_get_id(x509_purpose))
         }
     }
 }
