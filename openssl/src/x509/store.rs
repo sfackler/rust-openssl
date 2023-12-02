@@ -165,7 +165,9 @@ impl X509Lookup<HashDir> {
     /// directory.
     #[corresponds(X509_LOOKUP_hash_dir)]
     pub fn hash_dir() -> &'static X509LookupMethodRef<HashDir> {
-        unsafe { X509LookupMethodRef::from_ptr(ffi::X509_LOOKUP_hash_dir()) }
+        // `*mut` cast is needed because BoringSSL returns a `*const`. This is
+        // ok because we only return an immutable reference.
+        unsafe { X509LookupMethodRef::from_ptr(ffi::X509_LOOKUP_hash_dir() as *mut _) }
     }
 }
 
@@ -197,7 +199,9 @@ impl X509Lookup<File> {
     /// into memory at the time the file is added as a lookup source.
     #[corresponds(X509_LOOKUP_file)]
     pub fn file() -> &'static X509LookupMethodRef<File> {
-        unsafe { X509LookupMethodRef::from_ptr(ffi::X509_LOOKUP_file()) }
+        // `*mut` cast is needed because BoringSSL returns a `*const`. This is
+        // ok because we only return an immutable reference.
+        unsafe { X509LookupMethodRef::from_ptr(ffi::X509_LOOKUP_file() as *mut _) }
     }
 }
 
