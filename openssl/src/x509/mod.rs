@@ -2439,10 +2439,8 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl350))] {
+    if #[cfg(any(ossl110, libressl350, boringssl))] {
         use ffi::X509_OBJECT_free;
-    } else if #[cfg(boringssl)] {
-        use ffi::X509_OBJECT_free_contents as X509_OBJECT_free;
     } else {
         #[allow(bad_style)]
         unsafe fn X509_OBJECT_free(x: *mut ffi::X509_OBJECT) {
