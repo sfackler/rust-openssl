@@ -539,11 +539,7 @@ impl SbgpAsIdentifier {
                     }
                 }
             }  
-
-            let ptr = asid.as_ptr();
-            std::mem::forget(asid);
-
-            X509Extension::new_internal(Nid::SBGP_AUTONOMOUSSYSNUM, true, ptr as *mut _)
+            X509Extension::new_internal(Nid::SBGP_AUTONOMOUSSYSNUM, true, asid.as_ptr().cast())
         }
     }
 }
@@ -687,7 +683,7 @@ impl SbgpIpAddressIdentifier {
             X509Extension::new_internal(
                 Nid::SBGP_IPADDRBLOCK,
                 true,
-                stack.as_ptr() as *mut _,
+                stack.as_ptr().cast(),
             )
         }
     }
