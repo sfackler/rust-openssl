@@ -1187,12 +1187,21 @@ fn test_dist_point_null() {
 #[test]
 #[cfg(ossl110)]
 fn test_sbgp_extensions_parsing() {
-    let cert = include_bytes!("../../test/rfc3779.pem");
-    let cert = X509::from_pem(cert).unwrap();
+    let cert_bytes = include_bytes!("../../test/rfc3779.pem");
+    let cert = X509::from_pem(cert_bytes).unwrap();
 
-    let asn_ranges = cert.sbgp_asn().unwrap().ranges().unwrap();
+    let asn = cert.sbgp_asn().unwrap();
+    assert!(!asn.inherited());
+    assert!(asn.is_canonical());
+
+    let cert1 = X509::from_pem(cert_bytes).unwrap();
+    let prnt = cert1.sbgp_asn().unwrap();
+    assert!(asn.contains(&prnt));
+    
+    let asn_ranges = asn.ranges().unwrap();
     assert_eq!(asn_ranges[0], (10, 18));
     assert_eq!(asn_ranges[1], (20, 20));
+
 
     let families = cert.sbgp_ip_addresses().unwrap();
     for family in families {
@@ -1239,20 +1248,30 @@ fn test_sbgp_as_identifier_builder() {
 #[cfg(ossl110)]
 fn test_sbgp_as_identifier_builder_inherit() {
     let mut builder = X509Builder::new().unwrap();
-    let as_id_ext = SbgpAsIdentifier::new().add_inherit().build().unwrap();
+    let ext = SbgpAsIdentifier::new().add_inherit().build().unwrap();
 
-    builder.append_extension(as_id_ext).unwrap();
+    builder.append_extension(ext).unwrap();
     let cert = builder.build();
 
     let asn = cert.sbgp_asn().unwrap();
     assert!(asn.inherited());
     assert_eq!(asn.ranges(), None);
 
-    assert!(SbgpAsIdentifier::new()
+    // 
+
+    let mut builder = X509Builder::new().unwrap();  
+    let ext = SbgpAsIdentifier::new()
         .add_inherit()
         .add_asn(123)
         .build()
-        .is_err());
+        .unwrap();
+
+    builder.append_extension(ext).unwrap();
+    let cert = builder.build();
+
+    let asn = cert.sbgp_asn().unwrap();
+    assert!(asn.inherited());
+    assert_eq!(asn.ranges(), None);
 }
 
 #[test]

@@ -117,10 +117,6 @@ extern "C" {
     /*
      * Utility functions for working with RFC 3779 values,
      * since their encodings are a bit tedious.
-     *
-     * Not yet used:
-     * - X509v3_addr_add_inherit
-     * - X509v3_addr_add_prefix
      */
     pub fn X509v3_asid_add_id_or_range(
         asid: *mut ASIdentifiers,
@@ -131,6 +127,11 @@ extern "C" {
     pub fn X509v3_asid_add_inherit(asid: *mut ASIdentifiers, which: c_int) -> c_int;
     pub fn X509v3_asid_canonize(asid: *mut ASIdentifiers) -> c_int;
     pub fn X509v3_asid_is_canonical(asid: *mut ASIdentifiers) -> c_int;
+    pub fn X509v3_asid_inherits(asid: *mut ASIdentifiers) -> c_int;
+    pub fn X509v3_asid_subset(child: *mut ASIdentifiers, parent: *mut ASIdentifiers) -> c_int;
+    pub fn X509v3_asid_validate_path(ctx: *mut X509_STORE_CTX) -> c_int;
+    pub fn X509v3_asid_validate_resource_set(chain: *mut stack_st_X509, ext: *mut ASIdentifiers, allow_inheritence: c_int) -> c_int;
+
 
     pub fn X509v3_addr_get_range(
         aor: *mut IPAddressOrRange,

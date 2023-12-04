@@ -1,30 +1,25 @@
-#[cfg(ossl110)]
+#![cfg(ossl110)]
+#![cfg(not(OPENSSL_NO_RFC3779))]
+
 use std::mem::MaybeUninit;
-#[cfg(ossl110)]
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
-#[cfg(ossl110)]
 use ffi::{
     ASIdOrRange_id, ASIdOrRange_range, ASIdentifierChoice_asIdsOrRanges,
-    ASIdentifierChoice_inherit, IPAddressChoice_addressesOrRanges, X509v3_addr_get_afi,
+    IPAddressChoice_addressesOrRanges, X509v3_addr_get_afi,
     ASN1_INTEGER, IANA_AFI_IPV4, IANA_AFI_IPV6,
 };
-#[cfg(ossl110)]
 use foreign_types::ForeignTypeRef;
-#[cfg(ossl110)]
 use openssl_macros::corresponds;
 
-#[cfg(ossl110)]
 use crate::{
     asn1::Asn1IntegerRef,
     stack::{Stack, StackRef, Stackable},
     util::{ForeignTypeExt, ForeignTypeRefExt},
 };
 
-#[cfg(ossl110)]
 use super::X509Ref;
 
-#[cfg(ossl110)]
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ASIdOrRange;
     fn drop = ffi::ASIdOrRange_free;
@@ -34,12 +29,10 @@ foreign_type_and_impl_send_sync! {
     /// Reference to `ASIdOrRange`.
     pub struct ASIdOrRangeRef;
 }
-#[cfg(ossl110)]
 impl Stackable for ASIdOrRange {
     type StackType = ffi::stack_st_ASIdOrRange;
 }
 
-#[cfg(ossl110)]
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ASIdentifiers;
     fn drop = ffi::ASIdentifiers_free;
@@ -50,13 +43,27 @@ foreign_type_and_impl_send_sync! {
     pub struct ASIdentifiersRef;
 }
 
-#[cfg(ossl110)]
 impl ASIdentifiers {
+    #[corresponds(X509v3_asid_inherits)]
     pub fn inherited(&self) -> bool {
         unsafe {
-            let asptr = self.0;
-            let asnum = (*asptr).asnum;
-            (*asnum).type_ == ASIdentifierChoice_inherit
+            ffi::X509v3_asid_inherits(self.as_ptr()) == 1
+        }
+    }
+
+    #[corresponds(X509v3_asid_subset)]
+    pub fn contains(&self, parent: &ASIdentifiers) -> bool {
+        unsafe {
+            assert!(self.is_canonical());
+            assert!(parent.is_canonical());
+            ffi::X509v3_asid_subset(self.as_ptr(), parent.as_ptr()) == 1
+        }
+    }
+
+    #[corresponds(X509v3_asid_is_canonical)]
+    pub fn is_canonical(&self) -> bool {
+        unsafe {
+            ffi::X509v3_asid_is_canonical(self.as_ptr()) == 1
         }
     }
 
@@ -94,7 +101,6 @@ impl ASIdentifiers {
     }
 }
 
-#[cfg(ossl110)]
 foreign_type_and_impl_send_sync! {
     type CType = ffi::IPAddressOrRange;
     fn drop = ffi::IPAddressOrRange_free;
@@ -105,12 +111,10 @@ foreign_type_and_impl_send_sync! {
     pub struct IPAddressOrRangeRef;
 }
 
-#[cfg(ossl110)]
 impl Stackable for IPAddressOrRange {
     type StackType = ffi::stack_st_IPAddressOrRange;
 }
 
-#[cfg(ossl110)]
 foreign_type_and_impl_send_sync! {
     type CType = ffi::IPAddressFamily;
     fn drop = ffi::IPAddressFamily_free;
@@ -121,19 +125,16 @@ foreign_type_and_impl_send_sync! {
     pub struct IPAddressFamilyRef;
 }
 
-#[cfg(ossl110)]
 impl Stackable for IPAddressFamily {
     type StackType = ffi::stack_st_IPAddressFamily;
 }
 
 #[derive(PartialEq, Eq, Debug)]
-#[cfg(ossl110)]
 pub enum IPVersion {
     V4,
     V6,
 }
 
-#[cfg(ossl110)]
 impl IPAddressFamily {
     /// Returns the IP version of this record.
     #[corresponds(X509v3_addr_get_afi)]
@@ -192,7 +193,6 @@ impl IPAddressFamily {
     }
 }
 
-#[cfg(ossl110)]
 impl X509Ref {
     #[corresponds(X509_get_ext_d2i)]
     pub fn sbgp_asn(&self) -> Option<ASIdentifiers> {
