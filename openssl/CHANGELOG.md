@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [v0.10.61] - 2023-12-04
+
+### Changed
+
+* `SslStream` now uses `SSL_read_ex`, `SSL_write_ex`, and `SSL_peek_ex` when available
+
+### Added
+
+* Added `SslStream::{read_uninit, ssl_read_uninit}`.
+
 ## [v0.10.60] - 2023-11-22
 
 ### Deprecated
@@ -848,7 +858,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.60...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.61...master
+[v0.10.61]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.60...openssl-v0.10.61
 [v0.10.60]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.59...openssl-v0.10.60
 [v0.10.59]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.58...openssl-v0.10.59
 [v0.10.58]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.57...openssl-v0.10.58
