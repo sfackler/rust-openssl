@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [v0.9.97] - 2023-12-04
+
+### Changed
+
+* libatomic is no longer dynamically linked for 32 bit ARM targets.
+
+### Added
+
+* Added `SSL_read_ex`, `SSL_peek_ex`, and `SSL_write_ex`.
+
 ## [v0.9.96] - 2023-11-22
 
 ### Changed
@@ -545,7 +555,8 @@ Fixed builds against OpenSSL built with `no-cast`.
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.96..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.97..master
+[v0.9.97]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.96...openssl-sys-v0.9.97
 [v0.9.96]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.95...openssl-sys-v0.9.96
 [v0.9.95]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.94...openssl-sys-v0.9.95
 [v0.9.94]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.93...openssl-sys-v0.9.94
