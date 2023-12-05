@@ -640,7 +640,13 @@ extern "C" {
     pub fn SSL_stateless(s: *mut SSL) -> c_int;
     pub fn SSL_connect(ssl: *mut SSL) -> c_int;
     pub fn SSL_read(ssl: *mut SSL, buf: *mut c_void, num: c_int) -> c_int;
+    #[cfg(any(ossl111, libressl350))]
+    pub fn SSL_read_ex(ssl: *mut SSL, buf: *mut c_void, num: usize, readbytes: *mut usize)
+        -> c_int;
     pub fn SSL_peek(ssl: *mut SSL, buf: *mut c_void, num: c_int) -> c_int;
+    #[cfg(any(ossl111, libressl350))]
+    pub fn SSL_peek_ex(ssl: *mut SSL, buf: *mut c_void, num: usize, readbytes: *mut usize)
+        -> c_int;
     #[cfg(any(ossl111, libressl340))]
     pub fn SSL_read_early_data(
         s: *mut SSL,
@@ -661,6 +667,13 @@ extern "C" {
 
 extern "C" {
     pub fn SSL_write(ssl: *mut SSL, buf: *const c_void, num: c_int) -> c_int;
+    #[cfg(any(ossl111, libressl350))]
+    pub fn SSL_write_ex(
+        ssl: *mut SSL,
+        buf: *const c_void,
+        num: size_t,
+        written: *mut size_t,
+    ) -> c_int;
     #[cfg(any(ossl111, libressl340))]
     pub fn SSL_write_early_data(
         s: *mut SSL,
