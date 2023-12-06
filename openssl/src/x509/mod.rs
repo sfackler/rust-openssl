@@ -383,11 +383,6 @@ foreign_type_and_impl_send_sync! {
     pub struct X509Ref;
 }
 
-#[cfg(boringssl)]
-type X509LenTy = c_uint;
-#[cfg(not(boringssl))]
-type X509LenTy = c_int;
-
 impl X509Ref {
     /// Returns this certificate's subject name.
     #[corresponds(X509_get_subject_name)]
@@ -760,15 +755,16 @@ impl X509 {
                 let r =
                     ffi::PEM_read_bio_X509(bio.as_ptr(), ptr::null_mut(), None, ptr::null_mut());
                 if r.is_null() {
-                    let err = ffi::ERR_peek_last_error();
-                    if ffi::ERR_GET_LIB(err) as X509LenTy == ffi::ERR_LIB_PEM
-                        && ffi::ERR_GET_REASON(err) == ffi::PEM_R_NO_START_LINE
+                    let e = ErrorStack::get();
+                    let errors = e.errors();
+                    if !errors.is_empty()
+                        && errors[0].library_code() == ffi::ERR_LIB_PEM as libc::c_int
+                        && errors[0].reason_code() == ffi::PEM_R_NO_START_LINE as libc::c_int
                     {
-                        ffi::ERR_clear_error();
                         break;
                     }
 
-                    return Err(ErrorStack::get());
+                    return Err(e);
                 } else {
                     certs.push(X509(r));
                 }
