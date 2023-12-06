@@ -27,7 +27,7 @@ use foreign_types::ForeignType;
 
 use super::sbgp::ASIdentifiers;
 #[cfg(ossl110)]
-use super::sbgp::{IPAddressFamily, IPVersion};
+use super::sbgp::{IPAddressFamily, IpVersion};
 #[cfg(ossl110)]
 use crate::bn::BigNum;
 #[cfg(ossl110)]
@@ -451,7 +451,7 @@ pub struct SbgpAsIdentifier(SbgpAsIdentifierOrInherit);
 #[cfg(not(OPENSSL_NO_RFC3779))]
 enum SbgpAsIdentifierOrInherit {
     Inherit,
-    Local(Vec<(u32, u32)>)
+    List(Vec<(u32, u32)>)
 }
 
 #[cfg(ossl110)]
@@ -468,27 +468,37 @@ impl Default for SbgpAsIdentifier {
 impl SbgpAsIdentifier {
     /// Construct a new `SbgpAsIdentifier` extension.
     pub fn new() -> SbgpAsIdentifier {
-        Self(SbgpAsIdentifierOrInherit::Local(Vec::new()))
+        Self(SbgpAsIdentifierOrInherit::List(Vec::new()))
     }
 
     /// Sets the `inherit`` flag to `true`.
     pub fn add_inherit(&mut self) -> &mut SbgpAsIdentifier {
+        if let SbgpAsIdentifierOrInherit::List(ref l) = self.0 {
+            if !l.is_empty() {
+                panic!("cannot set extension to inherit, list allready contains elements");
+            }
+        }
+
         self.0 = SbgpAsIdentifierOrInherit::Inherit;
         self
     }
 
     /// Adds an AS number.
     pub fn add_asn(&mut self, asn: u32) -> &mut SbgpAsIdentifier {
-        if let SbgpAsIdentifierOrInherit::Local(ref mut asns) = self.0 {
+        if let SbgpAsIdentifierOrInherit::List(ref mut asns) = self.0 {
             asns.push((asn, asn))
+        } else {
+            panic!("cannot add AS number to extension, extension is set to inherit");
         }
         self
     }
 
     /// Adds a range of AS numbers.
     pub fn add_asn_range(&mut self, asn_min: u32, asn_max: u32) -> &mut SbgpAsIdentifier {
-        if let SbgpAsIdentifierOrInherit::Local(ref mut asns) = self.0 {
+        if let SbgpAsIdentifierOrInherit::List(ref mut asns) = self.0 {
             asns.push((asn_min, asn_max))
+        } else {
+            panic!("cannot add AS range to extension, extension is set to inherit");
         }
         self
     }
@@ -504,7 +514,7 @@ impl SbgpAsIdentifier {
                         ffi::V3_ASID_ASNUM,
                     ))?;
                 },
-                SbgpAsIdentifierOrInherit::Local(ref asns) => {
+                SbgpAsIdentifierOrInherit::List(ref asns) => {
                     assert!(!asns.is_empty(), "cannot create empty extension");
 
                     for (min, max) in asns {
@@ -555,7 +565,7 @@ pub struct SbgpIpAddressIdentifier {
 #[cfg(not(OPENSSL_NO_RFC3779))]
 enum SbgpIpAddressIdentifierOrInherit<Addr> {
     Inherit,
-    Local(Vec<(Addr, Addr)>) 
+    List(Vec<(Addr, Addr)>) 
 }
 
 
@@ -573,16 +583,26 @@ impl SbgpIpAddressIdentifier {
     /// Construct a new `SbgpIpAddressIdentifier` extension.
     pub fn new() -> SbgpIpAddressIdentifier {
         SbgpIpAddressIdentifier {
-            v4: SbgpIpAddressIdentifierOrInherit::Local(Vec::new()),
-            v6: SbgpIpAddressIdentifierOrInherit::Local(Vec::new()),
+            v4: SbgpIpAddressIdentifierOrInherit::List(Vec::new()),
+            v6: SbgpIpAddressIdentifierOrInherit::List(Vec::new()),
+        }
+    }
+
+    fn len_of(&self, afi: IpVersion) -> usize {
+        match (afi, &self.v4, &self.v6) {
+            (IpVersion::V4, SbgpIpAddressIdentifierOrInherit::List(l), _) => l.len(),
+            (IpVersion::V6, _, SbgpIpAddressIdentifierOrInherit::List(l)) => l.len(),
+            _ => 0,
         }
     }
 
     /// Sets the `inherit` flag in the list corresponding to the ip version.
-    pub fn add_inherit(&mut self, afi: IPVersion) -> &mut SbgpIpAddressIdentifier {
+    pub fn add_inherit(&mut self, afi: IpVersion) -> &mut SbgpIpAddressIdentifier {
         match afi {
-            IPVersion::V4 => self.v4 = SbgpIpAddressIdentifierOrInherit::Inherit,
-            IPVersion::V6 => self.v6 = SbgpIpAddressIdentifierOrInherit::Inherit,
+            IpVersion::V4 if self.len_of(afi) == 0 => self.v4 = SbgpIpAddressIdentifierOrInherit::Inherit,
+            IpVersion::V4 => panic!("cannot set ipv4 to inherit, list allready contains values"),
+            IpVersion::V6 if self.len_of(afi) == 0 => self.v6 = SbgpIpAddressIdentifierOrInherit::Inherit,     
+            IpVersion::V6 => panic!("cannot set ipv6 to inherit, list allready contains values"),
         }
         self
     }
@@ -601,8 +621,10 @@ impl SbgpIpAddressIdentifier {
         ip_addr_min: Ipv4Addr,
         ip_addr_max: Ipv4Addr,
     ) -> &mut SbgpIpAddressIdentifier {
-        if let SbgpIpAddressIdentifierOrInherit::Local(ref mut ips) = self.v4 {
+        if let SbgpIpAddressIdentifierOrInherit::List(ref mut ips) = self.v4 {
             ips.push((ip_addr_min, ip_addr_max));
+        } else {
+            panic!("cannot add ipv4 address to extension, ipv4 is set to inherit");
         }
         self
     }
@@ -613,8 +635,10 @@ impl SbgpIpAddressIdentifier {
         ip_addr_min: Ipv6Addr,
         ip_addr_max: Ipv6Addr,
     ) -> &mut SbgpIpAddressIdentifier {
-        if let SbgpIpAddressIdentifierOrInherit::Local(ref mut ips) = self.v6 {
+        if let SbgpIpAddressIdentifierOrInherit::List(ref mut ips) = self.v6 {
             ips.push((ip_addr_min, ip_addr_max));
+        } else {
+            panic!("cannot add ipv6 address to extension, ipv6 is set to inherit");
         }
         self
     }
@@ -655,7 +679,7 @@ impl SbgpIpAddressIdentifier {
                     std::ptr::null(),
                     ))?;
                 },
-                SbgpIpAddressIdentifierOrInherit::Local(ref ips) => {
+                SbgpIpAddressIdentifierOrInherit::List(ref ips) => {
                     for (min, max) in ips {
                         stack.sbgp_add_addr_range(*min, *max, IANA_AFI_IPV4 as u32)?;
                     }
@@ -669,7 +693,7 @@ impl SbgpIpAddressIdentifier {
                     std::ptr::null(),
                     ))?;
                 },
-                SbgpIpAddressIdentifierOrInherit::Local(ref ips) => {
+                SbgpIpAddressIdentifierOrInherit::List(ref ips) => {
                     for (min, max) in ips {
                         stack.sbgp_add_addr_range(*min, *max, IANA_AFI_IPV6 as u32)?;
                     }

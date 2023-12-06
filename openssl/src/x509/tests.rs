@@ -1262,7 +1262,6 @@ fn test_sbgp_as_identifier_builder_inherit() {
     let mut builder = X509Builder::new().unwrap();  
     let ext = SbgpAsIdentifier::new()
         .add_inherit()
-        .add_asn(123)
         .build()
         .unwrap();
 
@@ -1277,7 +1276,7 @@ fn test_sbgp_as_identifier_builder_inherit() {
 #[test]
 #[cfg(ossl110)]
 fn test_sbgp_ip_addr_ranges_builder() {
-    use crate::x509::sbgp::IPVersion;
+    use crate::x509::sbgp::IpVersion;
 
     let mut builder = X509Builder::new().unwrap();
     let ip_addr_ext = SbgpIpAddressIdentifier::new()
@@ -1305,7 +1304,7 @@ fn test_sbgp_ip_addr_ranges_builder() {
 
     assert_eq!(ranges.len(), 2);
 
-    assert_eq!(ranges[0].fam(), Some(IPVersion::V4));
+    assert_eq!(ranges[0].fam(), Some(IpVersion::V4));
     assert_eq!(
         ranges[0].range(),
         Some(vec![
@@ -1324,7 +1323,7 @@ fn test_sbgp_ip_addr_ranges_builder() {
         ])
     );
 
-    assert_eq!(ranges[1].fam(), Some(IPVersion::V6));
+    assert_eq!(ranges[1].fam(), Some(IpVersion::V6));
     assert_eq!(
         ranges[1].range(),
         Some(vec![(

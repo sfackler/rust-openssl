@@ -129,8 +129,8 @@ impl Stackable for IPAddressFamily {
     type StackType = ffi::stack_st_IPAddressFamily;
 }
 
-#[derive(PartialEq, Eq, Debug)]
-pub enum IPVersion {
+#[derive(PartialEq, Clone, Copy, Eq, Debug)]
+pub enum IpVersion {
     V4,
     V6,
 }
@@ -138,12 +138,12 @@ pub enum IPVersion {
 impl IPAddressFamily {
     /// Returns the IP version of this record.
     #[corresponds(X509v3_addr_get_afi)]
-    pub fn fam(&self) -> Option<IPVersion> {
+    pub fn fam(&self) -> Option<IpVersion> {
         unsafe {
             let ptr = self.0;
             match X509v3_addr_get_afi(ptr) as libc::c_int {
-                IANA_AFI_IPV4 => Some(IPVersion::V4),
-                IANA_AFI_IPV6 => Some(IPVersion::V6),
+                IANA_AFI_IPV4 => Some(IpVersion::V4),
+                IANA_AFI_IPV6 => Some(IpVersion::V6),
                 _ => None,
             }
         }
@@ -162,8 +162,8 @@ impl IPAddressFamily {
             let stack =
                 StackRef::<IPAddressOrRange>::from_const_ptr_opt((*choice).u.addressesOrRanges)?;
             match fam {
-                IPVersion::V4 => Self::addr_get_range::<Ipv4Addr>(stack, 4, IANA_AFI_IPV4 as u32),
-                IPVersion::V6 => Self::addr_get_range::<Ipv6Addr>(stack, 16, IANA_AFI_IPV6 as u32),
+                IpVersion::V4 => Self::addr_get_range::<Ipv4Addr>(stack, 4, IANA_AFI_IPV4 as u32),
+                IpVersion::V6 => Self::addr_get_range::<Ipv6Addr>(stack, 16, IANA_AFI_IPV6 as u32),
             }
         }
     }
