@@ -154,7 +154,7 @@ jobs:
             - false
           library:
             - name: boringssl
-              version: f78fe19fc98e0e6f760e05c6b9d48725004700d0
+              version: e6489902b7fb692875341b8ab5e57f0515f47bc1
             - name: openssl
               version: vendored
             - name: openssl

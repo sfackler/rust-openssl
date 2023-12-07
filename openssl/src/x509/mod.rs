@@ -38,7 +38,7 @@ use crate::ssl::SslRef;
 use crate::stack::{Stack, StackRef, Stackable};
 use crate::string::OpensslString;
 use crate::util::{ForeignTypeExt, ForeignTypeRefExt};
-use crate::{cvt, cvt_n, cvt_p};
+use crate::{cvt, cvt_n, cvt_p, cvt_p_const};
 use openssl_macros::corresponds;
 
 #[cfg(any(ossl102, libressl261))]
@@ -2548,8 +2548,8 @@ impl X509PurposeRef {
     #[corresponds(X509_PURPOSE_get0)]
     pub fn from_idx(idx: c_int) -> Result<&'static X509PurposeRef, ErrorStack> {
         unsafe {
-            let ptr = cvt_p(ffi::X509_PURPOSE_get0(idx))?;
-            Ok(X509PurposeRef::from_ptr(ptr))
+            let ptr = cvt_p_const(ffi::X509_PURPOSE_get0(idx))?;
+            Ok(X509PurposeRef::from_const_ptr(ptr))
         }
     }
 
