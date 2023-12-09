@@ -703,10 +703,8 @@ const_ptr_api! {
     extern "C" {
         pub fn X509_PURPOSE_get_by_sname(sname: #[const_ptr_if(any(ossl110, libressl280))] c_char) -> c_int;
         pub fn X509_PURPOSE_get_id(purpose: #[const_ptr_if(any(ossl110, libressl280))] X509_PURPOSE) -> c_int;
+        pub fn X509_PURPOSE_get0(idx: c_int) -> #[const_ptr_if(libressl390)] X509_PURPOSE;
     }
-}
-extern "C" {
-    pub fn X509_PURPOSE_get0(idx: c_int) -> *mut X509_PURPOSE;
 }
 
 extern "C" {

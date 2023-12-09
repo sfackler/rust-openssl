@@ -1018,6 +1018,7 @@ impl X509Extension {
     /// # Safety
     ///
     /// This method modifies global state without locking and therefore is not thread safe
+    #[cfg(not(libressl390))]
     #[corresponds(X509V3_EXT_add_alias)]
     #[deprecated(
         note = "Use x509::extension types or new_from_der and then this is not necessary",
