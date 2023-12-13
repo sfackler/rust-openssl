@@ -75,18 +75,16 @@ pub fn keep_random_devices_open(keep: bool) {
 
 #[cfg(test)]
 mod tests {
-    use super::{rand_bytes, rand_priv_bytes};
-
     #[test]
     fn test_rand_bytes() {
         let mut buf = [0; 32];
-        rand_bytes(&mut buf).unwrap();
+        super::rand_bytes(&mut buf).unwrap();
     }
 
     #[test]
     #[cfg(ossl111)]
     fn test_rand_priv_bytes() {
         let mut buf = [0; 32];
-        rand_priv_bytes(&mut buf).unwrap();
+        super::rand_priv_bytes(&mut buf).unwrap();
     }
 }
