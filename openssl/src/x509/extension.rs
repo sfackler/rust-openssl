@@ -443,6 +443,7 @@ impl AuthorityKeyIdentifier {
     }
 }
 
+/// A constructor for the `X509` AS number extension.
 #[cfg(ossl110)]
 #[cfg(not(OPENSSL_NO_RFC3779))]
 pub struct SbgpAsIdentifier(SbgpAsIdentifierOrInherit);
@@ -471,7 +472,7 @@ impl SbgpAsIdentifier {
         Self(SbgpAsIdentifierOrInherit::List(Vec::new()))
     }
 
-    /// Sets the `inherit`` flag to `true`.
+    /// Sets the `inherit` flag to `true`.
     pub fn add_inherit(&mut self) -> &mut SbgpAsIdentifier {
         if let SbgpAsIdentifierOrInherit::List(ref l) = self.0 {
             if !l.is_empty() {
@@ -483,7 +484,7 @@ impl SbgpAsIdentifier {
         self
     }
 
-    /// Adds an AS number.
+    /// Adds an AS number to the AS number extension.
     pub fn add_asn(&mut self, asn: u32) -> &mut SbgpAsIdentifier {
         if let SbgpAsIdentifierOrInherit::List(ref mut asns) = self.0 {
             asns.push((asn, asn))
@@ -493,7 +494,7 @@ impl SbgpAsIdentifier {
         self
     }
 
-    /// Adds a range of AS numbers.
+    /// Adds a range of AS numbers to the AS number extension.
     pub fn add_asn_range(&mut self, asn_min: u32, asn_max: u32) -> &mut SbgpAsIdentifier {
         if let SbgpAsIdentifierOrInherit::List(ref mut asns) = self.0 {
             asns.push((asn_min, asn_max))
@@ -554,6 +555,7 @@ impl SbgpAsIdentifier {
     }
 }
 
+/// The contstructor for a `X509` IP address extension.
 #[cfg(ossl110)]
 #[cfg(not(OPENSSL_NO_RFC3779))]
 pub struct SbgpIpAddressIdentifier {
@@ -607,7 +609,7 @@ impl SbgpIpAddressIdentifier {
         self
     }
 
-    /// Adds an IP adress.
+    /// Adds an IP address to the IP address extension.
     pub fn add_ip_addr(&mut self, ip_addr: IpAddr) -> &mut SbgpIpAddressIdentifier {
         match ip_addr {
             IpAddr::V4(addr) => self.add_ipv4_addr_range(addr, addr),
@@ -615,7 +617,7 @@ impl SbgpIpAddressIdentifier {
         }
     }
 
-    /// Adds a range of IPv4 adresses.
+    /// Adds a range of IPv4 adresses to the IP address extension.
     pub fn add_ipv4_addr_range(
         &mut self,
         ip_addr_min: Ipv4Addr,
@@ -629,7 +631,7 @@ impl SbgpIpAddressIdentifier {
         self
     }
 
-    /// Adds a range of IPv6 adresses.
+    /// Adds a range of IPv6 adresses of the IP adress extension.
     pub fn add_ipv6_addr_range(
         &mut self,
         ip_addr_min: Ipv6Addr,
@@ -643,7 +645,7 @@ impl SbgpIpAddressIdentifier {
         self
     }
 
-    /// Adds a ip prefix
+    /// Adds a IP prefix to the IP address extension.
     pub fn add_ip_prefix(
         &mut self,
         prefix: IpAddr,

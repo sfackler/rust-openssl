@@ -44,6 +44,8 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl ASIdentifiers {
+    /// Indicates whether the AS number extension should be inherited from the
+    /// parent certificate.
     #[corresponds(X509v3_asid_inherits)]
     pub fn inherited(&self) -> bool {
         unsafe {
@@ -51,8 +53,10 @@ impl ASIdentifiers {
         }
     }
 
+    /// Determines whether the contents of the AS number extension are contained
+    /// in the parent AS number extension.
     #[corresponds(X509v3_asid_subset)]
-    pub fn contains(&self, parent: &ASIdentifiers) -> bool {
+    pub fn subset_of(&self, parent: &ASIdentifiers) -> bool {
         unsafe {
             assert!(self.is_canonical());
             assert!(parent.is_canonical());
@@ -60,6 +64,7 @@ impl ASIdentifiers {
         }
     }
 
+    /// Indicates whether the extension is in canonical form.
     #[corresponds(X509v3_asid_is_canonical)]
     pub fn is_canonical(&self) -> bool {
         unsafe {
@@ -67,6 +72,9 @@ impl ASIdentifiers {
         }
     }
 
+    /// Reads the contents of the AS number extension and parses them into a 
+    /// vector of AS number ranges. Returns `None` if the contents
+    /// should be inherited.
     pub fn ranges(&self) -> Option<Vec<(u32, u32)>> {
         unsafe {
             let mut result = Vec::new();
@@ -194,6 +202,7 @@ impl IPAddressFamily {
 }
 
 impl X509Ref {
+    /// Extracts the SBGP AS number extension from the `X509` certificate.
     #[corresponds(X509_get_ext_d2i)]
     pub fn sbgp_asn(&self) -> Option<ASIdentifiers> {
         unsafe {
@@ -207,6 +216,7 @@ impl X509Ref {
         }
     }
 
+    /// Extracts the SBGP IP address extension from the `X509` certificate.
     #[corresponds(X509_get_ext_d2i)]
     pub fn sbgp_ip_addresses(&self) -> Option<Stack<IPAddressFamily>> {
         unsafe {

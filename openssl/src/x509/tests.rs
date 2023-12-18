@@ -1190,18 +1190,23 @@ fn test_sbgp_extensions_parsing() {
     let cert_bytes = include_bytes!("../../test/rfc3779.pem");
     let cert = X509::from_pem(cert_bytes).unwrap();
 
+    let parent_cert_bytes = include_bytes!("../../test/rfc3779-parent.pem");
+    let parent_cert = X509::from_pem(parent_cert_bytes).unwrap();
+
     let asn = cert.sbgp_asn().unwrap();
+    let pasn = parent_cert.sbgp_asn().unwrap();
     assert!(!asn.inherited());
     assert!(asn.is_canonical());
+    assert!(asn.subset_of(&pasn));
+    assert!(!pasn.subset_of(&asn));
 
     let cert1 = X509::from_pem(cert_bytes).unwrap();
     let prnt = cert1.sbgp_asn().unwrap();
-    assert!(asn.contains(&prnt));
+    assert!(asn.subset_of(&prnt));
     
     let asn_ranges = asn.ranges().unwrap();
     assert_eq!(asn_ranges[0], (10, 18));
     assert_eq!(asn_ranges[1], (20, 20));
-
 
     let families = cert.sbgp_ip_addresses().unwrap();
     for family in families {
