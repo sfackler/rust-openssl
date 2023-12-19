@@ -218,6 +218,8 @@ impl Nid {
     #[cfg(ossl110)]
     pub const BRAINPOOL_P256R1: Nid = Nid(ffi::NID_brainpoolP256r1);
     #[cfg(ossl110)]
+    pub const BRAINPOOL_P320R1: Nid = Nid(ffi::NID_brainpoolP320r1);
+    #[cfg(ossl110)]
     pub const BRAINPOOL_P384R1: Nid = Nid(ffi::NID_brainpoolP384r1);
     #[cfg(ossl110)]
     pub const BRAINPOOL_P512R1: Nid = Nid(ffi::NID_brainpoolP512r1);

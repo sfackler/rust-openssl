@@ -97,6 +97,8 @@ pub const NID_sect571r1: c_int = 734;
 #[cfg(ossl110)]
 pub const NID_brainpoolP256r1: c_int = 927;
 #[cfg(ossl110)]
+pub const NID_brainpoolP320r1: c_int = 929;
+#[cfg(ossl110)]
 pub const NID_brainpoolP384r1: c_int = 931;
 #[cfg(ossl110)]
 pub const NID_brainpoolP512r1: c_int = 933;
