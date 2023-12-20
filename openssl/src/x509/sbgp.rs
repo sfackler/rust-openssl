@@ -143,6 +143,17 @@ pub enum IpVersion {
     V6,
 }
 
+impl Stack<IPAddressFamily> {
+    /// Determines whether the IP address extension is contained
+    /// in the parents IP address extension.
+    #[corresponds(X509v3_addr_subset)]
+    pub fn subset_of(&self, parent: &Stack<IPAddressFamily>) -> bool {
+        unsafe {
+            ffi::X509v3_addr_subset(self.as_ptr(), parent.as_ptr()) == 1
+        }
+    }
+}
+
 impl IPAddressFamily {
     /// Returns the IP version of this record.
     #[corresponds(X509v3_addr_get_afi)]

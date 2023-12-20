@@ -134,4 +134,8 @@ extern "C" {
     ) -> c_int;
     pub fn X509v3_addr_canonize(addr: *mut IPAddrBlocks) -> c_int;
     pub fn X509v3_addr_is_canonical(addr: *mut IPAddrBlocks) -> c_int;
+    pub fn X509v3_addr_inherits(addr: *mut IPAddrBlocks) -> c_int;
+    pub fn X509v3_addr_subset(a: *mut IPAddrBlocks, b: *mut IPAddrBlocks) -> c_int;
+    pub fn X509v3_addr_validate_path(ctx: *mut X509_STORE_CTX) -> c_int;
+    pub fn X509v3_addr_validate_resource_set(chain: *mut stack_st_X509, ext: *mut IPAddrBlocks, allow_inheritence: c_int) -> c_int;
 }

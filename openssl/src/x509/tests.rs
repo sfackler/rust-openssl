@@ -1209,6 +1209,10 @@ fn test_sbgp_extensions_parsing() {
     assert_eq!(asn_ranges[1], (20, 20));
 
     let families = cert.sbgp_ip_addresses().unwrap();
+    let pfamilies = parent_cert.sbgp_ip_addresses().unwrap();
+    assert!(families.subset_of(&pfamilies));
+    assert!(!pfamilies.subset_of(&families));
+
     for family in families {
         let ranges = family.range().unwrap();
         for (ip_min, ip_max) in ranges {
@@ -1337,3 +1341,4 @@ fn test_sbgp_ip_addr_ranges_builder() {
         )])
     );
 }
+
