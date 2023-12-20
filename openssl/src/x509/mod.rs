@@ -1261,6 +1261,27 @@ impl X509NameRef {
         to_der,
         ffi::i2d_X509_NAME
     }
+
+    /// Returns a digest of the DER representation of this 'X509Name'.
+    #[corresponds(X509_NAME_digest)]
+    pub fn digest(&self, hash_type: MessageDigest) -> Result<DigestBytes, ErrorStack> {
+        unsafe {
+            let mut digest = DigestBytes {
+                buf: [0; ffi::EVP_MAX_MD_SIZE as usize],
+                len: ffi::EVP_MAX_MD_SIZE as usize,
+            };
+            let mut len = ffi::EVP_MAX_MD_SIZE as c_uint;
+            cvt(ffi::X509_NAME_digest(
+                self.as_ptr(),
+                hash_type.as_ptr(),
+                digest.buf.as_mut_ptr() as *mut _,
+                &mut len,
+            ))?;
+            digest.len = len as usize;
+
+            Ok(digest)
+        }
+    }
 }
 
 impl fmt::Debug for X509NameRef {
