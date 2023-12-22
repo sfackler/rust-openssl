@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [v0.10.62] - 2023-12-22
+
+### Added
+
+* Added `Nid::BRAINPOOL_P320R1`
+* Added `rand_priv_bytes`
+
+### Fixed
+
+* Fixed building on the latest version of BoringSSL
+
 ## [v0.10.61] - 2023-12-04
 
 ### Changed
@@ -858,7 +869,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.61...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.62...master
+[v0.10.62]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.61...openssl-v0.10.62
 [v0.10.61]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.60...openssl-v0.10.61
 [v0.10.60]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.59...openssl-v0.10.60
 [v0.10.59]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.58...openssl-v0.10.59

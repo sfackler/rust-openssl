@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [v0.9.98] - 2023-12-22
+
+### Added
+
+* Added `RAND_priv_bytes`.
+* Added `NID_brainpoolP320r1`.
+
+### Changed
+
+* `X509_PURPOSE_get0` now returns a `const` pointer on LibreSSL 3.9.0+.
+* `X509V3_EXT_add_alias` is removed on LibreSSL 3.9.0+.
+
 ## [v0.9.97] - 2023-12-04
 
 ### Changed
@@ -555,7 +567,8 @@ Fixed builds against OpenSSL built with `no-cast`.
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.97..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.98..master
+[v0.9.98]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.97...openssl-sys-v0.9.98
 [v0.9.97]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.96...openssl-sys-v0.9.97
 [v0.9.96]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.95...openssl-sys-v0.9.96
 [v0.9.95]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.94...openssl-sys-v0.9.95
