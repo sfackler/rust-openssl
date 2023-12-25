@@ -247,7 +247,7 @@ jobs:
           run: |
             case "${{ matrix.library.name }}" in
             "openssl")
-              url="https://openssl.org/source${{ matrix.library.dl-path }}/openssl-${{ matrix.library.version }}.tar.gz"
+              url="https://www.openssl.org/source${{ matrix.library.dl-path }}/openssl-${{ matrix.library.version }}.tar.gz"
               tar_flags="--strip-components=1"
               ;;
             "libressl")

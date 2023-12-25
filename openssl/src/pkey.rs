@@ -747,12 +747,22 @@ impl PKey<Private> {
 }
 
 impl PKey<Public> {
-    from_pem! {
+    private_key_from_pem! {
         /// Decodes a PEM-encoded SubjectPublicKeyInfo structure.
         ///
         /// The input should have a header of `-----BEGIN PUBLIC KEY-----`.
         #[corresponds(PEM_read_bio_PUBKEY)]
         public_key_from_pem,
+
+        /// Decodes a PEM-encoded SubjectPublicKeyInfo structure.
+        #[corresponds(PEM_read_bio_PUBKEY)]
+        public_key_from_pem_passphrase,
+
+        /// Decodes a PEM-encoded SubjectPublicKeyInfo structure.
+        ///
+        /// The callback should fill the password into the provided buffer and return its length.
+        #[corresponds(PEM_read_bio_PrivateKey)]
+        public_key_from_pem_callback,
         PKey<Public>,
         ffi::PEM_read_bio_PUBKEY
     }
