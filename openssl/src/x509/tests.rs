@@ -172,7 +172,7 @@ fn test_subject_alt_name() {
 }
 
 #[test]
-#[cfg(ossl110)]
+#[cfg(any(ossl110, boringssl))]
 fn test_retrieve_pathlen() {
     let cert = include_bytes!("../../test/root-ca.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -188,7 +188,7 @@ fn test_retrieve_pathlen() {
 }
 
 #[test]
-#[cfg(ossl110)]
+#[cfg(any(ossl110, boringssl))]
 fn test_subject_key_id() {
     let cert = include_bytes!("../../test/certv3.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -201,7 +201,7 @@ fn test_subject_key_id() {
 }
 
 #[test]
-#[cfg(ossl110)]
+#[cfg(any(ossl110, boringssl))]
 fn test_authority_key_id() {
     let cert = include_bytes!("../../test/certv3.pem");
     let cert = X509::from_pem(cert).unwrap();
