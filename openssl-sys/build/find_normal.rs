@@ -177,15 +177,24 @@ and try building this crate again.
         msg.push_str(
             "
 It looks like you're compiling for MSVC but we couldn't detect an OpenSSL
-installation. If there isn't one installed then you can try the rust-openssl
-README for more information about how to download precompiled binaries of
-OpenSSL:
+installation with vcpkg. Make sure you've installed the `openssl` package with
+a triplet ending in `-windows-static-md`.
 
-https://github.com/sfackler/rust-openssl#windows
+See the error output above for which triplet `vcpkg` tried to use.
 
 ",
         );
     }
+
+    msg.push_str(
+        "
+See the `rust-openssl` documentation for more information on how to provide a
+compatible version of OpenSSL to link against:
+
+https://docs.rs/openssl/latest/openssl/#building
+
+",
+    );
 
     panic!("{}", msg);
 }
