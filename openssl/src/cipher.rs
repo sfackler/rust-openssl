@@ -171,7 +171,6 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_256_xts() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
     pub fn aes_128_ctr() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_ctr() as *mut _) }
     }
@@ -200,7 +199,6 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_ccm() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
     pub fn aes_128_ofb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_ofb() as *mut _) }
     }
