@@ -469,34 +469,18 @@ extern "C" {
         penclen: c_int,
     ) -> c_int;
 }
-cfg_if! {
-    if #[cfg(ossl300)] {
-        extern "C" {
-            pub fn i2d_X509_PUBKEY(a: *const X509_PUBKEY, out: *mut *mut c_uchar) -> c_int;
-            pub fn X509_PUBKEY_get0_param(
-                ppkalg: *mut *mut ASN1_OBJECT,
-                pk: *mut *const c_uchar,
-                ppklen: *mut c_int,
-                pa: *mut *mut X509_ALGOR,
-                pub_: *const X509_PUBKEY,
-            ) -> c_int;
-            pub fn X509_PUBKEY_get(key: *const X509_PUBKEY) -> *mut EVP_PKEY;
-            pub fn X509_PUBKEY_get0(key: *const X509_PUBKEY) -> *mut EVP_PKEY;
-        }
-    } else {
-        extern "C" {
-            pub fn i2d_X509_PUBKEY(a: *mut X509_PUBKEY, out: *mut *mut c_uchar) -> c_int;
-            pub fn X509_PUBKEY_get0_param(
-                ppkalg: *mut *mut ASN1_OBJECT,
-                pk: *mut *const c_uchar,
-                ppklen: *mut c_int,
-                pa: *mut *mut X509_ALGOR,
-                pub_: *mut X509_PUBKEY,
-            ) -> c_int;
-            pub fn X509_PUBKEY_get(key: *mut X509_PUBKEY) -> *mut EVP_PKEY;
-            #[cfg(ossl110)]
-            pub fn X509_PUBKEY_get0(key: *mut X509_PUBKEY) -> *mut EVP_PKEY;
-        }
+const_ptr_api! {
+    extern "C" {
+       pub fn i2d_X509_PUBKEY(a: #[const_ptr_if(ossl300)] X509_PUBKEY, out: *mut *mut c_uchar) -> c_int;
+       pub fn X509_PUBKEY_get0_param(
+           ppkalg: *mut *mut ASN1_OBJECT,
+           pk: *mut *const c_uchar,
+           ppklen: *mut c_int,
+           pa: *mut *mut X509_ALGOR,
+           pub_: #[const_ptr_if(ossl300)] X509_PUBKEY,
+       ) -> c_int;
+       pub fn X509_PUBKEY_get(key: #[const_ptr_if(ossl300)] X509_PUBKEY) -> *mut EVP_PKEY;
+       pub fn X509_PUBKEY_get0(key: #[const_ptr_if(ossl300)] X509_PUBKEY) -> *mut EVP_PKEY;
     }
 }
 
