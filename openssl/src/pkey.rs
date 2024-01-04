@@ -443,6 +443,22 @@ impl<T> PKey<T> {
         }
     }
 
+    /// Creates a new `PKey` containing a Diffie-Hellman key with type DHX.
+    #[cfg(all(not(boringssl), ossl110))]
+    pub fn from_dhx(dh: Dh<T>) -> Result<PKey<T>, ErrorStack> {
+        unsafe {
+            let evp = cvt_p(ffi::EVP_PKEY_new())?;
+            let pkey = PKey::from_ptr(evp);
+            cvt(ffi::EVP_PKEY_assign(
+                pkey.0,
+                ffi::EVP_PKEY_DHX,
+                dh.as_ptr().cast(),
+            ))?;
+            mem::forget(dh);
+            Ok(pkey)
+        }
+    }
+
     /// Creates a new `PKey` containing an elliptic curve key.
     #[corresponds(EVP_PKEY_assign_EC_KEY)]
     pub fn from_ec_key(ec_key: EcKey<T>) -> Result<PKey<T>, ErrorStack> {
