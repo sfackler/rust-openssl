@@ -538,6 +538,12 @@ extern "C" {
     #[cfg(ossl300)]
     pub fn EVP_PKEY_CTX_set_signature_md(ctx: *mut EVP_PKEY_CTX, md: *const EVP_MD) -> c_int;
 
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_CTX_set_params(ctx: *mut EVP_PKEY_CTX, params: *const OSSL_PARAM) -> c_int;
+
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_CTX_get_params(ctx: *mut EVP_PKEY_CTX, params: *mut OSSL_PARAM) -> c_int;
+
     pub fn EVP_PKEY_new_mac_key(
         type_: c_int,
         e: *mut ENGINE,
@@ -645,4 +651,17 @@ cfg_if! {
 extern "C" {
     pub fn EVP_EncodeBlock(dst: *mut c_uchar, src: *const c_uchar, src_len: c_int) -> c_int;
     pub fn EVP_DecodeBlock(dst: *mut c_uchar, src: *const c_uchar, src_len: c_int) -> c_int;
+}
+
+extern "C" {
+    #[cfg(ossl300)]
+    pub fn OSSL_PARAM_construct_uint(key: *const c_char, buf: *mut c_uint) -> OSSL_PARAM;
+    #[cfg(ossl300)]
+    pub fn OSSL_PARAM_construct_utf8_string(
+        key: *const c_char,
+        buf: *mut c_char,
+        bsize: size_t,
+    ) -> OSSL_PARAM;
+    #[cfg(ossl300)]
+    pub fn OSSL_PARAM_construct_end() -> OSSL_PARAM;
 }
