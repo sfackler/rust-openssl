@@ -756,12 +756,13 @@ impl X509 {
                     ffi::PEM_read_bio_X509(bio.as_ptr(), ptr::null_mut(), None, ptr::null_mut());
                 if r.is_null() {
                     let e = ErrorStack::get();
-                    let errors = e.errors();
-                    if !errors.is_empty()
-                        && errors[0].library_code() == ffi::ERR_LIB_PEM as libc::c_int
-                        && errors[0].reason_code() == ffi::PEM_R_NO_START_LINE as libc::c_int
-                    {
-                        break;
+
+                    if let Some(err) = e.errors().last() {
+                        if err.library_code() == ffi::ERR_LIB_PEM as libc::c_int
+                            && err.reason_code() == ffi::PEM_R_NO_START_LINE as libc::c_int
+                        {
+                            break;
+                        }
                     }
 
                     return Err(e);
