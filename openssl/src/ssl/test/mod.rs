@@ -552,7 +552,7 @@ fn test_alpn_server_select_none() {
 }
 
 #[test]
-#[cfg(any(ossl102, libressl261))]
+#[cfg(any(boringssl, ossl102, libressl261))]
 fn test_alpn_server_unilateral() {
     let server = Server::builder().build();
 
