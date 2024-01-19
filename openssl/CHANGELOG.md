@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+* Added `Pkcs7Ref::{type_,signed}`.
+* Added `Pkcs7SignedRef::certificates`.
+
 ## [v0.10.62] - 2023-12-22
 
 ### Added
