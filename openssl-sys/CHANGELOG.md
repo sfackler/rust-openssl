@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [v0.9.99] - 2024-01-19
+
+### Added
+
+* On macOS added Homebrew's `openssl@3.0` to the list of candidates to build against.
+* `NID_brainpoolP256r1`, `NID_brainpoolP320r1`, `NID_brainpoolP384r1`, and `NID_brainpoolP512r1` are now available on LibreSSL.
+
+### Changed
+
+* `X509_PURPOSE` is now opaque on LibreSSL 3.9.0+.
+
 ## [v0.9.98] - 2023-12-22
 
 ### Added
@@ -567,7 +578,8 @@ Fixed builds against OpenSSL built with `no-cast`.
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.98..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.99..master
+[v0.9.99]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.98...openssl-sys-v0.9.99
 [v0.9.98]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.97...openssl-sys-v0.9.98
 [v0.9.97]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.96...openssl-sys-v0.9.97
 [v0.9.96]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.95...openssl-sys-v0.9.96
