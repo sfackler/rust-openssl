@@ -175,7 +175,7 @@ fn test_subject_alt_name() {
 }
 
 #[test]
-#[cfg(ossl110)]
+#[cfg(any(ossl110, boringssl))]
 fn test_retrieve_pathlen() {
     let cert = include_bytes!("../../test/root-ca.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -191,7 +191,7 @@ fn test_retrieve_pathlen() {
 }
 
 #[test]
-#[cfg(ossl110)]
+#[cfg(any(ossl110, boringssl))]
 fn test_subject_key_id() {
     let cert = include_bytes!("../../test/certv3.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -204,7 +204,7 @@ fn test_subject_key_id() {
 }
 
 #[test]
-#[cfg(ossl110)]
+#[cfg(any(ossl110, boringssl))]
 fn test_authority_key_id() {
     let cert = include_bytes!("../../test/certv3.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -1339,4 +1339,19 @@ fn test_sbgp_ip_addr_ranges_builder() {
             IpAddr::from_str("fc00::400").unwrap(),
         )])
     );
+}
+
+#[test]
+#[cfg(ossl300)]
+fn test_store_all_certificates() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    let store = {
+        let mut b = X509StoreBuilder::new().unwrap();
+        b.add_cert(cert).unwrap();
+        b.build()
+    };
+
+    assert_eq!(store.all_certificates().len(), 1);
 }

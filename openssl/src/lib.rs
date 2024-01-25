@@ -48,6 +48,9 @@
 //!
 //! # Alpine Linux
 //! $ apk add pkgconfig openssl-dev
+//!
+//! # openSUSE
+//! $ sudo zypper in libopenssl-devel
 //! ```
 //!
 //! ## Manual
@@ -119,12 +122,14 @@
 //! ```
 #![doc(html_root_url = "https://docs.rs/openssl/0.10")]
 #![warn(rust_2018_idioms)]
-#![allow(clippy::uninlined_format_args)]
+#![allow(clippy::uninlined_format_args, clippy::needless_doctest_main)]
 
 #[doc(inline)]
 pub use ffi::init;
 
 use libc::c_int;
+#[cfg(ossl300)]
+use libc::c_long;
 
 use crate::error::ErrorStack;
 
@@ -140,7 +145,7 @@ pub mod base64;
 pub mod bn;
 pub mod cipher;
 pub mod cipher_ctx;
-#[cfg(all(not(boringssl), not(libressl), not(osslconf = "OPENSSL_NO_CMS")))]
+#[cfg(all(not(libressl), not(osslconf = "OPENSSL_NO_CMS")))]
 pub mod cms;
 pub mod conf;
 pub mod derive;
@@ -162,7 +167,7 @@ pub mod md;
 pub mod md_ctx;
 pub mod memcmp;
 pub mod nid;
-#[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_OCSP")))]
+#[cfg(not(osslconf = "OPENSSL_NO_OCSP"))]
 pub mod ocsp;
 pub mod pkcs12;
 pub mod pkcs5;
@@ -204,7 +209,29 @@ fn cvt_p<T>(r: *mut T) -> Result<*mut T, ErrorStack> {
 }
 
 #[inline]
+fn cvt_p_const<T>(r: *const T) -> Result<*const T, ErrorStack> {
+    if r.is_null() {
+        Err(ErrorStack::get())
+    } else {
+        Ok(r)
+    }
+}
+
+#[inline]
 fn cvt(r: c_int) -> Result<c_int, ErrorStack> {
+    if r <= 0 {
+        Err(ErrorStack::get())
+    } else {
+        Ok(r)
+    }
+}
+
+// cvt_long is currently only used in functions that require openssl >= 3.0.0,
+// so this cfg statement is used to avoid "unused function" errors when
+// compiling with openssl < 3.0.0
+#[inline]
+#[cfg(ossl300)]
+fn cvt_long(r: c_long) -> Result<c_long, ErrorStack> {
     if r <= 0 {
         Err(ErrorStack::get())
     } else {

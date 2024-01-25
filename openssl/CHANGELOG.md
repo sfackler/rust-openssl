@@ -2,6 +2,93 @@
 
 ## [Unreleased]
 
+## [v0.10.63] - 2024-01-19
+
+### Added
+
+* Added `Pkcs7Ref::{type_,signed}`.
+* Added `Pkcs7SignedRef::certificates`.
+* Added `Cipher::{aes_256_xts,des_ede3_ecb,des_ede3_cfb8,des_ede3_ofb,camellia128_ofb,camellia192_ofb,camellia256_ofb,cast5_ofb,idea_ofb}`
+* Added `PKey::from_dhx`
+* Added `PKey::{public_key_from_pem_passphrase,public_key_from_pem_callback}`.
+
+### Changed
+
+* `Cipher::aes_128_ofb` is now available on BoringSSL
+* `Nid::{BRAINPOOL_P256R1,BRAINPOOL_P320R1,BRAINPOOL_P384R1,BRAINPOOL_P512R1}` are now available on LibreSSL.
+
+## [v0.10.62] - 2023-12-22
+
+### Added
+
+* Added `Nid::BRAINPOOL_P320R1`
+* Added `rand_priv_bytes`
+
+### Fixed
+
+* Fixed building on the latest version of BoringSSL
+
+## [v0.10.61] - 2023-12-04
+
+### Changed
+
+* `SslStream` now uses `SSL_read_ex`, `SSL_write_ex`, and `SSL_peek_ex` when available
+
+### Added
+
+* Added `SslStream::{read_uninit, ssl_read_uninit}`.
+
+## [v0.10.60] - 2023-11-22
+
+### Deprecated
+
+* Deprecated `X509StoreRef::objects`. It is unsound. All callers should migrate to using `X509StoreRef::all_certificates` instead.
+
+### Fixed
+
+* Fixed a memory leak when calling `SslContextBuilder::set_ex_data` and `SslRef::set_ex_data` multiple times with the same index.
+
+### Added
+
+* Added `X509StoreRef::all_certificates`
+* Added `cipher::Cipher::{camellia128_cbc,camellia192_cbc,camellia256_cbc,cast5_cbc,idea_cbc}`
+* Added `symm::Cipher::{des_ede3_ecb,des_ede3_cfb8,des_ede3_ofb,camellia_128_ecb,camellia_128_ofb,camellia_128_cfb128,camellia_192_ecb,camellia_192_ofb,camellia_192_cfb128,camellia_256_ecb,camellia_256_ofb,camellia_256_cfb128,cast5_ecb,cast5_ofb,cast5_cfb64,idea_ecb,idea_ofb,idea_cfb64}`
+* Added `Crypter::update_unchecked`
+* Added `SslRef::{peer_tmp_key,tmp_key}`
+
+### Changed
+
+* `cipher::Cipher::chacha20` is now available on LibreSSL
+* `symm::Cipher::chacha20` is now available on LibreSSL
+
+## [v0.10.59] - 2023-11-03
+
+### Added
+
+* Added `Nid::CHACHA20_POLY1305`
+
+### Changed
+
+* Fixed the availability of `Id::RSA_PSS` on OpenSSL
+
+## [v0.10.58] - 2023-11-01
+
+### Added
+
+* Added `Id::{RSA_PSS,DHX}` constants
+* Added `SslContextBuilder::set_security_level`
+* Added `SslContextRef::security_level`
+* Added `SslRef::set_security_level`, `SslRef::security_level`
+* Added `Cipher::{camellia_128_cbc, camellia_192_cbc, camellia_256_cbc, cast5_cbc, idea_cbc}`
+* Added `X509CrlRef::extension`
+* Added `X509PurposeId::CODE_SIGN`
+
+### Changed
+
+* `Pkey` HKDF functionality now works on LibreSSL
+* `BigNum::mod_sqrt` is now available on all OpenSSLs
+* `MessageDigest::sha3*` are now available on LibreSSL
+
 ## [v0.10.57] - 2023-08-27
 
 ### Added
@@ -797,7 +884,13 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.57...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.63...master
+[v0.10.63]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.62...openssl-v0.10.63
+[v0.10.62]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.61...openssl-v0.10.62
+[v0.10.61]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.60...openssl-v0.10.61
+[v0.10.60]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.59...openssl-v0.10.60
+[v0.10.59]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.58...openssl-v0.10.59
+[v0.10.58]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.57...openssl-v0.10.58
 [v0.10.57]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.56...openssl-v0.10.57
 [v0.10.56]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.55...openssl-v0.10.56
 [v0.10.55]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.54...openssl-v0.10.55

@@ -115,7 +115,7 @@ pub fn pbkdf2_hmac(
 ///
 /// Requires OpenSSL 1.1.0 or newer.
 #[corresponds(EVP_PBE_scrypt)]
-#[cfg(any(ossl110, boringssl))]
+#[cfg(all(any(ossl110, boringssl), not(osslconf = "OPENSSL_NO_SCRYPT")))]
 #[allow(clippy::useless_conversion)]
 pub fn scrypt(
     pass: &[u8],

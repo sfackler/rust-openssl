@@ -5,6 +5,7 @@ extern "C" {
     pub fn DH_free(dh: *mut DH);
     pub fn DH_check(dh: *const DH, codes: *mut c_int) -> c_int;
 
+    #[cfg(not(libressl382))]
     pub fn DH_generate_parameters(
         prime_len: c_int,
         generator: c_int,

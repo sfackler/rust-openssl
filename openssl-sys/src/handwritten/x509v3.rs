@@ -84,6 +84,7 @@ const_ptr_api! {
 }
 
 extern "C" {
+    #[cfg(not(libressl390))]
     pub fn X509V3_EXT_add_alias(nid_to: c_int, nid_from: c_int) -> c_int;
     pub fn X509V3_EXT_d2i(ext: *mut X509_EXTENSION) -> *mut c_void;
     pub fn X509V3_EXT_i2d(ext_nid: c_int, crit: c_int, ext: *mut c_void) -> *mut X509_EXTENSION;

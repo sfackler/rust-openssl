@@ -80,10 +80,10 @@ use std::convert::TryFrom;
 use std::ptr;
 
 /// HKDF modes of operation.
-#[cfg(ossl111)]
+#[cfg(any(ossl111, libressl360))]
 pub struct HkdfMode(c_int);
 
-#[cfg(ossl111)]
+#[cfg(any(ossl111, libressl360))]
 impl HkdfMode {
     /// This is the default mode. Calling [`derive`][PkeyCtxRef::derive] on a [`PkeyCtxRef`] set up
     /// for HKDF will perform an extract followed by an expand operation in one go. The derived key
@@ -566,7 +566,7 @@ impl<T> PkeyCtxRef<T> {
     ///
     /// Requires OpenSSL 1.1.0 or newer.
     #[corresponds(EVP_PKEY_CTX_set_hkdf_md)]
-    #[cfg(any(ossl110, boringssl))]
+    #[cfg(any(ossl110, boringssl, libressl360))]
     #[inline]
     pub fn set_hkdf_md(&mut self, digest: &MdRef) -> Result<(), ErrorStack> {
         unsafe {
@@ -589,7 +589,7 @@ impl<T> PkeyCtxRef<T> {
     ///
     /// Requires OpenSSL 1.1.1 or newer.
     #[corresponds(EVP_PKEY_CTX_set_hkdf_mode)]
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl360))]
     #[inline]
     pub fn set_hkdf_mode(&mut self, mode: HkdfMode) -> Result<(), ErrorStack> {
         unsafe {
@@ -608,7 +608,7 @@ impl<T> PkeyCtxRef<T> {
     ///
     /// Requires OpenSSL 1.1.0 or newer.
     #[corresponds(EVP_PKEY_CTX_set1_hkdf_key)]
-    #[cfg(any(ossl110, boringssl))]
+    #[cfg(any(ossl110, boringssl, libressl360))]
     #[inline]
     pub fn set_hkdf_key(&mut self, key: &[u8]) -> Result<(), ErrorStack> {
         #[cfg(not(boringssl))]
@@ -633,7 +633,7 @@ impl<T> PkeyCtxRef<T> {
     ///
     /// Requires OpenSSL 1.1.0 or newer.
     #[corresponds(EVP_PKEY_CTX_set1_hkdf_salt)]
-    #[cfg(any(ossl110, boringssl))]
+    #[cfg(any(ossl110, boringssl, libressl360))]
     #[inline]
     pub fn set_hkdf_salt(&mut self, salt: &[u8]) -> Result<(), ErrorStack> {
         #[cfg(not(boringssl))]
@@ -658,7 +658,7 @@ impl<T> PkeyCtxRef<T> {
     ///
     /// Requires OpenSSL 1.1.0 or newer.
     #[corresponds(EVP_PKEY_CTX_add1_hkdf_info)]
-    #[cfg(any(ossl110, boringssl))]
+    #[cfg(any(ossl110, boringssl, libressl360))]
     #[inline]
     pub fn add_hkdf_info(&mut self, info: &[u8]) -> Result<(), ErrorStack> {
         #[cfg(not(boringssl))]
@@ -855,7 +855,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(any(ossl110, boringssl))]
+    #[cfg(any(ossl110, boringssl, libressl360))]
     fn hkdf() {
         let mut ctx = PkeyCtx::new_id(Id::HKDF).unwrap();
         ctx.derive_init().unwrap();
@@ -877,7 +877,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl360))]
     fn hkdf_expand() {
         let mut ctx = PkeyCtx::new_id(Id::HKDF).unwrap();
         ctx.derive_init().unwrap();
@@ -901,7 +901,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl360))]
     fn hkdf_extract() {
         let mut ctx = PkeyCtx::new_id(Id::HKDF).unwrap();
         ctx.derive_init().unwrap();
