@@ -109,8 +109,11 @@ extern "C" {
     pub fn X509v3_asid_inherits(asid: *mut ASIdentifiers) -> c_int;
     pub fn X509v3_asid_subset(child: *mut ASIdentifiers, parent: *mut ASIdentifiers) -> c_int;
     pub fn X509v3_asid_validate_path(ctx: *mut X509_STORE_CTX) -> c_int;
-    pub fn X509v3_asid_validate_resource_set(chain: *mut stack_st_X509, ext: *mut ASIdentifiers, allow_inheritence: c_int) -> c_int;
-
+    pub fn X509v3_asid_validate_resource_set(
+        chain: *mut stack_st_X509,
+        ext: *mut ASIdentifiers,
+        allow_inheritence: c_int,
+    ) -> c_int;
 
     pub fn X509v3_addr_get_range(
         aor: *mut IPAddressOrRange,
@@ -137,5 +140,9 @@ extern "C" {
     pub fn X509v3_addr_inherits(addr: *mut IPAddrBlocks) -> c_int;
     pub fn X509v3_addr_subset(a: *mut IPAddrBlocks, b: *mut IPAddrBlocks) -> c_int;
     pub fn X509v3_addr_validate_path(ctx: *mut X509_STORE_CTX) -> c_int;
-    pub fn X509v3_addr_validate_resource_set(chain: *mut stack_st_X509, ext: *mut IPAddrBlocks, allow_inheritence: c_int) -> c_int;
+    pub fn X509v3_addr_validate_resource_set(
+        chain: *mut stack_st_X509,
+        ext: *mut IPAddrBlocks,
+        allow_inheritence: c_int,
+    ) -> c_int;
 }

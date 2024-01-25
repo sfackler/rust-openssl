@@ -1200,16 +1200,14 @@ fn test_sbgp_extensions_parsing() {
     assert!(asn.subset_of(&pasn));
     assert!(!pasn.subset_of(&asn));
 
-    let cert1 = X509::from_pem(cert_bytes).unwrap();
-    let prnt = cert1.sbgp_asn().unwrap();
-    assert!(asn.subset_of(&prnt));
-    
     let asn_ranges = asn.ranges().unwrap();
     assert_eq!(asn_ranges[0], (10, 18));
     assert_eq!(asn_ranges[1], (20, 20));
 
     let families = cert.sbgp_ip_addresses().unwrap();
     let pfamilies = parent_cert.sbgp_ip_addresses().unwrap();
+    assert!(!families.inherited());
+    assert!(families.is_canonical());
     assert!(families.subset_of(&pfamilies));
     assert!(!pfamilies.subset_of(&families));
 
@@ -1266,13 +1264,8 @@ fn test_sbgp_as_identifier_builder_inherit() {
     assert!(asn.inherited());
     assert_eq!(asn.ranges(), None);
 
-    // 
-
-    let mut builder = X509Builder::new().unwrap();  
-    let ext = SbgpAsIdentifier::new()
-        .add_inherit()
-        .build()
-        .unwrap();
+    let mut builder = X509Builder::new().unwrap();
+    let ext = SbgpAsIdentifier::new().add_inherit().build().unwrap();
 
     builder.append_extension(ext).unwrap();
     let cert = builder.build();
@@ -1305,11 +1298,11 @@ fn test_sbgp_ip_addr_ranges_builder() {
     builder.append_extension(ip_addr_ext).unwrap();
     let cert = builder.build();
 
-    let ranges = cert
-        .sbgp_ip_addresses()
-        .unwrap()
-        .into_iter()
-        .collect::<Vec<_>>();
+    let ranges = cert.sbgp_ip_addresses().unwrap();
+    assert!(!ranges.inherited());
+    assert!(ranges.is_canonical());
+
+    let ranges = ranges.into_iter().collect::<Vec<_>>();
 
     assert_eq!(ranges.len(), 2);
 
@@ -1341,4 +1334,3 @@ fn test_sbgp_ip_addr_ranges_builder() {
         )])
     );
 }
-

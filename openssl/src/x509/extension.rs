@@ -35,8 +35,6 @@ use crate::cvt;
 #[cfg(ossl110)]
 use ffi::{IANA_AFI_IPV4, IANA_AFI_IPV6};
 #[cfg(ossl110)]
-use openssl_macros::corresponds;
-#[cfg(ossl110)]
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 /// An extension which indicates whether a certificate is a CA certificate.
@@ -452,7 +450,7 @@ pub struct SbgpAsIdentifier(SbgpAsIdentifierOrInherit);
 #[cfg(not(OPENSSL_NO_RFC3779))]
 enum SbgpAsIdentifierOrInherit {
     Inherit,
-    List(Vec<(u32, u32)>)
+    List(Vec<(u32, u32)>),
 }
 
 #[cfg(ossl110)]
@@ -462,7 +460,6 @@ impl Default for SbgpAsIdentifier {
         SbgpAsIdentifier::new()
     }
 }
-
 
 #[cfg(ossl110)]
 #[cfg(not(OPENSSL_NO_RFC3779))]
@@ -514,7 +511,7 @@ impl SbgpAsIdentifier {
                         asid.as_ptr(),
                         ffi::V3_ASID_ASNUM,
                     ))?;
-                },
+                }
                 SbgpAsIdentifierOrInherit::List(ref asns) => {
                     assert!(!asns.is_empty(), "cannot create empty extension");
 
@@ -526,7 +523,6 @@ impl SbgpAsIdentifier {
                                 0,
                                 asn_min.as_ptr(),
                                 std::ptr::null_mut(),
-                                
                             ))?;
                         } else {
                             let asn_max = BigNum::from_u32(*max)?.to_asn1_integer()?;
@@ -540,7 +536,7 @@ impl SbgpAsIdentifier {
                         };
                         // On success ownership of min and max was moved, so forget
                         // On failure the fn early returned, thus the Rust types will free min and max
-                        std::mem::forget(asn_min);      
+                        std::mem::forget(asn_min);
                     }
 
                     // canonize must only be performed on this branch, since an inherit
@@ -549,7 +545,7 @@ impl SbgpAsIdentifier {
                         cvt(ffi::X509v3_asid_canonize(asid.as_ptr()))?;
                     }
                 }
-            }  
+            }
             X509Extension::new_internal(Nid::SBGP_AUTONOMOUSSYSNUM, true, asid.as_ptr().cast())
         }
     }
@@ -559,17 +555,16 @@ impl SbgpAsIdentifier {
 #[cfg(ossl110)]
 #[cfg(not(OPENSSL_NO_RFC3779))]
 pub struct SbgpIpAddressIdentifier {
-   v4: SbgpIpAddressIdentifierOrInherit<Ipv4Addr>,
-   v6: SbgpIpAddressIdentifierOrInherit<Ipv6Addr>,
+    v4: SbgpIpAddressIdentifierOrInherit<Ipv4Addr>,
+    v6: SbgpIpAddressIdentifierOrInherit<Ipv6Addr>,
 }
 
 #[cfg(ossl110)]
 #[cfg(not(OPENSSL_NO_RFC3779))]
 enum SbgpIpAddressIdentifierOrInherit<Addr> {
     Inherit,
-    List(Vec<(Addr, Addr)>) 
+    List(Vec<(Addr, Addr)>),
 }
-
 
 #[cfg(ossl110)]
 #[cfg(not(OPENSSL_NO_RFC3779))]
@@ -601,9 +596,13 @@ impl SbgpIpAddressIdentifier {
     /// Sets the `inherit` flag in the list corresponding to the ip version.
     pub fn add_inherit(&mut self, afi: IpVersion) -> &mut SbgpIpAddressIdentifier {
         match afi {
-            IpVersion::V4 if self.len_of(afi) == 0 => self.v4 = SbgpIpAddressIdentifierOrInherit::Inherit,
+            IpVersion::V4 if self.len_of(afi) == 0 => {
+                self.v4 = SbgpIpAddressIdentifierOrInherit::Inherit
+            }
             IpVersion::V4 => panic!("cannot set ipv4 to inherit, list allready contains values"),
-            IpVersion::V6 if self.len_of(afi) == 0 => self.v6 = SbgpIpAddressIdentifierOrInherit::Inherit,     
+            IpVersion::V6 if self.len_of(afi) == 0 => {
+                self.v6 = SbgpIpAddressIdentifierOrInherit::Inherit
+            }
             IpVersion::V6 => panic!("cannot set ipv6 to inherit, list allready contains values"),
         }
         self
@@ -613,7 +612,7 @@ impl SbgpIpAddressIdentifier {
     pub fn add_ip_addr(&mut self, ip_addr: IpAddr) -> &mut SbgpIpAddressIdentifier {
         match ip_addr {
             IpAddr::V4(addr) => self.add_ipv4_addr_range(addr, addr),
-            IpAddr::V6(addr)=> self.add_ipv6_addr_range(addr, addr),
+            IpAddr::V6(addr) => self.add_ipv6_addr_range(addr, addr),
         }
     }
 
@@ -672,45 +671,41 @@ impl SbgpIpAddressIdentifier {
     pub fn build(&self) -> Result<X509Extension, ErrorStack> {
         unsafe {
             let mut stack = Stack::<IPAddressFamily>::new()?;
-            
+
             match self.v4 {
                 SbgpIpAddressIdentifierOrInherit::Inherit => {
                     cvt(ffi::X509v3_addr_add_inherit(
-                    stack.as_ptr(),
-                    IANA_AFI_IPV4 as u32,
-                    std::ptr::null(),
+                        stack.as_ptr(),
+                        IANA_AFI_IPV4 as u32,
+                        std::ptr::null(),
                     ))?;
-                },
+                }
                 SbgpIpAddressIdentifierOrInherit::List(ref ips) => {
                     for (min, max) in ips {
                         stack.sbgp_add_addr_range(*min, *max, IANA_AFI_IPV4 as u32)?;
                     }
-                },
+                }
             }
             match self.v6 {
                 SbgpIpAddressIdentifierOrInherit::Inherit => {
                     cvt(ffi::X509v3_addr_add_inherit(
-                    stack.as_ptr(),
-                    IANA_AFI_IPV6 as u32,
-                    std::ptr::null(),
+                        stack.as_ptr(),
+                        IANA_AFI_IPV6 as u32,
+                        std::ptr::null(),
                     ))?;
-                },
+                }
                 SbgpIpAddressIdentifierOrInherit::List(ref ips) => {
                     for (min, max) in ips {
                         stack.sbgp_add_addr_range(*min, *max, IANA_AFI_IPV6 as u32)?;
                     }
-                },
+                }
             }
-            
+
             if ffi::X509v3_addr_is_canonical(stack.as_ptr()) != 1 {
                 cvt(ffi::X509v3_addr_canonize(stack.as_ptr()))?;
             }
 
-            X509Extension::new_internal(
-                Nid::SBGP_IPADDRBLOCK,
-                true,
-                stack.as_ptr().cast(),
-            )
+            X509Extension::new_internal(Nid::SBGP_IPADDRBLOCK, true, stack.as_ptr().cast())
         }
     }
 }
@@ -718,10 +713,14 @@ impl SbgpIpAddressIdentifier {
 #[cfg(ossl110)]
 #[cfg(not(OPENSSL_NO_RFC3779))]
 impl Stack<IPAddressFamily> {
-    /// Adds an address range to the stack
-    /// This helper exists as a utility function, because RFC 3779 types are hard to deal with.
-    #[corresponds(X509v3_addr_add_range)]
-    pub fn sbgp_add_addr_range<Addr>(&mut self, mut min: Addr, mut max: Addr, afi: u32) -> Result<(), ErrorStack> {
+    // No pub, since messing with existing stacks outside build()
+    // seems like an unnessecary risk.
+    fn sbgp_add_addr_range<Addr>(
+        &mut self,
+        mut min: Addr,
+        mut max: Addr,
+        afi: u32,
+    ) -> Result<(), ErrorStack> {
         unsafe {
             let min = &mut min as *mut _ as *mut u8;
             let max = &mut max as *mut _ as *mut u8;

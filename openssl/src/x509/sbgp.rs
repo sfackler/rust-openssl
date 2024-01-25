@@ -6,8 +6,8 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use ffi::{
     ASIdOrRange_id, ASIdOrRange_range, ASIdentifierChoice_asIdsOrRanges,
-    IPAddressChoice_addressesOrRanges, X509v3_addr_get_afi,
-    ASN1_INTEGER, IANA_AFI_IPV4, IANA_AFI_IPV6,
+    IPAddressChoice_addressesOrRanges, X509v3_addr_get_afi, ASN1_INTEGER, IANA_AFI_IPV4,
+    IANA_AFI_IPV6,
 };
 use foreign_types::ForeignTypeRef;
 use openssl_macros::corresponds;
@@ -48,9 +48,7 @@ impl ASIdentifiers {
     /// parent certificate.
     #[corresponds(X509v3_asid_inherits)]
     pub fn inherited(&self) -> bool {
-        unsafe {
-            ffi::X509v3_asid_inherits(self.as_ptr()) == 1
-        }
+        unsafe { ffi::X509v3_asid_inherits(self.as_ptr()) == 1 }
     }
 
     /// Determines whether the contents of the AS number extension are contained
@@ -67,12 +65,10 @@ impl ASIdentifiers {
     /// Indicates whether the extension is in canonical form.
     #[corresponds(X509v3_asid_is_canonical)]
     pub fn is_canonical(&self) -> bool {
-        unsafe {
-            ffi::X509v3_asid_is_canonical(self.as_ptr()) == 1
-        }
+        unsafe { ffi::X509v3_asid_is_canonical(self.as_ptr()) == 1 }
     }
 
-    /// Reads the contents of the AS number extension and parses them into a 
+    /// Reads the contents of the AS number extension and parses them into a
     /// vector of AS number ranges. Returns `None` if the contents
     /// should be inherited.
     pub fn ranges(&self) -> Option<Vec<(u32, u32)>> {
@@ -144,13 +140,24 @@ pub enum IpVersion {
 }
 
 impl Stack<IPAddressFamily> {
+    /// Indicates whether the AS number extension should be inherited from the
+    /// parent certificate.
+    pub fn inherited(&self) -> bool {
+        unsafe { ffi::X509v3_addr_inherits(self.as_ptr()) == 1 }
+    }
+
     /// Determines whether the IP address extension is contained
     /// in the parents IP address extension.
     #[corresponds(X509v3_addr_subset)]
     pub fn subset_of(&self, parent: &Stack<IPAddressFamily>) -> bool {
-        unsafe {
-            ffi::X509v3_addr_subset(self.as_ptr(), parent.as_ptr()) == 1
-        }
+        unsafe { ffi::X509v3_addr_subset(self.as_ptr(), parent.as_ptr()) == 1 }
+    }
+
+    /// Returns whether the IP address extension is in canonical
+    /// form.
+    #[corresponds(X509v3_addr_is_canonical)]
+    pub fn is_canonical(&self) -> bool {
+        unsafe { ffi::X509v3_addr_is_canonical(self.as_ptr()) == 1 }
     }
 }
 
@@ -159,8 +166,7 @@ impl IPAddressFamily {
     #[corresponds(X509v3_addr_get_afi)]
     pub fn fam(&self) -> Option<IpVersion> {
         unsafe {
-            let ptr = self.0;
-            match X509v3_addr_get_afi(ptr) as libc::c_int {
+            match X509v3_addr_get_afi(self.as_ptr()) as libc::c_int {
                 IANA_AFI_IPV4 => Some(IpVersion::V4),
                 IANA_AFI_IPV6 => Some(IpVersion::V6),
                 _ => None,
@@ -173,8 +179,7 @@ impl IPAddressFamily {
     pub fn range(&self) -> Option<Vec<(IpAddr, IpAddr)>> {
         unsafe {
             let fam = self.fam()?;
-            let ptr = self.0;
-            let choice = (*ptr).ipAddressChoice;
+            let choice = (*self.as_ptr()).ipAddressChoice;
             if (*choice).type_ != IPAddressChoice_addressesOrRanges {
                 return None;
             }
