@@ -1,8 +1,4 @@
 use std::cmp::Ordering;
-#[cfg(ossl110)]
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
-#[cfg(ossl110)]
-use std::str::FromStr;
 
 use crate::asn1::{Asn1Object, Asn1OctetString, Asn1Time};
 use crate::bn::{BigNum, MsbOption};
@@ -18,6 +14,7 @@ use crate::x509::extension::{
     SubjectKeyIdentifier,
 };
 #[cfg(ossl110)]
+#[cfg(not(OPENSSL_NO_RFC3779))]
 use crate::x509::extension::{SbgpAsIdentifier, SbgpIpAddressIdentifier};
 #[cfg(not(boringssl))]
 use crate::x509::store::X509Lookup;
@@ -1188,6 +1185,9 @@ fn test_dist_point_null() {
 #[cfg(ossl110)]
 #[cfg(not(OPENSSL_NO_RFC3779))]
 fn test_sbgp_extensions_parsing() {
+    use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+    use std::str::FromStr;
+
     let cert_bytes = include_bytes!("../../test/rfc3779.pem");
     let cert = X509::from_pem(cert_bytes).unwrap();
 
@@ -1283,6 +1283,8 @@ fn test_sbgp_as_identifier_builder_inherit() {
 #[cfg(not(OPENSSL_NO_RFC3779))]
 fn test_sbgp_ip_addr_ranges_builder() {
     use crate::x509::sbgp::IpVersion;
+    use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+    use std::str::FromStr;
 
     let mut builder = X509Builder::new().unwrap();
     let ip_addr_ext = SbgpIpAddressIdentifier::new()
