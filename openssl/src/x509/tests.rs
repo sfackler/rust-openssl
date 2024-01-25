@@ -1186,6 +1186,7 @@ fn test_dist_point_null() {
 
 #[test]
 #[cfg(ossl110)]
+#[cfg(not(OPENSSL_NO_RFC3779))]
 fn test_sbgp_extensions_parsing() {
     let cert_bytes = include_bytes!("../../test/rfc3779.pem");
     let cert = X509::from_pem(cert_bytes).unwrap();
@@ -1231,6 +1232,7 @@ fn test_sbgp_extensions_parsing() {
 
 #[test]
 #[cfg(ossl110)]
+#[cfg(not(OPENSSL_NO_RFC3779))]
 fn test_sbgp_as_identifier_builder() {
     let mut builder = X509Builder::new().unwrap();
     let as_id_ext = SbgpAsIdentifier::new()
@@ -1253,6 +1255,7 @@ fn test_sbgp_as_identifier_builder() {
 
 #[test]
 #[cfg(ossl110)]
+#[cfg(not(OPENSSL_NO_RFC3779))]
 fn test_sbgp_as_identifier_builder_inherit() {
     let mut builder = X509Builder::new().unwrap();
     let ext = SbgpAsIdentifier::new().add_inherit().build().unwrap();
@@ -1277,6 +1280,7 @@ fn test_sbgp_as_identifier_builder_inherit() {
 
 #[test]
 #[cfg(ossl110)]
+#[cfg(not(OPENSSL_NO_RFC3779))]
 fn test_sbgp_ip_addr_ranges_builder() {
     use crate::x509::sbgp::IpVersion;
 
