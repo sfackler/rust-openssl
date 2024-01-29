@@ -42,13 +42,16 @@
 //! ```
 
 use cfg_if::cfg_if;
-use foreign_types::ForeignTypeRef;
+use foreign_types::{ForeignType, ForeignTypeRef};
 use std::mem;
 
 use crate::error::ErrorStack;
 #[cfg(not(boringssl))]
 use crate::ssl::SslFiletype;
+#[cfg(ossl300)]
+use crate::stack::Stack;
 use crate::stack::StackRef;
+use crate::util::ForeignTypeRefExt;
 #[cfg(any(ossl102, libressl261))]
 use crate::x509::verify::{X509VerifyFlags, X509VerifyParamRef};
 use crate::x509::{X509Object, X509PurposeId, X509};
@@ -163,7 +166,7 @@ impl X509Lookup<HashDir> {
     /// directory.
     #[corresponds(X509_LOOKUP_hash_dir)]
     pub fn hash_dir() -> &'static X509LookupMethodRef<HashDir> {
-        unsafe { X509LookupMethodRef::from_ptr(ffi::X509_LOOKUP_hash_dir()) }
+        unsafe { X509LookupMethodRef::from_const_ptr(ffi::X509_LOOKUP_hash_dir()) }
     }
 }
 
@@ -195,7 +198,7 @@ impl X509Lookup<File> {
     /// into memory at the time the file is added as a lookup source.
     #[corresponds(X509_LOOKUP_file)]
     pub fn file() -> &'static X509LookupMethodRef<File> {
-        unsafe { X509LookupMethodRef::from_ptr(ffi::X509_LOOKUP_file()) }
+        unsafe { X509LookupMethodRef::from_const_ptr(ffi::X509_LOOKUP_file()) }
     }
 }
 
@@ -260,9 +263,23 @@ foreign_type_and_impl_send_sync! {
 
 impl X509StoreRef {
     /// Get a reference to the cache of certificates in this store.
+    ///
+    /// This method is deprecated. It is **unsound** and will be removed in a
+    /// future version of rust-openssl. `X509StoreRef::all_certificates`
+    /// should be used instead.
+    #[deprecated(
+        note = "This method is unsound, and will be removed in a future version of rust-openssl. X509StoreRef::all_certificates should be used instead."
+    )]
     #[corresponds(X509_STORE_get0_objects)]
     pub fn objects(&self) -> &StackRef<X509Object> {
         unsafe { StackRef::from_ptr(X509_STORE_get0_objects(self.as_ptr())) }
+    }
+
+    /// Returns a stack of all the certificates in this store.
+    #[corresponds(X509_STORE_get1_all_certs)]
+    #[cfg(ossl300)]
+    pub fn all_certificates(&self) -> Stack<X509> {
+        unsafe { Stack::from_ptr(ffi::X509_STORE_get1_all_certs(self.as_ptr())) }
     }
 }
 

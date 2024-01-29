@@ -52,7 +52,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl382))] {
         extern "C" {
             pub fn EVP_MD_CTX_new() -> *mut EVP_MD_CTX;
             pub fn EVP_MD_CTX_free(ctx: *mut EVP_MD_CTX);
@@ -271,6 +271,8 @@ const_ptr_api! {
 extern "C" {
     pub fn EVP_CIPHER_CTX_new() -> *mut EVP_CIPHER_CTX;
     pub fn EVP_CIPHER_CTX_free(ctx: *mut EVP_CIPHER_CTX);
+    pub fn EVP_CIPHER_CTX_copy(dst: *mut EVP_CIPHER_CTX, src: *const EVP_CIPHER_CTX) -> c_int;
+
     pub fn EVP_MD_CTX_copy_ex(dst: *mut EVP_MD_CTX, src: *const EVP_MD_CTX) -> c_int;
     #[cfg(ossl111)]
     pub fn EVP_MD_CTX_reset(ctx: *mut EVP_MD_CTX) -> c_int;
@@ -292,13 +294,13 @@ extern "C" {
     pub fn EVP_sha256() -> *const EVP_MD;
     pub fn EVP_sha384() -> *const EVP_MD;
     pub fn EVP_sha512() -> *const EVP_MD;
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub fn EVP_sha3_224() -> *const EVP_MD;
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub fn EVP_sha3_256() -> *const EVP_MD;
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub fn EVP_sha3_384() -> *const EVP_MD;
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub fn EVP_sha3_512() -> *const EVP_MD;
     #[cfg(ossl111)]
     pub fn EVP_shake128() -> *const EVP_MD;
@@ -310,7 +312,10 @@ extern "C" {
     pub fn EVP_des_ecb() -> *const EVP_CIPHER;
     pub fn EVP_des_ede3() -> *const EVP_CIPHER;
     pub fn EVP_des_ede3_cbc() -> *const EVP_CIPHER;
+    pub fn EVP_des_ede3_ecb() -> *const EVP_CIPHER;
     pub fn EVP_des_ede3_cfb64() -> *const EVP_CIPHER;
+    pub fn EVP_des_ede3_cfb8() -> *const EVP_CIPHER;
+    pub fn EVP_des_ede3_ofb() -> *const EVP_CIPHER;
     pub fn EVP_des_cbc() -> *const EVP_CIPHER;
     #[cfg(not(osslconf = "OPENSSL_NO_RC4"))]
     pub fn EVP_rc4() -> *const EVP_CIPHER;
@@ -365,7 +370,7 @@ extern "C" {
     pub fn EVP_aes_256_wrap() -> *const EVP_CIPHER;
     #[cfg(ossl110)]
     pub fn EVP_aes_256_wrap_pad() -> *const EVP_CIPHER;
-    #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_CHACHA")))]
+    #[cfg(all(any(ossl110, libressl310), not(osslconf = "OPENSSL_NO_CHACHA")))]
     pub fn EVP_chacha20() -> *const EVP_CIPHER;
     #[cfg(all(any(ossl110, libressl360), not(osslconf = "OPENSSL_NO_CHACHA")))]
     pub fn EVP_chacha20_poly1305() -> *const EVP_CIPHER;
@@ -389,28 +394,48 @@ extern "C" {
     #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
     pub fn EVP_sm4_ctr() -> *const EVP_CIPHER;
 
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAMELLIA")))]
+    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
     pub fn EVP_camellia_128_cfb128() -> *const EVP_CIPHER;
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAMELLIA")))]
+    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
     pub fn EVP_camellia_128_ecb() -> *const EVP_CIPHER;
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAMELLIA")))]
+    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    pub fn EVP_camellia_128_cbc() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    pub fn EVP_camellia_128_ofb() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
     pub fn EVP_camellia_192_cfb128() -> *const EVP_CIPHER;
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAMELLIA")))]
+    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
     pub fn EVP_camellia_192_ecb() -> *const EVP_CIPHER;
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAMELLIA")))]
+    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    pub fn EVP_camellia_192_cbc() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    pub fn EVP_camellia_192_ofb() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
     pub fn EVP_camellia_256_cfb128() -> *const EVP_CIPHER;
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAMELLIA")))]
+    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
     pub fn EVP_camellia_256_ecb() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    pub fn EVP_camellia_256_cbc() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    pub fn EVP_camellia_256_ofb() -> *const EVP_CIPHER;
 
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAST")))]
+    #[cfg(not(osslconf = "OPENSSL_NO_CAST"))]
     pub fn EVP_cast5_cfb64() -> *const EVP_CIPHER;
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAST")))]
+    #[cfg(not(osslconf = "OPENSSL_NO_CAST"))]
     pub fn EVP_cast5_ecb() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_CAST"))]
+    pub fn EVP_cast5_cbc() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_CAST"))]
+    pub fn EVP_cast5_ofb() -> *const EVP_CIPHER;
 
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_IDEA")))]
+    #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
     pub fn EVP_idea_cfb64() -> *const EVP_CIPHER;
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_IDEA")))]
+    #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
     pub fn EVP_idea_ecb() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
+    pub fn EVP_idea_cbc() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
+    pub fn EVP_idea_ofb() -> *const EVP_CIPHER;
 
     #[cfg(not(ossl110))]
     pub fn OPENSSL_add_all_algorithms_noconf();

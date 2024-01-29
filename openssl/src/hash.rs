@@ -43,7 +43,7 @@ use crate::nid::Nid;
 use crate::{cvt, cvt_p};
 
 cfg_if! {
-    if #[cfg(any(ossl110, boringssl))] {
+    if #[cfg(any(ossl110, boringssl, libressl382))] {
         use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
     } else {
         use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
@@ -127,22 +127,22 @@ impl MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha512()) }
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub fn sha3_224() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha3_224()) }
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub fn sha3_256() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha3_256()) }
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub fn sha3_384() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha3_384()) }
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub fn sha3_512() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha3_512()) }
     }
@@ -157,7 +157,7 @@ impl MessageDigest {
         unsafe { MessageDigest(ffi::EVP_shake256()) }
     }
 
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_RMD160")))]
+    #[cfg(not(osslconf = "OPENSSL_NO_RMD160"))]
     pub fn ripemd160() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_ripemd160()) }
     }
@@ -624,7 +624,7 @@ mod tests {
         );
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     #[test]
     fn test_sha3_224() {
         let tests = [(
@@ -644,7 +644,7 @@ mod tests {
         );
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     #[test]
     fn test_sha3_256() {
         let tests = [(
@@ -664,7 +664,7 @@ mod tests {
         );
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     #[test]
     fn test_sha3_384() {
         let tests = [("416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
@@ -684,7 +684,7 @@ mod tests {
         );
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     #[test]
     fn test_sha3_512() {
         let tests = [("416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
@@ -745,7 +745,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(osslconf = "OPENSSL_NO_RMD160"))]
     #[cfg_attr(ossl300, ignore)]
     fn test_ripemd160() {
         #[cfg(ossl300)]

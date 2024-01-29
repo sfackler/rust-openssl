@@ -7,8 +7,12 @@ pub const PKCS5_SALT_LEN: c_int = 8;
 pub const PKCS12_DEFAULT_ITER: c_int = 2048;
 
 pub const EVP_PKEY_RSA: c_int = NID_rsaEncryption;
+#[cfg(any(ossl111, libressl310, boringssl))]
+pub const EVP_PKEY_RSA_PSS: c_int = NID_rsassaPss;
 pub const EVP_PKEY_DSA: c_int = NID_dsa;
 pub const EVP_PKEY_DH: c_int = NID_dhKeyAgreement;
+#[cfg(ossl110)]
+pub const EVP_PKEY_DHX: c_int = NID_dhpublicnumber;
 pub const EVP_PKEY_EC: c_int = NID_X9_62_id_ecPublicKey;
 #[cfg(ossl111)]
 pub const EVP_PKEY_SM2: c_int = NID_sm2;
@@ -24,7 +28,7 @@ pub const EVP_PKEY_HMAC: c_int = NID_hmac;
 pub const EVP_PKEY_CMAC: c_int = NID_cmac;
 #[cfg(ossl111)]
 pub const EVP_PKEY_POLY1305: c_int = NID_poly1305;
-#[cfg(ossl110)]
+#[cfg(any(ossl110, libressl360))]
 pub const EVP_PKEY_HKDF: c_int = NID_hkdf;
 
 #[cfg(ossl102)]
@@ -197,31 +201,31 @@ pub const EVP_PKEY_CTRL_CIPHER: c_int = 12;
 
 pub const EVP_PKEY_ALG_CTRL: c_int = 0x1000;
 
-#[cfg(ossl111)]
+#[cfg(any(ossl111, libressl360))]
 pub const EVP_PKEY_HKDEF_MODE_EXTRACT_AND_EXPAND: c_int = 0;
 
-#[cfg(ossl111)]
+#[cfg(any(ossl111, libressl360))]
 pub const EVP_PKEY_HKDEF_MODE_EXTRACT_ONLY: c_int = 1;
 
-#[cfg(ossl111)]
+#[cfg(any(ossl111, libressl360))]
 pub const EVP_PKEY_HKDEF_MODE_EXPAND_ONLY: c_int = 2;
 
-#[cfg(ossl110)]
+#[cfg(any(ossl110, libressl360))]
 pub const EVP_PKEY_CTRL_HKDF_MD: c_int = EVP_PKEY_ALG_CTRL + 3;
 
-#[cfg(ossl110)]
+#[cfg(any(ossl110, libressl360))]
 pub const EVP_PKEY_CTRL_HKDF_SALT: c_int = EVP_PKEY_ALG_CTRL + 4;
 
-#[cfg(ossl110)]
+#[cfg(any(ossl110, libressl360))]
 pub const EVP_PKEY_CTRL_HKDF_KEY: c_int = EVP_PKEY_ALG_CTRL + 5;
 
-#[cfg(ossl110)]
+#[cfg(any(ossl110, libressl360))]
 pub const EVP_PKEY_CTRL_HKDF_INFO: c_int = EVP_PKEY_ALG_CTRL + 6;
 
-#[cfg(ossl111)]
+#[cfg(any(ossl111, libressl360))]
 pub const EVP_PKEY_CTRL_HKDF_MODE: c_int = EVP_PKEY_ALG_CTRL + 7;
 
-#[cfg(all(ossl111, not(ossl300)))]
+#[cfg(any(all(ossl111, not(ossl300)), libressl360))]
 pub unsafe fn EVP_PKEY_CTX_set_hkdf_mode(ctx: *mut EVP_PKEY_CTX, mode: c_int) -> c_int {
     EVP_PKEY_CTX_ctrl(
         ctx,
@@ -233,7 +237,7 @@ pub unsafe fn EVP_PKEY_CTX_set_hkdf_mode(ctx: *mut EVP_PKEY_CTX, mode: c_int) ->
     )
 }
 
-#[cfg(all(ossl110, not(ossl300)))]
+#[cfg(any(all(ossl110, not(ossl300)), libressl360))]
 pub unsafe fn EVP_PKEY_CTX_set_hkdf_md(ctx: *mut EVP_PKEY_CTX, md: *const EVP_MD) -> c_int {
     EVP_PKEY_CTX_ctrl(
         ctx,
@@ -245,7 +249,7 @@ pub unsafe fn EVP_PKEY_CTX_set_hkdf_md(ctx: *mut EVP_PKEY_CTX, md: *const EVP_MD
     )
 }
 
-#[cfg(all(ossl110, not(ossl300)))]
+#[cfg(any(all(ossl110, not(ossl300)), libressl360))]
 pub unsafe fn EVP_PKEY_CTX_set1_hkdf_salt(
     ctx: *mut EVP_PKEY_CTX,
     salt: *const u8,
@@ -261,7 +265,7 @@ pub unsafe fn EVP_PKEY_CTX_set1_hkdf_salt(
     )
 }
 
-#[cfg(all(ossl110, not(ossl300)))]
+#[cfg(any(all(ossl110, not(ossl300)), libressl360))]
 pub unsafe fn EVP_PKEY_CTX_set1_hkdf_key(
     ctx: *mut EVP_PKEY_CTX,
     key: *const u8,
@@ -277,7 +281,7 @@ pub unsafe fn EVP_PKEY_CTX_set1_hkdf_key(
     )
 }
 
-#[cfg(all(ossl110, not(ossl300)))]
+#[cfg(any(all(ossl110, not(ossl300)), libressl360))]
 pub unsafe fn EVP_PKEY_CTX_add1_hkdf_info(
     ctx: *mut EVP_PKEY_CTX,
     info: *const u8,

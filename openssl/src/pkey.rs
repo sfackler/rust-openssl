@@ -78,17 +78,21 @@ pub struct Id(c_int);
 
 impl Id {
     pub const RSA: Id = Id(ffi::EVP_PKEY_RSA);
+    #[cfg(any(ossl111, libressl310, boringssl))]
+    pub const RSA_PSS: Id = Id(ffi::EVP_PKEY_RSA_PSS);
     #[cfg(not(boringssl))]
     pub const HMAC: Id = Id(ffi::EVP_PKEY_HMAC);
     #[cfg(not(boringssl))]
     pub const CMAC: Id = Id(ffi::EVP_PKEY_CMAC);
     pub const DSA: Id = Id(ffi::EVP_PKEY_DSA);
     pub const DH: Id = Id(ffi::EVP_PKEY_DH);
+    #[cfg(ossl110)]
+    pub const DHX: Id = Id(ffi::EVP_PKEY_DHX);
     pub const EC: Id = Id(ffi::EVP_PKEY_EC);
     #[cfg(ossl111)]
     pub const SM2: Id = Id(ffi::EVP_PKEY_SM2);
 
-    #[cfg(any(ossl110, boringssl))]
+    #[cfg(any(ossl110, boringssl, libressl360))]
     pub const HKDF: Id = Id(ffi::EVP_PKEY_HKDF);
 
     #[cfg(any(ossl111, boringssl, libressl370))]
@@ -439,6 +443,22 @@ impl<T> PKey<T> {
         }
     }
 
+    /// Creates a new `PKey` containing a Diffie-Hellman key with type DHX.
+    #[cfg(all(not(boringssl), ossl110))]
+    pub fn from_dhx(dh: Dh<T>) -> Result<PKey<T>, ErrorStack> {
+        unsafe {
+            let evp = cvt_p(ffi::EVP_PKEY_new())?;
+            let pkey = PKey::from_ptr(evp);
+            cvt(ffi::EVP_PKEY_assign(
+                pkey.0,
+                ffi::EVP_PKEY_DHX,
+                dh.as_ptr().cast(),
+            ))?;
+            mem::forget(dh);
+            Ok(pkey)
+        }
+    }
+
     /// Creates a new `PKey` containing an elliptic curve key.
     #[corresponds(EVP_PKEY_assign_EC_KEY)]
     pub fn from_ec_key(ec_key: EcKey<T>) -> Result<PKey<T>, ErrorStack> {
@@ -743,12 +763,22 @@ impl PKey<Private> {
 }
 
 impl PKey<Public> {
-    from_pem! {
+    private_key_from_pem! {
         /// Decodes a PEM-encoded SubjectPublicKeyInfo structure.
         ///
         /// The input should have a header of `-----BEGIN PUBLIC KEY-----`.
         #[corresponds(PEM_read_bio_PUBKEY)]
         public_key_from_pem,
+
+        /// Decodes a PEM-encoded SubjectPublicKeyInfo structure.
+        #[corresponds(PEM_read_bio_PUBKEY)]
+        public_key_from_pem_passphrase,
+
+        /// Decodes a PEM-encoded SubjectPublicKeyInfo structure.
+        ///
+        /// The callback should fill the password into the provided buffer and return its length.
+        #[corresponds(PEM_read_bio_PrivateKey)]
+        public_key_from_pem_callback,
         PKey<Public>,
         ffi::PEM_read_bio_PUBKEY
     }

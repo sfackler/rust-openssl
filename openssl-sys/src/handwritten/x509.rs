@@ -644,6 +644,8 @@ const_ptr_api! {
     extern "C" {
         #[cfg(any(ossl110, libressl270))]
         pub fn X509_STORE_get0_objects(ctx: #[const_ptr_if(ossl300)] X509_STORE) -> *mut stack_st_X509_OBJECT;
+        #[cfg(ossl300)]
+        pub fn X509_STORE_get1_all_certs(ctx: *mut X509_STORE) -> *mut stack_st_X509;
     }
 }
 
@@ -685,25 +687,30 @@ extern "C" {
     pub fn X509_REQ_print(bio: *mut BIO, req: *mut X509_REQ) -> c_int;
 }
 
-#[repr(C)]
-pub struct X509_PURPOSE {
-    pub purpose: c_int,
-    pub trust: c_int, // Default trust ID
-    pub flags: c_int,
-    pub check_purpose:
-        Option<unsafe extern "C" fn(*const X509_PURPOSE, *const X509, c_int) -> c_int>,
-    pub name: *mut c_char,
-    pub sname: *mut c_char,
-    pub usr_data: *mut c_void,
+cfg_if! {
+    if #[cfg(libressl390)] {
+        pub enum X509_PURPOSE {}
+    } else {
+        #[repr(C)]
+        pub struct X509_PURPOSE {
+            pub purpose: c_int,
+            pub trust: c_int, // Default trust ID
+            pub flags: c_int,
+            pub check_purpose:
+                Option<unsafe extern "C" fn(*const X509_PURPOSE, *const X509, c_int) -> c_int>,
+            pub name: *mut c_char,
+            pub sname: *mut c_char,
+            pub usr_data: *mut c_void,
+        }
+    }
 }
 
 const_ptr_api! {
     extern "C" {
         pub fn X509_PURPOSE_get_by_sname(sname: #[const_ptr_if(any(ossl110, libressl280))] c_char) -> c_int;
+        pub fn X509_PURPOSE_get_id(purpose: #[const_ptr_if(any(ossl110, libressl280))] X509_PURPOSE) -> c_int;
+        pub fn X509_PURPOSE_get0(idx: c_int) -> #[const_ptr_if(libressl390)] X509_PURPOSE;
     }
-}
-extern "C" {
-    pub fn X509_PURPOSE_get0(idx: c_int) -> *mut X509_PURPOSE;
 }
 
 extern "C" {

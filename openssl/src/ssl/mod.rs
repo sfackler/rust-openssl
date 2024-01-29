@@ -57,6 +57,8 @@
 //!     }
 //! }
 //! ```
+#[cfg(ossl300)]
+use crate::cvt_long;
 use crate::dh::{Dh, DhRef};
 #[cfg(all(ossl101, not(ossl110)))]
 use crate::ec::EcKey;
@@ -68,6 +70,8 @@ use crate::hash::MessageDigest;
 #[cfg(any(ossl110, libressl270))]
 use crate::nid::Nid;
 use crate::pkey::{HasPrivate, PKeyRef, Params, Private};
+#[cfg(ossl300)]
+use crate::pkey::{PKey, Public};
 use crate::srtp::{SrtpProtectionProfile, SrtpProtectionProfileRef};
 use crate::ssl::bio::BioMethod;
 use crate::ssl::callbacks::*;
@@ -86,14 +90,13 @@ use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 use once_cell::sync::{Lazy, OnceCell};
 use openssl_macros::corresponds;
 use std::any::TypeId;
-use std::cmp;
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::io;
 use std::io::prelude::*;
 use std::marker::PhantomData;
-use std::mem::{self, ManuallyDrop};
+use std::mem::{self, ManuallyDrop, MaybeUninit};
 use std::ops::{Deref, DerefMut};
 use std::panic::resume_unwind;
 use std::path::Path;
@@ -143,6 +146,8 @@ cfg_if! {
 
 bitflags! {
     /// Options controlling the behavior of an `SslContext`.
+    #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[repr(transparent)]
     pub struct SslOptions: SslOptionsRepr {
         /// Disables a countermeasure against an SSLv3/TLSv1.0 vulnerability affecting CBC ciphers.
         const DONT_INSERT_EMPTY_FRAGMENTS = ffi::SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS as SslOptionsRepr;
@@ -281,6 +286,8 @@ bitflags! {
 
 bitflags! {
     /// Options controlling the behavior of an `SslContext`.
+    #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[repr(transparent)]
     pub struct SslMode: SslBitType {
         /// Enables "short writes".
         ///
@@ -378,6 +385,8 @@ unsafe impl Send for SslMethod {}
 
 bitflags! {
     /// Options controlling the behavior of certificate verification.
+    #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[repr(transparent)]
     pub struct SslVerifyMode: i32 {
         /// Verifies that the peer's certificate is trusted.
         ///
@@ -410,6 +419,8 @@ type SslTimeTy = c_long;
 
 bitflags! {
     /// Options controlling the behavior of session caching.
+    #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[repr(transparent)]
     pub struct SslSessionCacheMode: SslBitType {
         /// No session caching for the client or server takes place.
         const OFF = ffi::SSL_SESS_CACHE_OFF;
@@ -447,6 +458,8 @@ bitflags! {
 #[cfg(ossl111)]
 bitflags! {
     /// Which messages and under which conditions an extension should be added or expected.
+    #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[repr(transparent)]
     pub struct ExtensionContext: c_uint {
         /// This extension is only allowed in TLS
         const TLS_ONLY = ffi::SSL_EXT_TLS_ONLY;
@@ -641,8 +654,8 @@ impl SslVersion {
 
     /// TLSv1.3
     ///
-    /// Requires OpenSSL 1.1.1 or LibreSSL 3.4.0 or newer.
-    #[cfg(any(ossl111, libressl340))]
+    /// Requires BoringSSL or OpenSSL 1.1.1 or LibreSSL 3.4.0 or newer.
+    #[cfg(any(ossl111, libressl340, boringssl))]
     pub const TLS1_3: SslVersion = SslVersion(ffi::TLS1_3_VERSION);
 
     /// DTLSv1.0
@@ -653,7 +666,7 @@ impl SslVersion {
     /// DTLSv1.2
     ///
     /// DTLS 1.2 corresponds to TLS 1.2 to harmonize versions. There was never a DTLS 1.1.
-    #[cfg(any(ossl102, libressl332))]
+    #[cfg(any(ossl102, libressl332, boringssl))]
     pub const DTLS1_2: SslVersion = SslVersion(ffi::DTLS1_2_VERSION);
 }
 
@@ -735,7 +748,7 @@ impl SslContextBuilder {
     #[corresponds(SSL_CTX_set_verify)]
     pub fn set_verify(&mut self, mode: SslVerifyMode) {
         unsafe {
-            ffi::SSL_CTX_set_verify(self.as_ptr(), mode.bits as c_int, None);
+            ffi::SSL_CTX_set_verify(self.as_ptr(), mode.bits() as c_int, None);
         }
     }
 
@@ -752,7 +765,7 @@ impl SslContextBuilder {
     {
         unsafe {
             self.set_ex_data(SslContext::cached_ex_index::<F>(), verify);
-            ffi::SSL_CTX_set_verify(self.as_ptr(), mode.bits as c_int, Some(raw_verify::<F>));
+            ffi::SSL_CTX_set_verify(self.as_ptr(), mode.bits() as c_int, Some(raw_verify::<F>));
         }
     }
 
@@ -839,7 +852,7 @@ impl SslContextBuilder {
     pub fn set_mode(&mut self, mode: SslMode) -> SslMode {
         unsafe {
             let bits = ffi::SSL_CTX_set_mode(self.as_ptr(), mode.bits() as MtuTy) as SslBitType;
-            SslMode { bits }
+            SslMode::from_bits_retain(bits)
         }
     }
 
@@ -1111,14 +1124,14 @@ impl SslContextBuilder {
     pub fn set_options(&mut self, option: SslOptions) -> SslOptions {
         let bits =
             unsafe { ffi::SSL_CTX_set_options(self.as_ptr(), option.bits()) } as SslOptionsRepr;
-        SslOptions { bits }
+        SslOptions::from_bits_retain(bits)
     }
 
     /// Returns the options used by the context.
     #[corresponds(SSL_CTX_get_options)]
     pub fn options(&self) -> SslOptions {
         let bits = unsafe { ffi::SSL_CTX_get_options(self.as_ptr()) } as SslOptionsRepr;
-        SslOptions { bits }
+        SslOptions::from_bits_retain(bits)
     }
 
     /// Clears the options used by the context, returning the old set.
@@ -1126,7 +1139,7 @@ impl SslContextBuilder {
     pub fn clear_options(&mut self, option: SslOptions) -> SslOptions {
         let bits =
             unsafe { ffi::SSL_CTX_clear_options(self.as_ptr(), option.bits()) } as SslOptionsRepr;
-        SslOptions { bits }
+        SslOptions::from_bits_retain(bits)
     }
 
     /// Sets the minimum supported protocol version.
@@ -1134,9 +1147,9 @@ impl SslContextBuilder {
     /// A value of `None` will enable protocol versions down to the lowest version supported by
     /// OpenSSL.
     ///
-    /// Requires OpenSSL 1.1.0 or LibreSSL 2.6.1 or newer.
+    /// Requires BoringSSL or OpenSSL 1.1.0 or LibreSSL 2.6.1 or newer.
     #[corresponds(SSL_CTX_set_min_proto_version)]
-    #[cfg(any(ossl110, libressl261))]
+    #[cfg(any(ossl110, libressl261, boringssl))]
     pub fn set_min_proto_version(&mut self, version: Option<SslVersion>) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_CTX_set_min_proto_version(
@@ -1152,9 +1165,9 @@ impl SslContextBuilder {
     /// A value of `None` will enable protocol versions up to the highest version supported by
     /// OpenSSL.
     ///
-    /// Requires OpenSSL 1.1.0 or or LibreSSL 2.6.1 or newer.
+    /// Requires BoringSSL or OpenSSL 1.1.0 or or LibreSSL 2.6.1 or newer.
     #[corresponds(SSL_CTX_set_max_proto_version)]
-    #[cfg(any(ossl110, libressl261))]
+    #[cfg(any(ossl110, libressl261, boringssl))]
     pub fn set_max_proto_version(&mut self, version: Option<SslVersion>) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_CTX_set_max_proto_version(
@@ -1210,16 +1223,16 @@ impl SslContextBuilder {
     /// and `http/1.1` is encoded as `b"\x06spdy/1\x08http/1.1"`. The protocols are ordered by
     /// preference.
     ///
-    /// Requires OpenSSL 1.0.2 or LibreSSL 2.6.1 or newer.
+    /// Requires BoringSSL or OpenSSL 1.0.2 or LibreSSL 2.6.1 or newer.
     #[corresponds(SSL_CTX_set_alpn_protos)]
-    #[cfg(any(ossl102, libressl261))]
+    #[cfg(any(ossl102, libressl261, boringssl))]
     pub fn set_alpn_protos(&mut self, protocols: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             assert!(protocols.len() <= c_uint::max_value() as usize);
             let r = ffi::SSL_CTX_set_alpn_protos(
                 self.as_ptr(),
                 protocols.as_ptr(),
-                protocols.len() as c_uint,
+                protocols.len() as _,
             );
             // fun fact, SSL_CTX_set_alpn_protos has a reversed return code D:
             if r == 0 {
@@ -1475,7 +1488,7 @@ impl SslContextBuilder {
     pub fn set_session_cache_mode(&mut self, mode: SslSessionCacheMode) -> SslSessionCacheMode {
         unsafe {
             let bits = ffi::SSL_CTX_set_session_cache_mode(self.as_ptr(), mode.bits());
-            SslSessionCacheMode { bits }
+            SslSessionCacheMode::from_bits_retain(bits)
         }
     }
 
@@ -1558,16 +1571,34 @@ impl SslContextBuilder {
     ///
     /// This can be used to provide data to callbacks registered with the context. Use the
     /// `SslContext::new_ex_index` method to create an `Index`.
+    // FIXME should return a result
     #[corresponds(SSL_CTX_set_ex_data)]
     pub fn set_ex_data<T>(&mut self, index: Index<SslContext, T>, data: T) {
         self.set_ex_data_inner(index, data);
     }
 
     fn set_ex_data_inner<T>(&mut self, index: Index<SslContext, T>, data: T) -> *mut c_void {
+        match self.ex_data_mut(index) {
+            Some(v) => {
+                *v = data;
+                (v as *mut T).cast()
+            }
+            _ => unsafe {
+                let data = Box::into_raw(Box::new(data)) as *mut c_void;
+                ffi::SSL_CTX_set_ex_data(self.as_ptr(), index.as_raw(), data);
+                data
+            },
+        }
+    }
+
+    fn ex_data_mut<T>(&mut self, index: Index<SslContext, T>) -> Option<&mut T> {
         unsafe {
-            let data = Box::into_raw(Box::new(data)) as *mut c_void;
-            ffi::SSL_CTX_set_ex_data(self.as_ptr(), index.as_raw(), data);
-            data
+            let data = ffi::SSL_CTX_get_ex_data(self.as_ptr(), index.as_raw());
+            if data.is_null() {
+                None
+            } else {
+                Some(&mut *data.cast())
+            }
         }
     }
 
@@ -1706,6 +1737,16 @@ impl SslContextBuilder {
     #[cfg(ossl111)]
     pub fn set_num_tickets(&mut self, num_tickets: usize) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_CTX_set_num_tickets(self.as_ptr(), num_tickets)).map(|_| ()) }
+    }
+
+    /// Set the context's security level to a value between 0 and 5, inclusive.
+    /// A security value of 0 allows allows all parameters and algorithms.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[corresponds(SSL_CTX_set_security_level)]
+    #[cfg(any(ossl110, libressl360))]
+    pub fn set_security_level(&mut self, level: u32) {
+        unsafe { ffi::SSL_CTX_set_security_level(self.as_ptr(), level as c_int) }
     }
 
     /// Consumes the builder, returning a new `SslContext`.
@@ -1910,6 +1951,16 @@ impl SslContextRef {
     #[cfg(ossl111)]
     pub fn num_tickets(&self) -> usize {
         unsafe { ffi::SSL_CTX_get_num_tickets(self.as_ptr()) }
+    }
+
+    /// Get the context's security level, which controls the allowed parameters
+    /// and algorithms.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[corresponds(SSL_CTX_get_security_level)]
+    #[cfg(any(ossl110, libressl360))]
+    pub fn security_level(&self) -> u32 {
+        unsafe { ffi::SSL_CTX_get_security_level(self.as_ptr()) as u32 }
     }
 }
 
@@ -2122,6 +2173,7 @@ impl SslSessionRef {
         unsafe {
             let mut len = 0;
             let p = ffi::SSL_SESSION_get_id(self.as_ptr(), &mut len);
+            #[allow(clippy::unnecessary_cast)]
             slice::from_raw_parts(p as *const u8, len as usize)
         }
     }
@@ -2314,21 +2366,6 @@ impl SslRef {
         unsafe { ffi::SSL_get_rbio(self.as_ptr()) }
     }
 
-    fn read(&mut self, buf: &mut [u8]) -> c_int {
-        let len = cmp::min(c_int::max_value() as usize, buf.len()) as c_int;
-        unsafe { ffi::SSL_read(self.as_ptr(), buf.as_ptr() as *mut c_void, len) }
-    }
-
-    fn peek(&mut self, buf: &mut [u8]) -> c_int {
-        let len = cmp::min(c_int::max_value() as usize, buf.len()) as c_int;
-        unsafe { ffi::SSL_peek(self.as_ptr(), buf.as_ptr() as *mut c_void, len) }
-    }
-
-    fn write(&mut self, buf: &[u8]) -> c_int {
-        let len = cmp::min(c_int::max_value() as usize, buf.len()) as c_int;
-        unsafe { ffi::SSL_write(self.as_ptr(), buf.as_ptr() as *const c_void, len) }
-    }
-
     fn get_error(&self, ret: c_int) -> ErrorCode {
         unsafe { ErrorCode::from_raw(ffi::SSL_get_error(self.as_ptr(), ret)) }
     }
@@ -2350,7 +2387,7 @@ impl SslRef {
     /// [`SslContextBuilder::set_verify`]: struct.SslContextBuilder.html#method.set_verify
     #[corresponds(SSL_set_verify)]
     pub fn set_verify(&mut self, mode: SslVerifyMode) {
-        unsafe { ffi::SSL_set_verify(self.as_ptr(), mode.bits as c_int, None) }
+        unsafe { ffi::SSL_set_verify(self.as_ptr(), mode.bits() as c_int, None) }
     }
 
     /// Returns the verify mode that was set using `set_verify`.
@@ -2371,7 +2408,11 @@ impl SslRef {
         unsafe {
             // this needs to be in an Arc since the callback can register a new callback!
             self.set_ex_data(Ssl::cached_ex_index(), Arc::new(verify));
-            ffi::SSL_set_verify(self.as_ptr(), mode.bits as c_int, Some(ssl_raw_verify::<F>));
+            ffi::SSL_set_verify(
+                self.as_ptr(),
+                mode.bits() as c_int,
+                Some(ssl_raw_verify::<F>),
+            );
         }
     }
 
@@ -2439,19 +2480,16 @@ impl SslRef {
 
     /// Like [`SslContextBuilder::set_alpn_protos`].
     ///
-    /// Requires OpenSSL 1.0.2 or LibreSSL 2.6.1 or newer.
+    /// Requires BoringSSL or OpenSSL 1.0.2 or LibreSSL 2.6.1 or newer.
     ///
     /// [`SslContextBuilder::set_alpn_protos`]: struct.SslContextBuilder.html#method.set_alpn_protos
     #[corresponds(SSL_set_alpn_protos)]
-    #[cfg(any(ossl102, libressl261))]
+    #[cfg(any(ossl102, libressl261, boringssl))]
     pub fn set_alpn_protos(&mut self, protocols: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             assert!(protocols.len() <= c_uint::max_value() as usize);
-            let r = ffi::SSL_set_alpn_protos(
-                self.as_ptr(),
-                protocols.as_ptr(),
-                protocols.len() as c_uint,
-            );
+            let r =
+                ffi::SSL_set_alpn_protos(self.as_ptr(), protocols.as_ptr(), protocols.len() as _);
             // fun fact, SSL_set_alpn_protos has a reversed return code D:
             if r == 0 {
                 Ok(())
@@ -2598,9 +2636,9 @@ impl SslRef {
     /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
     /// to interpret it.
     ///
-    /// Requires OpenSSL 1.0.2 or LibreSSL 2.6.1 or newer.
+    /// Requires BoringSSL or OpenSSL 1.0.2 or LibreSSL 2.6.1 or newer.
     #[corresponds(SSL_get0_alpn_selected)]
-    #[cfg(any(ossl102, libressl261))]
+    #[cfg(any(ossl102, libressl261, boringssl))]
     pub fn selected_alpn_protocol(&self) -> Option<&[u8]> {
         unsafe {
             let mut data: *const c_uchar = ptr::null();
@@ -2926,15 +2964,19 @@ impl SslRef {
     ///
     /// This can be used to provide data to callbacks registered with the context. Use the
     /// `Ssl::new_ex_index` method to create an `Index`.
+    // FIXME should return a result
     #[corresponds(SSL_set_ex_data)]
     pub fn set_ex_data<T>(&mut self, index: Index<Ssl, T>, data: T) {
-        unsafe {
-            let data = Box::new(data);
-            ffi::SSL_set_ex_data(
-                self.as_ptr(),
-                index.as_raw(),
-                Box::into_raw(data) as *mut c_void,
-            );
+        match self.ex_data_mut(index) {
+            Some(v) => *v = data,
+            None => unsafe {
+                let data = Box::new(data);
+                ffi::SSL_set_ex_data(
+                    self.as_ptr(),
+                    index.as_raw(),
+                    Box::into_raw(data) as *mut c_void,
+                );
+            },
         }
     }
 
@@ -3289,9 +3331,9 @@ impl SslRef {
     /// A value of `None` will enable protocol versions down to the lowest version supported by
     /// OpenSSL.
     ///
-    /// Requires OpenSSL 1.1.0 or LibreSSL 2.6.1 or newer.
+    /// Requires BoringSSL or OpenSSL 1.1.0 or LibreSSL 2.6.1 or newer.
     #[corresponds(SSL_set_min_proto_version)]
-    #[cfg(any(ossl110, libressl261))]
+    #[cfg(any(ossl110, libressl261, boringssl))]
     pub fn set_min_proto_version(&mut self, version: Option<SslVersion>) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_set_min_proto_version(
@@ -3307,9 +3349,9 @@ impl SslRef {
     /// A value of `None` will enable protocol versions up to the highest version supported by
     /// OpenSSL.
     ///
-    /// Requires OpenSSL 1.1.0 or or LibreSSL 2.6.1 or newer.
+    /// Requires BoringSSL or OpenSSL 1.1.0 or or LibreSSL 2.6.1 or newer.
     #[corresponds(SSL_set_max_proto_version)]
-    #[cfg(any(ossl110, libressl261))]
+    #[cfg(any(ossl110, libressl261, boringssl))]
     pub fn set_max_proto_version(&mut self, version: Option<SslVersion>) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_set_max_proto_version(
@@ -3389,6 +3431,58 @@ impl SslRef {
     #[cfg(ossl111)]
     pub fn num_tickets(&self) -> usize {
         unsafe { ffi::SSL_get_num_tickets(self.as_ptr()) }
+    }
+
+    /// Set the context's security level to a value between 0 and 5, inclusive.
+    /// A security value of 0 allows allows all parameters and algorithms.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[corresponds(SSL_set_security_level)]
+    #[cfg(any(ossl110, libressl360))]
+    pub fn set_security_level(&mut self, level: u32) {
+        unsafe { ffi::SSL_set_security_level(self.as_ptr(), level as c_int) }
+    }
+
+    /// Get the connection's security level, which controls the allowed parameters
+    /// and algorithms.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[corresponds(SSL_get_security_level)]
+    #[cfg(any(ossl110, libressl360))]
+    pub fn security_level(&self) -> u32 {
+        unsafe { ffi::SSL_get_security_level(self.as_ptr()) as u32 }
+    }
+
+    /// Get the temporary key provided by the peer that is used during key
+    /// exchange.
+    // We use an owned value because EVP_KEY free need to be called when it is
+    // dropped
+    #[corresponds(SSL_get_peer_tmp_key)]
+    #[cfg(ossl300)]
+    pub fn peer_tmp_key(&self) -> Result<PKey<Public>, ErrorStack> {
+        unsafe {
+            let mut key = ptr::null_mut();
+            match cvt_long(ffi::SSL_get_peer_tmp_key(self.as_ptr(), &mut key)) {
+                Ok(_) => Ok(PKey::<Public>::from_ptr(key)),
+                Err(e) => Err(e),
+            }
+        }
+    }
+
+    /// Returns the temporary key from the local end of the connection that is
+    /// used during key exchange.
+    // We use an owned value because EVP_KEY free need to be called when it is
+    // dropped
+    #[corresponds(SSL_get_tmp_key)]
+    #[cfg(ossl300)]
+    pub fn tmp_key(&self) -> Result<PKey<Private>, ErrorStack> {
+        unsafe {
+            let mut key = ptr::null_mut();
+            match cvt_long(ffi::SSL_get_tmp_key(self.as_ptr(), &mut key)) {
+                Ok(_) => Ok(PKey::<Private>::from_ptr(key)),
+                Err(e) => Err(e),
+            }
+        }
     }
 }
 
@@ -3637,26 +3731,86 @@ impl<S: Read + Write> SslStream<S> {
         }
     }
 
+    /// Like `read`, but takes a possibly-uninitialized slice.
+    ///
+    /// # Safety
+    ///
+    /// No portion of `buf` will be de-initialized by this method. If the method returns `Ok(n)`,
+    /// then the first `n` bytes of `buf` are guaranteed to be initialized.
+    #[corresponds(SSL_read_ex)]
+    pub fn read_uninit(&mut self, buf: &mut [MaybeUninit<u8>]) -> io::Result<usize> {
+        loop {
+            match self.ssl_read_uninit(buf) {
+                Ok(n) => return Ok(n),
+                Err(ref e) if e.code() == ErrorCode::ZERO_RETURN => return Ok(0),
+                Err(ref e) if e.code() == ErrorCode::SYSCALL && e.io_error().is_none() => {
+                    return Ok(0);
+                }
+                Err(ref e) if e.code() == ErrorCode::WANT_READ && e.io_error().is_none() => {}
+                Err(e) => {
+                    return Err(e
+                        .into_io_error()
+                        .unwrap_or_else(|e| io::Error::new(io::ErrorKind::Other, e)));
+                }
+            }
+        }
+    }
+
     /// Like `read`, but returns an `ssl::Error` rather than an `io::Error`.
     ///
     /// It is particularly useful with a non-blocking socket, where the error value will identify if
     /// OpenSSL is waiting on read or write readiness.
-    #[corresponds(SSL_read)]
+    #[corresponds(SSL_read_ex)]
     pub fn ssl_read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
-        // The interpretation of the return code here is a little odd with a
-        // zero-length write. OpenSSL will likely correctly report back to us
-        // that it read zero bytes, but zero is also the sentinel for "error".
-        // To avoid that confusion short-circuit that logic and return quickly
-        // if `buf` has a length of zero.
-        if buf.is_empty() {
-            return Ok(0);
+        // SAFETY: `ssl_read_uninit` does not de-initialize the buffer.
+        unsafe {
+            self.ssl_read_uninit(slice::from_raw_parts_mut(
+                buf.as_mut_ptr().cast::<MaybeUninit<u8>>(),
+                buf.len(),
+            ))
         }
+    }
 
-        let ret = self.ssl.read(buf);
-        if ret > 0 {
-            Ok(ret as usize)
-        } else {
-            Err(self.make_error(ret))
+    /// Like `read_ssl`, but takes a possibly-uninitialized slice.
+    ///
+    /// # Safety
+    ///
+    /// No portion of `buf` will be de-initialized by this method. If the method returns `Ok(n)`,
+    /// then the first `n` bytes of `buf` are guaranteed to be initialized.
+    #[corresponds(SSL_read_ex)]
+    pub fn ssl_read_uninit(&mut self, buf: &mut [MaybeUninit<u8>]) -> Result<usize, Error> {
+        cfg_if! {
+            if #[cfg(any(ossl111, libressl350))] {
+                let mut readbytes = 0;
+                let ret = unsafe {
+                    ffi::SSL_read_ex(
+                        self.ssl().as_ptr(),
+                        buf.as_mut_ptr().cast(),
+                        buf.len(),
+                        &mut readbytes,
+                    )
+                };
+
+                if ret > 0 {
+                    Ok(readbytes)
+                } else {
+                    Err(self.make_error(ret))
+                }
+            } else {
+                if buf.is_empty() {
+                    return Ok(0);
+                }
+
+                let len = usize::min(c_int::max_value() as usize, buf.len()) as c_int;
+                let ret = unsafe {
+                    ffi::SSL_read(self.ssl().as_ptr(), buf.as_mut_ptr().cast(), len)
+                };
+                if ret > 0 {
+                    Ok(ret as usize)
+                } else {
+                    Err(self.make_error(ret))
+                }
+            }
         }
     }
 
@@ -3664,34 +3818,78 @@ impl<S: Read + Write> SslStream<S> {
     ///
     /// It is particularly useful with a non-blocking socket, where the error value will identify if
     /// OpenSSL is waiting on read or write readiness.
-    #[corresponds(SSL_write)]
+    #[corresponds(SSL_write_ex)]
     pub fn ssl_write(&mut self, buf: &[u8]) -> Result<usize, Error> {
-        // See above for why we short-circuit on zero-length buffers
-        if buf.is_empty() {
-            return Ok(0);
-        }
+        cfg_if! {
+            if #[cfg(any(ossl111, libressl350))] {
+                let mut written = 0;
+                let ret = unsafe {
+                    ffi::SSL_write_ex(
+                        self.ssl().as_ptr(),
+                        buf.as_ptr().cast(),
+                        buf.len(),
+                        &mut written,
+                    )
+                };
 
-        let ret = self.ssl.write(buf);
-        if ret > 0 {
-            Ok(ret as usize)
-        } else {
-            Err(self.make_error(ret))
+                if ret > 0 {
+                    Ok(written)
+                } else {
+                    Err(self.make_error(ret))
+                }
+            } else {
+                if buf.is_empty() {
+                    return Ok(0);
+                }
+
+                let len = usize::min(c_int::max_value() as usize, buf.len()) as c_int;
+                let ret = unsafe {
+                    ffi::SSL_write(self.ssl().as_ptr(), buf.as_ptr().cast(), len)
+                };
+                if ret > 0 {
+                    Ok(ret as usize)
+                } else {
+                    Err(self.make_error(ret))
+                }
+            }
         }
     }
 
     /// Reads data from the stream, without removing it from the queue.
-    #[corresponds(SSL_peek)]
+    #[corresponds(SSL_peek_ex)]
     pub fn ssl_peek(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
-        // See above for why we short-circuit on zero-length buffers
-        if buf.is_empty() {
-            return Ok(0);
-        }
+        cfg_if! {
+            if #[cfg(any(ossl111, libressl350))] {
+                let mut readbytes = 0;
+                let ret = unsafe {
+                    ffi::SSL_peek_ex(
+                        self.ssl().as_ptr(),
+                        buf.as_mut_ptr().cast(),
+                        buf.len(),
+                        &mut readbytes,
+                    )
+                };
 
-        let ret = self.ssl.peek(buf);
-        if ret > 0 {
-            Ok(ret as usize)
-        } else {
-            Err(self.make_error(ret))
+                if ret > 0 {
+                    Ok(readbytes)
+                } else {
+                    Err(self.make_error(ret))
+                }
+            } else {
+                if buf.is_empty() {
+                    return Ok(0);
+                }
+
+                let len = usize::min(c_int::max_value() as usize, buf.len()) as c_int;
+                let ret = unsafe {
+                    ffi::SSL_peek(self.ssl().as_ptr(), buf.as_mut_ptr().cast(), len)
+                };
+                if ret > 0 {
+                    Ok(ret as usize)
+                } else {
+                    Err(self.make_error(ret))
+                }
+            }
         }
     }
 
@@ -3718,7 +3916,7 @@ impl<S: Read + Write> SslStream<S> {
     pub fn get_shutdown(&mut self) -> ShutdownState {
         unsafe {
             let bits = ffi::SSL_get_shutdown(self.ssl.as_ptr());
-            ShutdownState { bits }
+            ShutdownState::from_bits_retain(bits)
         }
     }
 
@@ -3797,20 +3995,12 @@ impl<S> SslStream<S> {
 
 impl<S: Read + Write> Read for SslStream<S> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        loop {
-            match self.ssl_read(buf) {
-                Ok(n) => return Ok(n),
-                Err(ref e) if e.code() == ErrorCode::ZERO_RETURN => return Ok(0),
-                Err(ref e) if e.code() == ErrorCode::SYSCALL && e.io_error().is_none() => {
-                    return Ok(0);
-                }
-                Err(ref e) if e.code() == ErrorCode::WANT_READ && e.io_error().is_none() => {}
-                Err(e) => {
-                    return Err(e
-                        .into_io_error()
-                        .unwrap_or_else(|e| io::Error::new(io::ErrorKind::Other, e)));
-                }
-            }
+        // SAFETY: `read_uninit` does not de-initialize the buffer
+        unsafe {
+            self.read_uninit(slice::from_raw_parts_mut(
+                buf.as_mut_ptr().cast::<MaybeUninit<u8>>(),
+                buf.len(),
+            ))
         }
     }
 }
@@ -4051,6 +4241,8 @@ pub enum ShutdownResult {
 
 bitflags! {
     /// The shutdown state of a session.
+    #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[repr(transparent)]
     pub struct ShutdownState: c_int {
         /// A close notify message has been sent to the peer.
         const SENT = ffi::SSL_SENT_SHUTDOWN;

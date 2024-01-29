@@ -76,7 +76,7 @@ pub unsafe fn EVP_PKEY_CTX_set0_rsa_oaep_label(
         EVP_PKEY_OP_TYPE_CRYPT,
         EVP_PKEY_CTRL_RSA_OAEP_LABEL,
         len,
-        label as *mut c_void,
+        label,
     )
 }
 

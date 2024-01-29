@@ -158,7 +158,7 @@ mod test {
     }
 
     #[test]
-    #[cfg_attr(osslconf = "OPENSSL_NO_EC2M", ignore)]
+    #[cfg_attr(osslconf = "OPENSSL_NO_EC", ignore)]
     fn sign_and_verify() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let private_key = EcKey::generate(&group).unwrap();
@@ -186,7 +186,7 @@ mod test {
     }
 
     #[test]
-    #[cfg_attr(osslconf = "OPENSSL_NO_EC2M", ignore)]
+    #[cfg_attr(osslconf = "OPENSSL_NO_EC", ignore)]
     fn check_private_components() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let private_key = EcKey::generate(&group).unwrap();
@@ -206,7 +206,7 @@ mod test {
     }
 
     #[test]
-    #[cfg_attr(osslconf = "OPENSSL_NO_EC2M", ignore)]
+    #[cfg_attr(osslconf = "OPENSSL_NO_EC", ignore)]
     fn serialize_deserialize() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let private_key = EcKey::generate(&group).unwrap();

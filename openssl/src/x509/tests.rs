@@ -34,7 +34,7 @@ use hex::{self, FromHex};
 #[cfg(any(ossl102, libressl261))]
 use libc::time_t;
 
-use super::{CertificateIssuer, ReasonCode};
+use super::{AuthorityInformationAccess, CertificateIssuer, ReasonCode};
 
 fn pkey() -> PKey<Private> {
     let rsa = Rsa::generate(2048).unwrap();
@@ -172,7 +172,7 @@ fn test_subject_alt_name() {
 }
 
 #[test]
-#[cfg(ossl110)]
+#[cfg(any(ossl110, boringssl))]
 fn test_retrieve_pathlen() {
     let cert = include_bytes!("../../test/root-ca.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -188,7 +188,7 @@ fn test_retrieve_pathlen() {
 }
 
 #[test]
-#[cfg(ossl110)]
+#[cfg(any(ossl110, boringssl))]
 fn test_subject_key_id() {
     let cert = include_bytes!("../../test/certv3.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -201,7 +201,7 @@ fn test_subject_key_id() {
 }
 
 #[test]
-#[cfg(ossl110)]
+#[cfg(any(ossl110, boringssl))]
 fn test_authority_key_id() {
     let cert = include_bytes!("../../test/certv3.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -701,6 +701,24 @@ fn test_crl_entry_extensions() {
     let crl = include_bytes!("../../test/entry_extensions.crl");
     let crl = X509Crl::from_pem(crl).unwrap();
 
+    let (critical, access_info) = crl
+        .extension::<AuthorityInformationAccess>()
+        .unwrap()
+        .expect("Authority Information Access extension should be present");
+    assert!(
+        !critical,
+        "Authority Information Access extension is not critical"
+    );
+    assert_eq!(
+        access_info.len(),
+        1,
+        "Authority Information Access should have one entry"
+    );
+    assert_eq!(access_info[0].method().to_string(), "CA Issuers");
+    assert_eq!(
+        access_info[0].location().uri(),
+        Some("http://www.example.com/ca.crt")
+    );
     let revoked_certs = crl.get_revoked().unwrap();
     let entry = &revoked_certs[0];
 
@@ -1158,4 +1176,19 @@ fn test_dist_point_null() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
     assert!(cert.crl_distribution_points().is_none());
+}
+
+#[test]
+#[cfg(ossl300)]
+fn test_store_all_certificates() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    let store = {
+        let mut b = X509StoreBuilder::new().unwrap();
+        b.add_cert(cert).unwrap();
+        b.build()
+    };
+
+    assert_eq!(store.all_certificates().len(), 1);
 }

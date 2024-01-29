@@ -154,14 +154,14 @@ jobs:
             - false
           library:
             - name: boringssl
-              version: bcecc7d834fc44ad257b2f23f88e1cf597ab2736
+              version: e6489902b7fb692875341b8ab5e57f0515f47bc1
             - name: openssl
               version: vendored
             - name: openssl
-              version: 3.1.2
+              version: 3.2.0
               dl-path: /
             - name: openssl
-              version: 1.1.1v
+              version: 1.1.1w
               dl-path: /
             - name: openssl
               version: 1.1.0l
@@ -187,7 +187,7 @@ jobs:
               bindgen: true
               library:
                 name: libressl
-                version: 3.8.0
+                version: 3.8.2
             - target: x86_64-unknown-linux-gnu
               bindgen: false
               library:
@@ -202,7 +202,7 @@ jobs:
               bindgen: false
               library:
                 name: libressl
-                version: 3.8.0
+                version: 3.8.2
       name: ${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-${{ matrix.bindgen }}
       runs-on: ubuntu-latest
       env:
@@ -236,7 +236,7 @@ jobs:
         - uses: actions/cache@v3
           with:
             path: /opt/openssl
-            key: openssl-${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-2
+            key: openssl-${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-6
           if: matrix.library.version != 'vendored'
           id: openssl-cache
         - run: |
@@ -247,7 +247,7 @@ jobs:
           run: |
             case "${{ matrix.library.name }}" in
             "openssl")
-              url="https://openssl.org/source${{ matrix.library.dl-path }}/openssl-${{ matrix.library.version }}.tar.gz"
+              url="https://www.openssl.org/source${{ matrix.library.dl-path }}/openssl-${{ matrix.library.version }}.tar.gz"
               tar_flags="--strip-components=1"
               ;;
             "libressl")
@@ -310,11 +310,8 @@ jobs:
               make install
 
               # Copy stuff around so it's all as the build system expects.
-              cp -r rust/ "$OPENSSL_DIR/rust"
-              mkdir -p "$OPENSSL_DIR/crypto/"
-              mkdir -p "$OPENSSL_DIR/ssl/"
-              cp "$OPENSSL_DIR/lib/libcrypto.a" "$OPENSSL_DIR/crypto/"
-              cp "$OPENSSL_DIR/lib/libssl.a" "$OPENSSL_DIR/ssl/"
+              cp -r ../rust/ "$OPENSSL_DIR/rust"
+              cp -r ./ "$OPENSSL_DIR/build"
             esac
 
           if: matrix.library.version != 'vendored' && !steps.openssl-cache.outputs.cache-hit
@@ -353,6 +350,7 @@ jobs:
           run: |
             if [[ "${{ matrix.library.name }}" == "boringssl" && "${{ matrix.bindgen }}" != "true" ]]; then
               features="--features unstable_boringssl"
+              BORINGSSL_BUILD_DIR="$OPENSSL_DIR/build/"
             fi
             if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
               features="--features vendored"

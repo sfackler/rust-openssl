@@ -60,6 +60,14 @@ fn check_ssl_kind() {
     if cfg!(feature = "unstable_boringssl") {
         println!("cargo:rustc-cfg=boringssl");
         println!("cargo:boringssl=true");
+
+        if let Ok(vars) = env::var("DEP_BSSL_CONF") {
+            for var in vars.split(',') {
+                println!("cargo:rustc-cfg=osslconf=\"{}\"", var);
+            }
+            println!("cargo:conf={}", vars);
+        }
+
         // BoringSSL does not have any build logic, exit early
         std::process::exit(0);
     }
@@ -113,6 +121,16 @@ fn main() {
     let kind = determine_mode(&lib_dirs, &libs);
     for lib in libs.into_iter() {
         println!("cargo:rustc-link-lib={}={}", kind, lib);
+    }
+
+    // https://github.com/openssl/openssl/pull/15086
+    if version == Version::Openssl3xx
+        && kind == "static"
+        && (env::var("CARGO_CFG_TARGET_OS").unwrap() == "linux"
+            || env::var("CARGO_CFG_TARGET_OS").unwrap() == "android")
+        && env::var("CARGO_CFG_TARGET_POINTER_WIDTH").unwrap() == "32"
+    {
+        println!("cargo:rustc-link-lib=atomic");
     }
 
     if kind == "static" && target.contains("windows") {
@@ -213,6 +231,11 @@ See rust-openssl documentation for more information:
         }
     }
 
+    for enabled in &enabled {
+        println!("cargo:rustc-cfg=osslconf=\"{}\"", enabled);
+    }
+    println!("cargo:conf={}", enabled.join(","));
+
     if is_boringssl {
         println!("cargo:rustc-cfg=boringssl");
         println!("cargo:boringssl=true");
@@ -222,11 +245,6 @@ See rust-openssl documentation for more information:
 
     // We set this for any non-BoringSSL lib.
     println!("cargo:rustc-cfg=openssl");
-
-    for enabled in &enabled {
-        println!("cargo:rustc-cfg=osslconf=\"{}\"", enabled);
-    }
-    println!("cargo:conf={}", enabled.join(","));
 
     for cfg in cfgs::get(openssl_version, libressl_version) {
         println!("cargo:rustc-cfg={}", cfg);
@@ -273,6 +291,8 @@ See rust-openssl documentation for more information:
             (3, 7, 1) => ('3', '7', '1'),
             (3, 7, _) => ('3', '7', 'x'),
             (3, 8, 0) => ('3', '8', '0'),
+            (3, 8, 1) => ('3', '8', '1'),
+            (3, 8, _) => ('3', '8', 'x'),
             _ => version_error(),
         };
 
@@ -314,8 +334,8 @@ fn version_error() -> ! {
     panic!(
         "
 
-This crate is only compatible with OpenSSL (version 1.0.1 through 1.1.1, or 3.0.0), or LibreSSL 2.5
-through 3.8.0, but a different version of OpenSSL was found. The build is now aborting
+This crate is only compatible with OpenSSL (version 1.0.1 through 1.1.1, or 3), or LibreSSL 2.5
+through 3.8.1, but a different version of OpenSSL was found. The build is now aborting
 due to this version mismatch.
 
 "

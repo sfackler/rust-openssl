@@ -40,7 +40,7 @@
 //! assert_eq!(&*decrypted, data);
 //! ```
 #[cfg(any(ossl102, libressl310))]
-use libc::{c_int, c_void};
+use libc::c_int;
 use std::{marker::PhantomData, ptr};
 
 use crate::error::ErrorStack;
@@ -174,7 +174,7 @@ impl<'a> Encrypter<'a> {
 
             cvt(ffi::EVP_PKEY_CTX_set0_rsa_oaep_label(
                 self.pctx,
-                p as *mut c_void,
+                p,
                 label.len() as c_int,
             ))
             .map(|_| ())
@@ -378,7 +378,7 @@ impl<'a> Decrypter<'a> {
 
             cvt(ffi::EVP_PKEY_CTX_set0_rsa_oaep_label(
                 self.pctx,
-                p as *mut c_void,
+                p,
                 label.len() as c_int,
             ))
             .map(|_| ())

@@ -15,6 +15,8 @@ use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
 
 bitflags! {
+    #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[repr(transparent)]
     pub struct OcspFlag: c_ulong {
         const NO_CERTS = ffi::OCSP_NOCERTS;
         const NO_INTERN = ffi::OCSP_NOINTERN;

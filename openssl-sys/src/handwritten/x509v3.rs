@@ -84,6 +84,7 @@ const_ptr_api! {
 }
 
 extern "C" {
+    #[cfg(not(libressl390))]
     pub fn X509V3_EXT_add_alias(nid_to: c_int, nid_from: c_int) -> c_int;
     pub fn X509V3_EXT_d2i(ext: *mut X509_EXTENSION) -> *mut c_void;
     pub fn X509V3_EXT_i2d(ext_nid: c_int, crit: c_int, ext: *mut c_void) -> *mut X509_EXTENSION;
@@ -144,4 +145,23 @@ stack!(stack_st_DIST_POINT);
 extern "C" {
     pub fn DIST_POINT_free(dist_point: *mut DIST_POINT);
     pub fn DIST_POINT_NAME_free(dist_point: *mut DIST_POINT_NAME);
+}
+
+#[cfg(ossl102)]
+extern "C" {
+    pub fn X509_check_host(
+        x: *mut X509,
+        chk: *const c_char,
+        chklen: usize,
+        flags: c_uint,
+        peername: *mut *mut c_char,
+    ) -> c_int;
+    pub fn X509_check_email(
+        x: *mut X509,
+        chk: *const c_char,
+        chklen: usize,
+        flags: c_uint,
+    ) -> c_int;
+    pub fn X509_check_ip(x: *mut X509, chk: *const c_uchar, chklen: usize, flags: c_uint) -> c_int;
+    pub fn X509_check_ip_asc(x: *mut X509, ipasc: *const c_char, flags: c_uint) -> c_int;
 }

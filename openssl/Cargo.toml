@@ -1,6 +1,6 @@
 [package]
 name = "openssl"
-version = "0.10.56"
+version = "0.10.63"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "Apache-2.0"
 description = "OpenSSL bindings"
@@ -23,14 +23,14 @@ unstable_boringssl = ["ffi/unstable_boringssl"]
 default = []
 
 [dependencies]
-bitflags = "1.0"
+bitflags = "2.2.1"
 cfg-if = "1.0"
 foreign-types = "0.3.1"
 libc = "0.2"
 once_cell = "1.5.2"
 
 openssl-macros = { version = "0.1.0", path = "../openssl-macros" }
-ffi = { package = "openssl-sys", version = "0.9.91", path = "../openssl-sys" }
+ffi = { package = "openssl-sys", version = "0.9.99", path = "../openssl-sys" }
 
 [dev-dependencies]
 hex = "0.3"

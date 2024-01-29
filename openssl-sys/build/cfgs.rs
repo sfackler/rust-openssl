@@ -53,9 +53,24 @@ pub fn get(openssl_version: Option<u64>, libressl_version: Option<u64>) -> Vec<&
         if libressl_version >= 0x3_07_00_00_0 {
             cfgs.push("libressl370");
         }
+        if libressl_version >= 0x3_08_00_00_0 {
+            cfgs.push("libressl380");
+        }
+        if libressl_version >= 0x3_08_01_00_0 {
+            cfgs.push("libressl381");
+        }
+        if libressl_version >= 0x3_08_02_00_0 {
+            cfgs.push("libressl382");
+        }
+        if libressl_version >= 0x3_09_00_00_0 {
+            cfgs.push("libressl390");
+        }
     } else {
         let openssl_version = openssl_version.unwrap();
 
+        if openssl_version >= 0x3_02_00_00_0 {
+            cfgs.push("ossl320");
+        }
         if openssl_version >= 0x3_00_00_00_0 {
             cfgs.push("ossl300");
         }

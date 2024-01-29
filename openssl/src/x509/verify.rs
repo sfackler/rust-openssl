@@ -11,6 +11,8 @@ use openssl_macros::corresponds;
 
 bitflags! {
     /// Flags used to check an `X509` certificate.
+    #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[repr(transparent)]
     pub struct X509CheckFlags: c_uint {
         const ALWAYS_CHECK_SUBJECT = ffi::X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT;
         const NO_WILDCARDS = ffi::X509_CHECK_FLAG_NO_WILDCARDS;
@@ -28,6 +30,8 @@ bitflags! {
 
 bitflags! {
     /// Flags used to verify an `X509` certificate chain.
+    #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[repr(transparent)]
     pub struct X509VerifyFlags: c_ulong {
         const CB_ISSUER_CHECK = ffi::X509_V_FLAG_CB_ISSUER_CHECK;
         const USE_CHECK_TIME = ffi::X509_V_FLAG_USE_CHECK_TIME;
@@ -87,14 +91,20 @@ impl X509VerifyParamRef {
     #[corresponds(X509_VERIFY_PARAM_set_hostflags)]
     pub fn set_hostflags(&mut self, hostflags: X509CheckFlags) {
         unsafe {
-            ffi::X509_VERIFY_PARAM_set_hostflags(self.as_ptr(), hostflags.bits);
+            ffi::X509_VERIFY_PARAM_set_hostflags(self.as_ptr(), hostflags.bits());
         }
     }
 
     /// Set verification flags.
     #[corresponds(X509_VERIFY_PARAM_set_flags)]
     pub fn set_flags(&mut self, flags: X509VerifyFlags) -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::X509_VERIFY_PARAM_set_flags(self.as_ptr(), flags.bits)).map(|_| ()) }
+        unsafe {
+            cvt(ffi::X509_VERIFY_PARAM_set_flags(
+                self.as_ptr(),
+                flags.bits(),
+            ))
+            .map(|_| ())
+        }
     }
 
     /// Clear verification flags.
@@ -103,7 +113,7 @@ impl X509VerifyParamRef {
         unsafe {
             cvt(ffi::X509_VERIFY_PARAM_clear_flags(
                 self.as_ptr(),
-                flags.bits,
+                flags.bits(),
             ))
             .map(|_| ())
         }
@@ -113,7 +123,7 @@ impl X509VerifyParamRef {
     #[corresponds(X509_VERIFY_PARAM_get_flags)]
     pub fn flags(&mut self) -> X509VerifyFlags {
         let bits = unsafe { ffi::X509_VERIFY_PARAM_get_flags(self.as_ptr()) };
-        X509VerifyFlags { bits }
+        X509VerifyFlags::from_bits_retain(bits)
     }
 
     /// Set the expected DNS hostname.
@@ -126,6 +136,21 @@ impl X509VerifyParamRef {
                 self.as_ptr(),
                 raw_host.as_ptr() as *const _,
                 host.len(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Set the expected email address.
+    #[corresponds(X509_VERIFY_PARAM_set1_email)]
+    pub fn set_email(&mut self, email: &str) -> Result<(), ErrorStack> {
+        unsafe {
+            // len == 0 means "run strlen" :(
+            let raw_email = if email.is_empty() { "\0" } else { email };
+            cvt(ffi::X509_VERIFY_PARAM_set1_email(
+                self.as_ptr(),
+                raw_email.as_ptr() as *const _,
+                email.len(),
             ))
             .map(|_| ())
         }

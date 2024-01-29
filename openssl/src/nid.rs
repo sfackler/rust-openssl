@@ -215,11 +215,13 @@ impl Nid {
     pub const SECT409R1: Nid = Nid(ffi::NID_sect409r1);
     pub const SECT571K1: Nid = Nid(ffi::NID_sect571k1);
     pub const SECT571R1: Nid = Nid(ffi::NID_sect571r1);
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl))]
     pub const BRAINPOOL_P256R1: Nid = Nid(ffi::NID_brainpoolP256r1);
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl))]
+    pub const BRAINPOOL_P320R1: Nid = Nid(ffi::NID_brainpoolP320r1);
+    #[cfg(any(ossl110, libressl))]
     pub const BRAINPOOL_P384R1: Nid = Nid(ffi::NID_brainpoolP384r1);
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl))]
     pub const BRAINPOOL_P512R1: Nid = Nid(ffi::NID_brainpoolP512r1);
     pub const WAP_WSG_IDM_ECID_WTLS1: Nid = Nid(ffi::NID_wap_wsg_idm_ecid_wtls1);
     pub const WAP_WSG_IDM_ECID_WTLS3: Nid = Nid(ffi::NID_wap_wsg_idm_ecid_wtls3);
@@ -1078,18 +1080,20 @@ impl Nid {
     pub const SM2: Nid = Nid(ffi::NID_sm2);
     #[cfg(any(ossl111, libressl291))]
     pub const SM3: Nid = Nid(ffi::NID_sm3);
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub const SHA3_224: Nid = Nid(ffi::NID_sha3_224);
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub const SHA3_256: Nid = Nid(ffi::NID_sha3_256);
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub const SHA3_384: Nid = Nid(ffi::NID_sha3_384);
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl380))]
     pub const SHA3_512: Nid = Nid(ffi::NID_sha3_512);
     #[cfg(ossl111)]
     pub const SHAKE128: Nid = Nid(ffi::NID_shake128);
     #[cfg(ossl111)]
     pub const SHAKE256: Nid = Nid(ffi::NID_shake256);
+    #[cfg(any(ossl110, libressl271))]
+    pub const CHACHA20_POLY1305: Nid = Nid(ffi::NID_chacha20_poly1305);
 }
 
 #[cfg(test)]
