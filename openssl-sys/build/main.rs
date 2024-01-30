@@ -79,6 +79,9 @@ fn main() {
     let target = env::var("TARGET").unwrap();
 
     let (lib_dirs, include_dir) = find_openssl(&target);
+    if let Some(printable_include) = include_dir.to_str() {
+        println!("cargo:rerun-if-changed={}", printable_include);
+    }
 
     if !lib_dirs.iter().all(|p| Path::new(p).exists()) {
         panic!("OpenSSL library directory does not exist: {:?}", lib_dirs);
