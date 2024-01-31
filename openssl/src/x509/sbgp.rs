@@ -53,6 +53,10 @@ impl ASIdentifiers {
 
     /// Determines whether the contents of the AS number extension are contained
     /// in the parent AS number extension.
+    /// 
+    /// This function is only available as of version 1.1.1, since it
+    /// implementation in version 1.1.0 is faulty.
+    #[cfg(ossl111)]
     #[corresponds(X509v3_asid_subset)]
     pub fn subset_of(&self, parent: &ASIdentifiers) -> bool {
         unsafe {

@@ -1195,11 +1195,15 @@ fn test_sbgp_extensions_parsing() {
     let parent_cert = X509::from_pem(parent_cert_bytes).unwrap();
 
     let asn = cert.sbgp_asn().unwrap();
-    let pasn = parent_cert.sbgp_asn().unwrap();
     assert!(!asn.inherited());
     assert!(asn.is_canonical());
-    assert!(asn.subset_of(&pasn));
-    assert!(!pasn.subset_of(&asn));
+
+    #[cfg(ossl111)]
+    {
+        let pasn = parent_cert.sbgp_asn().unwrap();
+        assert!(asn.subset_of(&pasn));
+        assert!(!pasn.subset_of(&asn));
+    }
 
     let asn_ranges = asn.ranges().unwrap();
     assert_eq!(asn_ranges[0], (10, 18));
