@@ -53,7 +53,7 @@ impl ASIdentifiers {
 
     /// Determines whether the contents of the AS number extension are contained
     /// in the parent AS number extension.
-    /// 
+    ///
     /// This function is only available as of version 1.1.1, since it
     /// implementation in version 1.1.0 is faulty.
     #[cfg(ossl111)]
