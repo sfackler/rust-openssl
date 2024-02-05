@@ -1127,4 +1127,31 @@ mod test {
         assert_eq!(nonce_type, NonceType::DETERMINISTIC_K);
         assert!(ErrorStack::get().errors().is_empty());
     }
+
+    // Test vector from
+    // https://github.com/openssl/openssl/blob/openssl-3.2.0/test/recipes/30-test_evp_data/evppkey_ecdsa_rfc6979.txt
+    #[test]
+    #[cfg(ossl320)]
+    fn ecdsa_deterministic_signature() {
+        let private_key_pem = "-----BEGIN PRIVATE KEY-----
+MDkCAQAwEwYHKoZIzj0CAQYIKoZIzj0DAQEEHzAdAgEBBBhvqwNJNOTA/Jrmf1tWWanX0f79GH7g
+n9Q=
+-----END PRIVATE KEY-----";
+
+        let key1 = EcKey::private_key_from_pem(private_key_pem.as_bytes()).unwrap();
+        let key1 = PKey::from_ec_key(key1).unwrap();
+        let input = "sample";
+        let expected_output = hex::decode("303502190098C6BD12B23EAF5E2A2045132086BE3EB8EBD62ABF6698FF021857A22B07DEA9530F8DE9471B1DC6624472E8E2844BC25B64").unwrap();
+
+        let hashed_input = hash(MessageDigest::sha1(), input.as_bytes()).unwrap();
+        let mut ctx = PkeyCtx::new(&key1).unwrap();
+        ctx.sign_init().unwrap();
+        ctx.set_signature_md(Md::sha1()).unwrap();
+        ctx.set_nonce_type(NonceType::DETERMINISTIC_K).unwrap();
+
+        let mut output = vec![];
+        ctx.sign_to_vec(&hashed_input, &mut output).unwrap();
+        assert_eq!(output, expected_output);
+        assert!(ErrorStack::get().errors().is_empty());
+    }
 }
