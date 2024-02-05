@@ -736,32 +736,6 @@ impl<T> PkeyCtxRef<T> {
         }
     }
 
-    /// Sets the digest algorithm for a private key context.
-    ///
-    /// Requires OpenSSL 3.0.0 or newer.
-    #[cfg(ossl300)]
-    #[corresponds(EVP_PKEY_CTX_set_params)]
-    pub fn set_digest(&mut self, hash_algorithm: MessageDigest) -> Result<(), ErrorStack> {
-        let digest_name = hash_algorithm.type_().short_name()?;
-        let digest = CString::new(digest_name).unwrap().into_raw();
-        let digest_field_name = CString::new("digest").unwrap();
-        unsafe {
-            let param_digest = ffi::OSSL_PARAM_construct_utf8_string(
-                digest_field_name.as_ptr(),
-                digest,
-                digest_name.len(),
-            );
-            let param_end = ffi::OSSL_PARAM_construct_end();
-
-            let params = [param_digest, param_end];
-            cvt(ffi::EVP_PKEY_CTX_set_params(self.as_ptr(), params.as_ptr()))?;
-
-            // retake pointer to free memory
-            let _ = CString::from_raw(digest);
-        }
-        Ok(())
-    }
-
     /// Gets the digest algorithm for a private key context.
     ///
     /// Requires OpenSSL 3.0.0 or newer.
@@ -1126,16 +1100,16 @@ mod test {
 
     #[test]
     #[cfg(ossl300)]
-    fn set_digest() {
+    fn set_signature_md() {
         let key1 =
             EcKey::generate(&EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap()).unwrap();
         let key1 = PKey::from_ec_key(key1).unwrap();
 
         let mut ctx = PkeyCtx::new(&key1).unwrap();
         ctx.sign_init().unwrap();
-        ctx.set_digest(MessageDigest::sha224()).unwrap();
-        let digest_name = ctx.digest().unwrap().unwrap().type_();
-        assert_eq!(digest_name, MessageDigest::sha224().type_());
+        ctx.set_signature_md(Md::sha224()).unwrap();
+        let digest_nid = ctx.digest().unwrap().unwrap().type_();
+        assert_eq!(digest_nid, Md::sha224().type_());
         assert!(ErrorStack::get().errors().is_empty());
     }
 

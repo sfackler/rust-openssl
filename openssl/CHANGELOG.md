@@ -4,9 +4,7 @@
 
 ### Added
 
-* Added `PkeyCtxRef::{digest, set_digest, nonce_type, set_nonce_type}`.
-* Added `OSSL_PARAM`, `OSSL_PARAM_construct_uint` , `OSSL_PARAM_construct_utf8_string`, `OSSL_PARAM_construct_end` to openssl-sys.
-* Added `EVP_PKEY_CTX_set_params` and `EVP_PKEY_CTX_get_params` to openssl-sys.
+* Added `PkeyCtxRef::{digest, nonce_type, set_nonce_type}`.
 
 ## [v0.10.63] - 2024-01-19
 
