@@ -4,7 +4,7 @@
 
 ### Added
 
-* Added `PkeyCtxRef::{digest, nonce_type, set_nonce_type}`.
+* Added `PkeyCtxRef::{nonce_type, set_nonce_type}`.
 
 ## [v0.10.63] - 2024-01-19
 

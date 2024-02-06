@@ -4,7 +4,7 @@
 
 ### Added
 
-* Added `OSSL_PARAM`, `OSSL_PARAM_construct_uint` , `OSSL_PARAM_construct_utf8_string`, `OSSL_PARAM_construct_end`.
+* Added `OSSL_PARAM`, `OSSL_PARAM_construct_uint` , `OSSL_PARAM_construct_end`.
 * Added `EVP_PKEY_CTX_set_params` and `EVP_PKEY_CTX_get_params`.
 
 ## [v0.9.99] - 2024-01-19

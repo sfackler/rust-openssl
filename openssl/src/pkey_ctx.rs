@@ -67,8 +67,6 @@ let cmac_key = ctx.keygen().unwrap();
 #[cfg(not(boringssl))]
 use crate::cipher::CipherRef;
 use crate::error::ErrorStack;
-#[cfg(ossl300)]
-use crate::hash::MessageDigest;
 use crate::md::MdRef;
 use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Private};
 use crate::rsa::Padding;
@@ -81,7 +79,7 @@ use libc::c_int;
 use libc::c_uint;
 use openssl_macros::corresponds;
 use std::convert::TryFrom;
-#[cfg(ossl300)]
+#[cfg(ossl320)]
 use std::ffi::CString;
 use std::ptr;
 
@@ -736,36 +734,6 @@ impl<T> PkeyCtxRef<T> {
         }
     }
 
-    /// Gets the digest algorithm for a private key context.
-    ///
-    /// Requires OpenSSL 3.0.0 or newer.
-    #[cfg(ossl300)]
-    #[corresponds(EVP_PKEY_CTX_get_params)]
-    pub fn digest(&mut self) -> Result<Option<MessageDigest>, ErrorStack> {
-        use libc::c_char;
-        // From openssl/internal/sizes.h
-        let ossl_max_name_size = 50usize;
-        let digest_field_name = CString::new("digest").unwrap();
-        let digest: *mut c_char = CString::new(vec![1; ossl_max_name_size])
-            .unwrap()
-            .into_raw();
-        unsafe {
-            let param_digest = ffi::OSSL_PARAM_construct_utf8_string(
-                digest_field_name.as_ptr(),
-                digest,
-                ossl_max_name_size,
-            );
-            let param_end = ffi::OSSL_PARAM_construct_end();
-            let mut params = [param_digest, param_end];
-            cvt(ffi::EVP_PKEY_CTX_get_params(
-                self.as_ptr(),
-                params.as_mut_ptr(),
-            ))?;
-            let digest_str = CString::from_raw(digest);
-            Ok(MessageDigest::from_name(digest_str.to_str().unwrap()))
-        }
-    }
-
     /// Sets the nonce type for a private key context.
     ///
     /// The nonce for DSA and ECDSA can be either random (the default) or deterministic (as defined by RFC 6979).
@@ -1096,21 +1064,6 @@ mod test {
         assert_eq!(length, 51);
         // The digest is the end of the DigestInfo structure.
         assert_eq!(result_buf[length - digest.len()..length], digest);
-    }
-
-    #[test]
-    #[cfg(ossl300)]
-    fn set_signature_md() {
-        let key1 =
-            EcKey::generate(&EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap()).unwrap();
-        let key1 = PKey::from_ec_key(key1).unwrap();
-
-        let mut ctx = PkeyCtx::new(&key1).unwrap();
-        ctx.sign_init().unwrap();
-        ctx.set_signature_md(Md::sha224()).unwrap();
-        let digest_nid = ctx.digest().unwrap().unwrap().type_();
-        assert_eq!(digest_nid, Md::sha224().type_());
-        assert!(ErrorStack::get().errors().is_empty());
     }
 
     #[test]
