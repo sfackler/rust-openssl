@@ -2094,10 +2094,7 @@ impl GeneralName {
         }
     }
 
-    pub(crate) fn new_other_name(
-        oid: Asn1Object,
-        value: &Vec<u8>,
-    ) -> Result<GeneralName, ErrorStack> {
+    pub(crate) fn new_other_name(oid: Asn1Object, value: &[u8]) -> Result<GeneralName, ErrorStack> {
         unsafe {
             ffi::init();
 
