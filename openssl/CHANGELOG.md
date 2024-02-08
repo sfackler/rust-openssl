@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+* Added `PkeyCtxRef::{nonce_type, set_nonce_type}`.
+
 ## [v0.10.63] - 2024-01-19
 
 ### Added

@@ -1093,3 +1093,13 @@ pub enum OSSL_PROVIDER {}
 
 #[cfg(ossl300)]
 pub enum OSSL_LIB_CTX {}
+
+#[cfg(ossl300)]
+#[repr(C)]
+pub struct OSSL_PARAM {
+    key: *const c_char,
+    data_type: c_uchar,
+    data: *mut c_void,
+    data_size: size_t,
+    return_size: size_t,
+}

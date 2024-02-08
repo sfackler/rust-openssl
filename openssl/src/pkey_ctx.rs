@@ -75,8 +75,12 @@ use crate::{cvt, cvt_p};
 use foreign_types::{ForeignType, ForeignTypeRef};
 #[cfg(not(boringssl))]
 use libc::c_int;
+#[cfg(ossl320)]
+use libc::c_uint;
 use openssl_macros::corresponds;
 use std::convert::TryFrom;
+#[cfg(ossl320)]
+use std::ffi::CStr;
 use std::ptr;
 
 /// HKDF modes of operation.
@@ -103,6 +107,21 @@ impl HkdfMode {
     ///
     /// The digest, key and info values must be set before a key is derived or an error occurs.
     pub const EXPAND_ONLY: Self = HkdfMode(ffi::EVP_PKEY_HKDEF_MODE_EXPAND_ONLY);
+}
+
+/// Nonce type for ECDSA and DSA.
+#[cfg(ossl320)]
+#[derive(Debug, PartialEq)]
+pub struct NonceType(c_uint);
+
+#[cfg(ossl320)]
+impl NonceType {
+    /// This is the default mode. It uses a random value for the nonce k as defined in FIPS 186-4 Section 6.3
+    /// “Secret Number Generation”.
+    pub const RANDOM_K: Self = NonceType(0);
+
+    /// Uses a deterministic value for the nonce k as defined in RFC #6979 (See Section 3.2 “Generation of k”).
+    pub const DETERMINISTIC_K: Self = NonceType(1);
 }
 
 generic_foreign_type_and_impl_send_sync! {
@@ -714,6 +733,53 @@ impl<T> PkeyCtxRef<T> {
             Ok(PKey::from_ptr(key))
         }
     }
+
+    /// Sets the nonce type for a private key context.
+    ///
+    /// The nonce for DSA and ECDSA can be either random (the default) or deterministic (as defined by RFC 6979).
+    ///
+    /// This is only useful for DSA and ECDSA.
+    /// Requires OpenSSL 3.2.0 or newer.
+    #[cfg(ossl320)]
+    #[corresponds(EVP_PKEY_CTX_set_params)]
+    pub fn set_nonce_type(&mut self, nonce_type: NonceType) -> Result<(), ErrorStack> {
+        let nonce_field_name = CStr::from_bytes_with_nul(b"nonce-type\0").unwrap();
+        let mut nonce_type = nonce_type.0;
+        unsafe {
+            let param_nonce =
+                ffi::OSSL_PARAM_construct_uint(nonce_field_name.as_ptr(), &mut nonce_type);
+            let param_end = ffi::OSSL_PARAM_construct_end();
+
+            let params = [param_nonce, param_end];
+            cvt(ffi::EVP_PKEY_CTX_set_params(self.as_ptr(), params.as_ptr()))?;
+        }
+        Ok(())
+    }
+
+    /// Gets the nonce type for a private key context.
+    ///
+    /// The nonce for DSA and ECDSA can be either random (the default) or deterministic (as defined by RFC 6979).
+    ///
+    /// This is only useful for DSA and ECDSA.
+    /// Requires OpenSSL 3.2.0 or newer.
+    #[cfg(ossl320)]
+    #[corresponds(EVP_PKEY_CTX_get_params)]
+    pub fn nonce_type(&mut self) -> Result<NonceType, ErrorStack> {
+        let nonce_field_name = CStr::from_bytes_with_nul(b"nonce-type\0").unwrap();
+        let mut nonce_type: c_uint = 0;
+        unsafe {
+            let param_nonce =
+                ffi::OSSL_PARAM_construct_uint(nonce_field_name.as_ptr(), &mut nonce_type);
+            let param_end = ffi::OSSL_PARAM_construct_end();
+
+            let mut params = [param_nonce, param_end];
+            cvt(ffi::EVP_PKEY_CTX_get_params(
+                self.as_ptr(),
+                params.as_mut_ptr(),
+            ))?;
+        }
+        Ok(NonceType(nonce_type))
+    }
 }
 
 #[cfg(test)]
@@ -998,5 +1064,47 @@ mod test {
         assert_eq!(length, 51);
         // The digest is the end of the DigestInfo structure.
         assert_eq!(result_buf[length - digest.len()..length], digest);
+    }
+
+    #[test]
+    #[cfg(ossl320)]
+    fn set_nonce_type() {
+        let key1 =
+            EcKey::generate(&EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap()).unwrap();
+        let key1 = PKey::from_ec_key(key1).unwrap();
+
+        let mut ctx = PkeyCtx::new(&key1).unwrap();
+        ctx.sign_init().unwrap();
+        ctx.set_nonce_type(NonceType::DETERMINISTIC_K).unwrap();
+        let nonce_type = ctx.nonce_type().unwrap();
+        assert_eq!(nonce_type, NonceType::DETERMINISTIC_K);
+        assert!(ErrorStack::get().errors().is_empty());
+    }
+
+    // Test vector from
+    // https://github.com/openssl/openssl/blob/openssl-3.2.0/test/recipes/30-test_evp_data/evppkey_ecdsa_rfc6979.txt
+    #[test]
+    #[cfg(ossl320)]
+    fn ecdsa_deterministic_signature() {
+        let private_key_pem = "-----BEGIN PRIVATE KEY-----
+MDkCAQAwEwYHKoZIzj0CAQYIKoZIzj0DAQEEHzAdAgEBBBhvqwNJNOTA/Jrmf1tWWanX0f79GH7g
+n9Q=
+-----END PRIVATE KEY-----";
+
+        let key1 = EcKey::private_key_from_pem(private_key_pem.as_bytes()).unwrap();
+        let key1 = PKey::from_ec_key(key1).unwrap();
+        let input = "sample";
+        let expected_output = hex::decode("303502190098C6BD12B23EAF5E2A2045132086BE3EB8EBD62ABF6698FF021857A22B07DEA9530F8DE9471B1DC6624472E8E2844BC25B64").unwrap();
+
+        let hashed_input = hash(MessageDigest::sha1(), input.as_bytes()).unwrap();
+        let mut ctx = PkeyCtx::new(&key1).unwrap();
+        ctx.sign_init().unwrap();
+        ctx.set_signature_md(Md::sha1()).unwrap();
+        ctx.set_nonce_type(NonceType::DETERMINISTIC_K).unwrap();
+
+        let mut output = vec![];
+        ctx.sign_to_vec(&hashed_input, &mut output).unwrap();
+        assert_eq!(output, expected_output);
+        assert!(ErrorStack::get().errors().is_empty());
     }
 }
