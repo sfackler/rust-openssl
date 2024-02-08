@@ -80,7 +80,7 @@ use libc::c_uint;
 use openssl_macros::corresponds;
 use std::convert::TryFrom;
 #[cfg(ossl320)]
-use std::ffi::CString;
+use std::ffi::CStr;
 use std::ptr;
 
 /// HKDF modes of operation.
@@ -743,7 +743,7 @@ impl<T> PkeyCtxRef<T> {
     #[cfg(ossl320)]
     #[corresponds(EVP_PKEY_CTX_set_params)]
     pub fn set_nonce_type(&mut self, nonce_type: NonceType) -> Result<(), ErrorStack> {
-        let nonce_field_name = CString::new("nonce-type").unwrap();
+        let nonce_field_name = CStr::from_bytes_with_nul("nonce-type\0".as_bytes()).unwrap();
         let mut nonce_type = nonce_type.0;
         unsafe {
             let param_nonce =
@@ -765,7 +765,7 @@ impl<T> PkeyCtxRef<T> {
     #[cfg(ossl320)]
     #[corresponds(EVP_PKEY_CTX_get_params)]
     pub fn nonce_type(&mut self) -> Result<NonceType, ErrorStack> {
-        let nonce_field_name = CString::new("nonce-type").unwrap();
+        let nonce_field_name = CStr::from_bytes_with_nul("nonce-type\0".as_bytes()).unwrap();
         let mut nonce_type: c_uint = 0;
         unsafe {
             let param_nonce =
