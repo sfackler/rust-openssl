@@ -3532,7 +3532,10 @@ impl SslRef {
         unsafe {
             let mut pnid: c_int = 0;
 
-            match cvt(ffi::SSL_get_peer_signature_type_nid(self.as_ptr(), &mut pnid)) {
+            match cvt(ffi::SSL_get_peer_signature_type_nid(
+                self.as_ptr(),
+                &mut pnid,
+            )) {
                 Ok(_) => Ok(Nid::from_raw(pnid)),
                 Err(e) => Err(e),
             }

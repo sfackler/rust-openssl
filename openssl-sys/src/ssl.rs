@@ -526,15 +526,20 @@ cfg_if! {
     }
 }
 
-    #[cfg(ossl102)]
-    pub unsafe fn SSL_get_peer_signature_nid(ssl: *mut SSL, psig_nid: *mut c_int) -> c_int {
-        SSL_ctrl(ssl, SSL_CTRL_GET_PEER_SIGNATURE_NID, 0, psig_nid as *mut c_void) as c_int
-    }
+#[cfg(ossl102)]
+pub unsafe fn SSL_get_peer_signature_nid(ssl: *mut SSL, psig_nid: *mut c_int) -> c_int {
+    SSL_ctrl(
+        ssl,
+        SSL_CTRL_GET_PEER_SIGNATURE_NID,
+        0,
+        psig_nid as *mut c_void,
+    ) as c_int
+}
 
-    #[cfg(ossl111)]
-    pub unsafe fn SSL_get_signature_nid(ssl: *mut SSL, psig_nid: *mut c_int) -> c_int {
-        SSL_ctrl(ssl, SSL_CTRL_GET_SIGNATURE_NID, 0, psig_nid as *mut c_void) as c_int
-    }
+#[cfg(ossl111)]
+pub unsafe fn SSL_get_signature_nid(ssl: *mut SSL, psig_nid: *mut c_int) -> c_int {
+    SSL_ctrl(ssl, SSL_CTRL_GET_SIGNATURE_NID, 0, psig_nid as *mut c_void) as c_int
+}
 
 #[cfg(ossl111)]
 pub const SSL_CLIENT_HELLO_SUCCESS: c_int = 1;

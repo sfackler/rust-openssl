@@ -372,7 +372,6 @@ fn peer_tmp_key_rsa() {
     assert_eq!(local_temp.bits(), 521);
 }
 
-
 #[test]
 #[cfg(ossl111)]
 fn signature_nids() {
@@ -387,7 +386,10 @@ fn signature_nids() {
 
     let stream = client.connect();
     assert_eq!(stream.ssl().peer_signature_nid().unwrap(), Nid::SHA384);
-    assert_eq!(stream.ssl().peer_signature_type_nid().unwrap(), Nid::RSASSAPSS);
+    assert_eq!(
+        stream.ssl().peer_signature_type_nid().unwrap(),
+        Nid::RSASSAPSS
+    );
 
     // local signature retrievals are invalid for a client using server auth
     assert!(stream.ssl().signature_nid().is_err());
