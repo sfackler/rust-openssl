@@ -67,7 +67,7 @@ use crate::error::ErrorStack;
 use crate::ex_data::Index;
 #[cfg(ossl111)]
 use crate::hash::MessageDigest;
-#[cfg(any(ossl110, libressl270))]
+#[cfg(any(ossl102, libressl270))]
 use crate::nid::Nid;
 use crate::pkey::{HasPrivate, PKeyRef, Params, Private};
 #[cfg(ossl300)]
