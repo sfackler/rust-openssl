@@ -3485,8 +3485,8 @@ impl SslRef {
         }
     }
 
-    /// Returns the hash of the signature. For example, if the connection used an
-    /// RSA_PSS+SHA256 signature this will return the nid for SHA256.
+    /// Returns the hash of the signature scheme. For example, if the connection
+    /// negotiated rsa_pss_pss_sha384, this method will return the NID for SHA384.
     #[corresponds(SSL_get_signature_nid)]
     #[cfg(ossl111)]
     pub fn signature_nid(&self) -> Result<Nid, ErrorStack> {
@@ -3499,8 +3499,8 @@ impl SslRef {
         }
     }
 
-    /// Returns the hash of the signature. For example, if the connection used an
-    /// RSA_PSS+SHA256 signature this will return the nid for SHA256.
+    /// Returns the hash of the signature scheme. For example, if the connection
+    /// negotiated rsa_pss_pss_sha384, this method will return the NID for SHA384.
     #[corresponds(SSL_get_peer_signature_nid)]
     #[cfg(ossl102)]
     pub fn peer_signature_nid(&self) -> Result<Nid, ErrorStack> {
@@ -3513,8 +3513,9 @@ impl SslRef {
         }
     }
 
-    /// Returns the signature algorithm. For example, if the connection used an
-    /// RSA_PSS+SHA256 signature this will return the nid for RSA_PSS.    
+    /// Returns the signature algorithm of the signature scheme. For example, if
+    /// the connection negotiated rsa_pss_pss_sha384, this method will return the
+    /// NID for rsa_pss.  
     #[corresponds(SSL_get_signature_type_nid)]
     #[cfg(ossl111)]
     pub fn signature_type_nid(&self) -> Result<Nid, ErrorStack> {
@@ -3528,8 +3529,9 @@ impl SslRef {
         }
     }
 
-    /// Returns the signature algorithm. For example, if the connection used an
-    /// RSA_PSS+SHA256 signature this will return the nid for RSA_PSS.
+    /// Returns the signature algorithm of the signature scheme. For example, if
+    /// the connection negotiated rsa_pss_pss_sha384, this method will return the
+    /// NID for rsa_pss.  
     #[corresponds(SSL_get_peer_signature_type_nid)]
     #[cfg(ossl111)]
     pub fn peer_signature_type_nid(&self) -> Result<Nid, ErrorStack> {
