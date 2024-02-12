@@ -649,6 +649,22 @@ impl X509Ref {
         }
     }
 
+    /// Returns this certificate's "alias". This field is populated by
+    /// OpenSSL in some situations -- specifically OpenSSL will store a
+    /// PKCS#12 `friendlyName` in this field.
+    #[corresponds(X509_alias_get0)]
+    pub fn alias(&self) -> Option<&[u8]> {
+        unsafe {
+            let mut len = 0;
+            let ptr = ffi::X509_alias_get0(self.as_ptr(), &mut len);
+            if ptr.is_null() {
+                None
+            } else {
+                Some(slice::from_raw_parts(ptr, len as usize))
+            }
+        }
+    }
+
     to_pem! {
         /// Serializes the certificate into a PEM-encoded X509 structure.
         ///
