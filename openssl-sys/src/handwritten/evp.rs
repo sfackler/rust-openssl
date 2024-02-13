@@ -69,6 +69,7 @@ cfg_if! {
     if #[cfg(ossl300)] {
         extern "C" {
             pub fn EVP_default_properties_is_fips_enabled(libctx: *mut OSSL_LIB_CTX) -> c_int;
+            pub fn EVP_default_properties_enable_fips(libctx: *mut OSSL_LIB_CTX, enable: c_int) -> c_int;
         }
     }
 }
