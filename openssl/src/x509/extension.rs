@@ -465,7 +465,7 @@ impl SbgpAsIdentifier {
     pub fn add_inherit(&mut self) -> &mut SbgpAsIdentifier {
         if let SbgpAsIdentifierOrInherit::List(ref l) = self.0 {
             if !l.is_empty() {
-                panic!("cannot set extension to inherit, list allready contains elements");
+                panic!("Cannot set extension to 'inherit': List already contains elements");
             }
         }
 
@@ -478,7 +478,7 @@ impl SbgpAsIdentifier {
         if let SbgpAsIdentifierOrInherit::List(ref mut asns) = self.0 {
             asns.push((asn, asn))
         } else {
-            panic!("cannot add AS number to extension, extension is set to inherit");
+            panic!("Cannot add AS number to extension: Extension is set to 'inherit'");
         }
         self
     }
@@ -488,7 +488,7 @@ impl SbgpAsIdentifier {
         if let SbgpAsIdentifierOrInherit::List(ref mut asns) = self.0 {
             asns.push((asn_min, asn_max))
         } else {
-            panic!("cannot add AS range to extension, extension is set to inherit");
+            panic!("Cannot add AS range to extension: Extension is set to 'inherit'");
         }
         self
     }
@@ -505,7 +505,7 @@ impl SbgpAsIdentifier {
                     ))?;
                 }
                 SbgpAsIdentifierOrInherit::List(ref asns) => {
-                    assert!(!asns.is_empty(), "cannot create empty extension");
+                    assert!(!asns.is_empty(), "Cannot create empty extension");
 
                     for (min, max) in asns {
                         let asn_min = crate::bn::BigNum::from_u32(*min)?.to_asn1_integer()?;
@@ -531,8 +531,8 @@ impl SbgpAsIdentifier {
                         std::mem::forget(asn_min);
                     }
 
-                    // canonize must only be performed on this branch, since an inherit
-                    // ext is automatically canoical
+                    // Canonize must only be performed on this branch, since an inherit ext is
+                    // automatically canonical
                     if ffi::X509v3_asid_is_canonical(asid.as_ptr()) != 1 {
                         crate::cvt(ffi::X509v3_asid_canonize(asid.as_ptr()))?;
                     }
@@ -591,14 +591,14 @@ impl SbgpIpAddressIdentifier {
             super::sbgp::IpVersion::V4 if self.len_of(afi) == 0 => {
                 self.v4 = SbgpIpAddressIdentifierOrInherit::Inherit
             }
-            super::sbgp::IpVersion::V4 => {
-                panic!("cannot set ipv4 to inherit, list allready contains values")
-            }
             super::sbgp::IpVersion::V6 if self.len_of(afi) == 0 => {
                 self.v6 = SbgpIpAddressIdentifierOrInherit::Inherit
             }
-            super::sbgp::IpVersion::V6 => {
-                panic!("cannot set ipv6 to inherit, list allready contains values")
+            _ => {
+                panic!(
+                    "Cannot set IP{:?} to 'inherit': List already contains values",
+                    afi
+                );
             }
         }
         self
@@ -612,7 +612,7 @@ impl SbgpIpAddressIdentifier {
         }
     }
 
-    /// Adds a range of IPv4 adresses to the IP address extension.
+    /// Adds a range of IPv4 addresses to the IP address extension.
     pub fn add_ipv4_addr_range(
         &mut self,
         ip_addr_min: Ipv4Addr,
@@ -621,12 +621,12 @@ impl SbgpIpAddressIdentifier {
         if let SbgpIpAddressIdentifierOrInherit::List(ref mut ips) = self.v4 {
             ips.push((ip_addr_min, ip_addr_max));
         } else {
-            panic!("cannot add ipv4 address to extension, ipv4 is set to inherit");
+            panic!("Cannot add IPv4 address to extension: IPv4 is set to 'inherit'");
         }
         self
     }
 
-    /// Adds a range of IPv6 adresses of the IP adress extension.
+    /// Adds a range of IPv6 addresses of the IP address extension.
     pub fn add_ipv6_addr_range(
         &mut self,
         ip_addr_min: Ipv6Addr,
@@ -635,7 +635,7 @@ impl SbgpIpAddressIdentifier {
         if let SbgpIpAddressIdentifierOrInherit::List(ref mut ips) = self.v6 {
             ips.push((ip_addr_min, ip_addr_max));
         } else {
-            panic!("cannot add ipv6 address to extension, ipv6 is set to inherit");
+            panic!("Cannot add IPv6 address to extension: IPv6 is set to 'inherit'");
         }
         self
     }
@@ -709,8 +709,7 @@ impl SbgpIpAddressIdentifier {
 #[cfg(ossl110)]
 #[cfg(not(OPENSSL_NO_RFC3779))]
 impl Stack<super::sbgp::IPAddressFamily> {
-    // No pub, since messing with existing stacks outside build()
-    // seems like an unnessecary risk.
+    // Not public, since messing with existing stacks outside build() seems like an unnecessary risk.
     fn sbgp_add_addr_range<Addr>(
         &mut self,
         mut min: Addr,
