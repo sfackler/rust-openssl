@@ -57,7 +57,7 @@ extern "C" {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl390))] {
         extern "C" {
             pub fn CRYPTO_malloc(num: size_t, file: *const c_char, line: c_int) -> *mut c_void;
             pub fn CRYPTO_free(buf: *mut c_void, file: *const c_char, line: c_int);
