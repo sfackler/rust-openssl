@@ -282,7 +282,7 @@ impl CmsContentInfo {
     pub fn get_type(&self) -> &Asn1ObjectRef {
         unsafe {
             let asn1_type = ffi::CMS_get0_type(self.as_ptr() as *const _);
-            &Asn1ObjectRef::from_const_ptr(asn1_type)
+            Asn1ObjectRef::from_const_ptr(asn1_type)
         }
     }
 }
