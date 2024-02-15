@@ -320,9 +320,19 @@ impl Asn1Time {
         }
     }
 
+    /// Creates a new time with the current time
+    pub fn now() -> Result<Asn1Time, ErrorStack> {
+        Asn1Time::from_period(0)
+    }
+
     /// Creates a new time on specified interval in days from now
     pub fn days_from_now(days: u32) -> Result<Asn1Time, ErrorStack> {
         Asn1Time::from_period(days as c_long * 60 * 60 * 24)
+    }
+
+    /// Creates a new time on specified interval in seconds from now
+    pub fn seconds_from_now(seconds: i64) -> Result<Asn1Time, ErrorStack> {
+        Self::from_period(seconds)
     }
 
     /// Creates a new time from the specified `time_t` value
