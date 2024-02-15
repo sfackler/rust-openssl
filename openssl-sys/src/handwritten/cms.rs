@@ -62,4 +62,6 @@ extern "C" {
         out: *mut BIO,
         flags: c_uint,
     ) -> c_int;
+
+    pub fn CMS_get0_type(cms: *const CMS_ContentInfo) -> *const ASN1_OBJECT;
 }
