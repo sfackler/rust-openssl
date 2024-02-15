@@ -25,7 +25,7 @@ use std::str;
 
 use crate::asn1::{
     Asn1BitStringRef, Asn1Enumerated, Asn1IntegerRef, Asn1Object, Asn1ObjectRef,
-    Asn1OctetStringRef, Asn1StringRef, Asn1TimeRef, Asn1Type,
+    Asn1OctetStringRef, Asn1StringRef, Asn1Time, Asn1TimeRef, Asn1Type,
 };
 use crate::bio::MemBioSlice;
 use crate::conf::ConfRef;
@@ -1652,6 +1652,26 @@ impl X509Revoked {
         X509Revoked,
         ffi::d2i_X509_REVOKED
     }
+
+    pub fn new(to_revoke: &X509) -> Result<Self, ErrorStack> {
+        unsafe { Ok(Self(Self::new_raw(to_revoke)?)) }
+    }
+
+    /// the caller has to ensure the pointer is freed
+    unsafe fn new_raw(to_revoke: &X509) -> Result<*mut ffi::X509_REVOKED, ErrorStack> {
+        let result = cvt_p(ffi::X509_REVOKED_new())?;
+
+        cvt(ffi::X509_REVOKED_set_serialNumber(
+            result,
+            to_revoke.serial_number().as_ptr(),
+        ))?;
+        cvt(ffi::X509_REVOKED_set_revocationDate(
+            result,
+            crate::asn1::Asn1Time::now()?.as_ptr(),
+        ))?;
+
+        Ok(result)
+    }
 }
 
 impl X509RevokedRef {
@@ -1826,6 +1846,70 @@ impl X509Crl {
         from_der,
         X509Crl,
         ffi::d2i_X509_CRL
+    }
+
+    pub fn new(issuer_cert: &X509) -> Result<Self, ErrorStack> {
+        unsafe {
+            let crl = cvt_p(ffi::X509_CRL_new())?;
+            cvt(ffi::X509_CRL_set_version(crl, issuer_cert.version() as i64))?;
+            cvt(ffi::X509_CRL_set_issuer_name(
+                crl,
+                issuer_cert.issuer_name().as_ptr(),
+            ))?;
+            cvt(ffi::X509_CRL_set1_lastUpdate(
+                crl,
+                Asn1Time::now()?.as_ptr(),
+            ))?;
+
+            Ok(Self(crl))
+        }
+    }
+
+    // Note: u32 seconds is more than enough for this
+    pub fn set_next_update_from_now(&mut self, seconds_from_now: u32) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_CRL_set1_nextUpdate(
+                self.as_ptr(),
+                Asn1Time::seconds_from_now(seconds_from_now.into())?.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    pub fn entry_count(&mut self) -> usize {
+        self.get_revoked()
+            .map(|stack| stack.len())
+            .unwrap_or_default()
+    }
+
+    pub fn sign<T>(&mut self, key: &PKeyRef<T>, hash: MessageDigest) -> Result<(), ErrorStack>
+    where
+        T: HasPrivate,
+    {
+        unsafe {
+            cvt(ffi::X509_CRL_sign(
+                self.as_ptr(),
+                key.as_ptr(),
+                hash.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    pub fn revoke(&mut self, to_revoke: &X509) -> Result<(), ErrorStack> {
+        match self.get_by_cert(to_revoke) {
+            CrlStatus::NotRevoked => unsafe {
+                // we are not allowed to drop the revoked after adding it to the crl
+                let revoked = X509Revoked::new_raw(to_revoke)?;
+                if ffi::X509_CRL_add0_revoked(self.as_ptr(), revoked) == 0 {
+                    return Err(ErrorStack::get());
+                };
+            },
+
+            _ => { /* do nothing, already revoked */ }
+        }
+
+        Ok(())
     }
 }
 
