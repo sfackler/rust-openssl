@@ -1851,28 +1851,28 @@ impl X509Crl {
 
     pub fn new(issuer_cert: &X509) -> Result<Self, ErrorStack> {
         unsafe {
-            let crl = cvt_p(ffi::X509_CRL_new())?;
+            let crl = Self(cvt_p(ffi::X509_CRL_new())?);
             #[cfg(ossl110)]
             {
                 cvt(ffi::X509_CRL_set_version(
-                    crl,
+                    crl.as_ptr(),
                     issuer_cert.version() as c_long,
                 ))?;
             }
             cvt(ffi::X509_CRL_set_issuer_name(
-                crl,
+                crl.as_ptr(),
                 issuer_cert.issuer_name().as_ptr(),
             ))?;
 
             cfg_if!(
                 if #[cfg(any(ossl110, libressl270))] {
-                    cvt(ffi::X509_CRL_set1_lastUpdate(crl, Asn1Time::now()?.as_ptr())).map(|_| ())?
+                    cvt(ffi::X509_CRL_set1_lastUpdate(crl.as_ptr(), Asn1Time::now()?.as_ptr())).map(|_| ())?
                 } else {
-                    cvt(ffi::X509_CRL_set_lastUpdate(crl, Asn1Time::now()?.as_ptr())).map(|_| ())?
+                    cvt(ffi::X509_CRL_set_lastUpdate(crl.as_ptr, Asn1Time::now()?.as_ptr())).map(|_| ())?
                 }
             );
 
-            Ok(Self(crl))
+            Ok(crl)
         }
     }
 
