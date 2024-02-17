@@ -1852,18 +1852,25 @@ impl X509Crl {
     pub fn new(issuer_cert: &X509) -> Result<Self, ErrorStack> {
         unsafe {
             let crl = cvt_p(ffi::X509_CRL_new())?;
-            cvt(ffi::X509_CRL_set_version(
-                crl,
-                issuer_cert.version() as c_long,
-            ))?;
+            #[cfg(ossl110)]
+            {
+                cvt(ffi::X509_CRL_set_version(
+                    crl,
+                    issuer_cert.version() as c_long,
+                ))?;
+            }
             cvt(ffi::X509_CRL_set_issuer_name(
                 crl,
                 issuer_cert.issuer_name().as_ptr(),
             ))?;
-            cvt(ffi::X509_CRL_set1_lastUpdate(
-                crl,
-                Asn1Time::now()?.as_ptr(),
-            ))?;
+
+            cfg_if!(
+                if #[cfg(any(ossl110, libressl270))] {
+                    cvt(ffi::X509_CRL_set1_lastUpdate(crl, Asn1Time::now()?.as_ptr())).map(|_| ())?
+                } else {
+                    cvt(ffi::X509_CRL_set_lastUpdate(crl, Asn1Time::now()?.as_ptr())).map(|_| ())?
+                }
+            );
 
             Ok(Self(crl))
         }
@@ -1872,18 +1879,44 @@ impl X509Crl {
     /// use a negative value to set a time before 'now'
     pub fn set_last_update(&mut self, seconds_from_now: Option<i32>) -> Result<(), ErrorStack> {
         let time = Asn1Time::seconds_from_now(seconds_from_now.unwrap_or(0) as c_long)?;
-        unsafe { cvt(ffi::X509_CRL_set1_lastUpdate(self.as_ptr(), time.as_ptr())).map(|_| ()) }
+        cfg_if!(
+        if #[cfg(any(ossl110, libressl270))] {
+                unsafe {
+                    cvt(ffi::X509_CRL_set1_lastUpdate(self.as_ptr(), time.as_ptr())).map(|_| ())?
+                };
+            } else {
+                unsafe {
+                    cvt(ffi::X509_CRL_set_lastUpdate(self.as_ptr(), time.as_ptr())).map(|_| ())?
+                };
+            }
+        );
+
+        Ok(())
     }
 
     // Note: u32 seconds is more than enough for this;
     pub fn set_next_update_from_now(&mut self, seconds_from_now: u32) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::X509_CRL_set1_nextUpdate(
-                self.as_ptr(),
-                Asn1Time::seconds_from_now(seconds_from_now as c_long)?.as_ptr(),
-            ))
-            .map(|_| ())
-        }
+        cfg_if!(
+        if #[cfg(any(ossl110, libressl270))] {
+                unsafe {
+                    cvt(ffi::X509_CRL_set1_nextUpdate(
+                        self.as_ptr(),
+                        Asn1Time::seconds_from_now(seconds_from_now as c_long)?.as_ptr(),
+                    ))
+                    .map(|_| ())?;
+            }
+        } else {
+            unsafe {
+                cvt(ffi::X509_CRL_set_nextUpdate(
+                    self.as_ptr(),
+                    Asn1Time::seconds_from_now(seconds_from_now as c_long)?.as_ptr(),
+                ))
+                .map(|_| ())?;
+            }
+            }
+        );
+
+        Ok(())
     }
 
     pub fn entry_count(&mut self) -> usize {
