@@ -1865,7 +1865,13 @@ impl X509Crl {
         }
     }
 
-    // Note: u32 seconds is more than enough for this
+    /// use a negative value to set a time before 'now'
+    pub fn set_last_update(&mut self, seconds_from_now: Option<i32>) -> Result<(), ErrorStack> {
+        let time = Asn1Time::seconds_from_now(seconds_from_now.unwrap_or(0) as i64)?;
+        unsafe { cvt(ffi::X509_CRL_set1_lastUpdate(self.as_ptr(), time.as_ptr())).map(|_| ()) }
+    }
+
+    // Note: u32 seconds is more than enough for this;
     pub fn set_next_update_from_now(&mut self, seconds_from_now: u32) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::X509_CRL_set1_nextUpdate(
