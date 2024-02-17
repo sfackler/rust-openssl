@@ -651,7 +651,9 @@ impl X509Ref {
 
     /// Returns this certificate's "alias". This field is populated by
     /// OpenSSL in some situations -- specifically OpenSSL will store a
-    /// PKCS#12 `friendlyName` in this field.
+    /// PKCS#12 `friendlyName` in this field. This is not a part of the X.509
+    /// certificate itself, OpenSSL merely attaches it to this structure in
+    /// memory.
     #[corresponds(X509_alias_get0)]
     pub fn alias(&self) -> Option<&[u8]> {
         unsafe {
