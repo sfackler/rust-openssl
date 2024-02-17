@@ -28,6 +28,7 @@ use crate::asn1::{
     Asn1OctetStringRef, Asn1StringRef, Asn1Time, Asn1TimeRef, Asn1Type,
 };
 use crate::bio::MemBioSlice;
+use crate::bn::BigNum;
 use crate::conf::ConfRef;
 use crate::error::ErrorStack;
 use crate::ex_data::Index;
@@ -1904,7 +1905,7 @@ impl X509Crl {
 
     /// Read the value of the crl_number extensions.
     /// Returns None if the extension is not present.
-    pub fn read_crl_number(&self) -> Result<Option<i64>, ErrorStack> {
+    pub fn read_crl_number(&self) -> Result<Option<BigNum>, ErrorStack> {
         unsafe {
             let mut crit = 0;
             let number = Asn1Integer::from_ptr_opt(std::mem::transmute(ffi::X509_CRL_get_ext_d2i(
@@ -1923,23 +1924,20 @@ impl X509Crl {
                     }
                 }
 
-                Some(number) => Ok(Some(ffi::ASN1_INTEGER_get(number.as_ptr()))),
+                Some(number) => Ok(Some(number.to_bn()?)),
             }
         }
     }
 
     /// Set the crl_number extension's value.
     /// If the extension is not present, it will be added.
-    pub fn set_crl_number(&mut self, value: i64) -> Result<(), ErrorStack> {
+    pub fn set_crl_number(&mut self, value: &BigNum) -> Result<(), ErrorStack> {
         unsafe {
-            let number = ffi::ASN1_INTEGER_new();
-            let number = Asn1Integer::from_ptr(number);
-            cvt(ffi::ASN1_INTEGER_set(number.as_ptr(), value))?;
-
+            let value = Asn1Integer::from_bn(value)?;
             cvt(ffi::X509_CRL_add1_ext_i2d(
                 self.as_ptr(),
                 ffi::NID_crl_number,
-                std::mem::transmute(number.as_ptr()),
+                std::mem::transmute(value.as_ptr()),
                 0,
                 ffi::X509V3_ADD_REPLACE,
             ))
