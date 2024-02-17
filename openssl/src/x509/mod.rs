@@ -1894,8 +1894,7 @@ impl X509Crl {
         Ok(())
     }
 
-    // Note: u32 seconds is more than enough for this;
-    pub fn set_next_update_from_now(&mut self, seconds_from_now: u32) -> Result<(), ErrorStack> {
+    pub fn set_next_update_from_now(&mut self, seconds_from_now: i32) -> Result<(), ErrorStack> {
         cfg_if!(
         if #[cfg(any(ossl110, libressl270, boringssl))] {
                 unsafe {
