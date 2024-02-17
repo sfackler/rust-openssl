@@ -1662,14 +1662,15 @@ impl X509Revoked {
     unsafe fn new_raw(to_revoke: &X509) -> Result<*mut ffi::X509_REVOKED, ErrorStack> {
         let result = cvt_p(ffi::X509_REVOKED_new())?;
 
-        cvt(ffi::X509_REVOKED_set_serialNumber(
-            result,
-            to_revoke.serial_number().as_ptr(),
-        ))?;
-        cvt(ffi::X509_REVOKED_set_revocationDate(
-            result,
-            crate::asn1::Asn1Time::now()?.as_ptr(),
-        ))?;
+        if ffi::X509_REVOKED_set_serialNumber(result, to_revoke.serial_number().as_ptr()) <= 0 {
+            ffi::X509_REVOKED_free(result);
+            return Err(ErrorStack::get());
+        }
+        if ffi::X509_REVOKED_set_revocationDate(result, crate::asn1::Asn1Time::now()?.as_ptr()) <= 0
+        {
+            ffi::X509_REVOKED_free(result);
+            return Err(ErrorStack::get());
+        }
 
         Ok(result)
     }
