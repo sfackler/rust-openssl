@@ -1902,6 +1902,9 @@ impl X509Crl {
         }
     }
 
+    /// Revoke the given certificate.
+    /// This function won't produce duplicate entries in case the certificate was already revoked.
+    /// Sets the CRL's last_updated time to the current time before returning irregardless of the given certificate.
     pub fn revoke(&mut self, to_revoke: &X509) -> Result<(), ErrorStack> {
         match self.get_by_cert(to_revoke) {
             CrlStatus::NotRevoked => unsafe {
@@ -1915,7 +1918,7 @@ impl X509Crl {
             _ => { /* do nothing, already revoked */ }
         }
 
-        Ok(())
+        self.set_last_update(Some(0))
     }
 }
 
