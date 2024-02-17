@@ -24,7 +24,7 @@ use std::slice;
 use std::str;
 
 use crate::asn1::{
-    Asn1BitStringRef, Asn1Enumerated, Asn1IntegerRef, Asn1Object, Asn1ObjectRef,
+    Asn1BitStringRef, Asn1Enumerated, Asn1Integer, Asn1IntegerRef, Asn1Object, Asn1ObjectRef,
     Asn1OctetStringRef, Asn1StringRef, Asn1Time, Asn1TimeRef, Asn1Type,
 };
 use crate::bio::MemBioSlice;
@@ -1897,6 +1897,51 @@ impl X509Crl {
                 self.as_ptr(),
                 key.as_ptr(),
                 hash.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Read the value of the crl_number extensions.
+    /// Returns None if the extension is not present.
+    pub fn read_crl_number(&self) -> Result<Option<i64>, ErrorStack> {
+        unsafe {
+            let mut crit = 0;
+            let number = Asn1Integer::from_ptr_opt(std::mem::transmute(ffi::X509_CRL_get_ext_d2i(
+                self.as_ptr(),
+                ffi::NID_crl_number,
+                &mut crit,
+                std::ptr::null_mut(),
+            )));
+            match number {
+                None => {
+                    if crit == -1 {
+                        // extension was not found
+                        Ok(None)
+                    } else {
+                        Err(ErrorStack::get())
+                    }
+                }
+
+                Some(number) => Ok(Some(ffi::ASN1_INTEGER_get(number.as_ptr()))),
+            }
+        }
+    }
+
+    /// Set the crl_number extension's value.
+    /// If the extension is not present, it will be added.
+    pub fn set_crl_number(&mut self, value: i64) -> Result<(), ErrorStack> {
+        unsafe {
+            let number = ffi::ASN1_INTEGER_new();
+            let number = Asn1Integer::from_ptr(number);
+            cvt(ffi::ASN1_INTEGER_set(number.as_ptr(), value))?;
+
+            cvt(ffi::X509_CRL_add1_ext_i2d(
+                self.as_ptr(),
+                ffi::NID_crl_number,
+                std::mem::transmute(number.as_ptr()),
+                0,
+                ffi::X509V3_ADD_REPLACE,
             ))
             .map(|_| ())
         }
