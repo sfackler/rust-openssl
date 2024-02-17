@@ -1852,7 +1852,10 @@ impl X509Crl {
     pub fn new(issuer_cert: &X509) -> Result<Self, ErrorStack> {
         unsafe {
             let crl = cvt_p(ffi::X509_CRL_new())?;
-            cvt(ffi::X509_CRL_set_version(crl, issuer_cert.version() as i64))?;
+            cvt(ffi::X509_CRL_set_version(
+                crl,
+                issuer_cert.version() as c_long,
+            ))?;
             cvt(ffi::X509_CRL_set_issuer_name(
                 crl,
                 issuer_cert.issuer_name().as_ptr(),
@@ -1868,7 +1871,7 @@ impl X509Crl {
 
     /// use a negative value to set a time before 'now'
     pub fn set_last_update(&mut self, seconds_from_now: Option<i32>) -> Result<(), ErrorStack> {
-        let time = Asn1Time::seconds_from_now(seconds_from_now.unwrap_or(0) as i64)?;
+        let time = Asn1Time::seconds_from_now(seconds_from_now.unwrap_or(0) as c_long)?;
         unsafe { cvt(ffi::X509_CRL_set1_lastUpdate(self.as_ptr(), time.as_ptr())).map(|_| ()) }
     }
 
@@ -1877,7 +1880,7 @@ impl X509Crl {
         unsafe {
             cvt(ffi::X509_CRL_set1_nextUpdate(
                 self.as_ptr(),
-                Asn1Time::seconds_from_now(seconds_from_now.into())?.as_ptr(),
+                Asn1Time::seconds_from_now(seconds_from_now as c_long)?.as_ptr(),
             ))
             .map(|_| ())
         }
@@ -1939,7 +1942,8 @@ impl X509Crl {
                 ffi::NID_crl_number,
                 std::mem::transmute(value.as_ptr()),
                 0,
-                ffi::X509V3_ADD_REPLACE,
+                #[allow(clippy::useless_conversion)]
+                ffi::X509V3_ADD_REPLACE.try_into().expect("This is an openssl flag and should therefore always fit into the expected integer type"),
             ))
             .map(|_| ())
         }

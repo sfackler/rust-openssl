@@ -331,7 +331,7 @@ impl Asn1Time {
     }
 
     /// Creates a new time on specified interval in seconds from now
-    pub fn seconds_from_now(seconds: i64) -> Result<Asn1Time, ErrorStack> {
+    pub fn seconds_from_now(seconds: c_long) -> Result<Asn1Time, ErrorStack> {
         Self::from_period(seconds)
     }
 
