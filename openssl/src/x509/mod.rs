@@ -1868,7 +1868,7 @@ impl X509Crl {
                 if #[cfg(any(ossl110, libressl270))] {
                     cvt(ffi::X509_CRL_set1_lastUpdate(crl.as_ptr(), Asn1Time::now()?.as_ptr())).map(|_| ())?
                 } else {
-                    cvt(ffi::X509_CRL_set_lastUpdate(crl.as_ptr, Asn1Time::now()?.as_ptr())).map(|_| ())?
+                    cvt(ffi::X509_CRL_set_lastUpdate(crl.as_ptr(), Asn1Time::now()?.as_ptr())).map(|_| ())?
                 }
             );
 
