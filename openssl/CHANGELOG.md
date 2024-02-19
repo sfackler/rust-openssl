@@ -2,9 +2,13 @@
 
 ## [Unreleased]
 
+## [v0.10.64] - 2024-02-19
+
 ### Added
 
 * Added `PkeyCtxRef::{nonce_type, set_nonce_type}`.
+* Added `X509Ref::alias`.
+
 
 ## [v0.10.63] - 2024-01-19
 
@@ -888,7 +892,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.63...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.64...master
+[v0.10.64]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.63...openssl-v0.10.64
 [v0.10.63]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.62...openssl-v0.10.63
 [v0.10.62]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.61...openssl-v0.10.62
 [v0.10.61]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.60...openssl-v0.10.61
