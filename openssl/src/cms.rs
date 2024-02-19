@@ -20,6 +20,7 @@ use crate::util::ForeignTypeRefExt;
 use crate::x509::{store::X509StoreRef, X509Ref, X509};
 use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
+use cfg_if::cfg_if;
 
 bitflags! {
     #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -281,7 +282,14 @@ impl CmsContentInfo {
     #[corresponds(CMS_get0_type)]
     pub fn get_type(&self) -> &Asn1ObjectRef {
         unsafe {
-            let asn1_type = ffi::CMS_get0_type(self.as_ptr() as *const _);
+            cfg_if!(
+                if #[cfg(any(ossl101, ossl102))] {
+                    let asn1_type = ffi::CMS_get0_type(self.as_ptr());
+                } else {
+                    let asn1_type = ffi::CMS_get0_type(self.as_ptr() as *const _);
+                }
+            );
+            
             Asn1ObjectRef::from_const_ptr(asn1_type)
         }
     }
