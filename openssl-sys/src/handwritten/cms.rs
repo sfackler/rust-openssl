@@ -63,11 +63,16 @@ extern "C" {
         flags: c_uint,
     ) -> c_int;
 
-    cfg_if!(
-        if #[cfg(any(ossl101, ossl102))] {
-            pub fn CMS_get0_type(cms: *mut CMS_ContentInfo) -> *const ASN1_OBJECT;
-        } else {
+}
+
+cfg_if! {
+    if #[cfg(ossl111)] {
+        extern "C" {
             pub fn CMS_get0_type(cms: *const CMS_ContentInfo) -> *const ASN1_OBJECT;
         }
-    );
+    } else {
+        extern "C" {
+            pub fn CMS_get0_type(cms: *mut CMS_ContentInfo) -> *const ASN1_OBJECT;
+        }
+    }
 }
