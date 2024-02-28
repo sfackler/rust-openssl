@@ -94,7 +94,7 @@ use std::ptr;
 
 cfg_if! {
     if #[cfg(any(ossl110, boringssl, libressl382))] {
-        use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
+        use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new, EVP_MD_CTX_copy_ex};
     } else {
         use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
     }
@@ -397,6 +397,16 @@ impl MdCtxRef {
             Ok(())
         }
     }
+
+    /// Copies the EVP_MD_CTX if `in_` into `self`.
+    ///
+    /// This can be used to efficiently digest different data with the same prefix.
+    #[corresponds(EVP_MD_CTX_copy_ex)]
+    #[inline]
+    pub fn copy(&mut self, in_: &Self) -> Result<(), ErrorStack> {
+        unsafe { cvt(EVP_MD_CTX_copy_ex(self.as_ptr(), in_.as_ptr()))? };
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -500,6 +510,40 @@ mod test {
         ctx.digest_init(Md::sha512()).unwrap();
         assert_eq!(Md::sha512().size(), ctx.size());
         assert_eq!(Md::sha512().size(), 64);
+    }
+
+    #[test]
+    fn verify_md_ctx_copy() {
+        let hello_world_expected =
+            hex::decode("872e4e50ce9990d8b041330c47c9ddd11bec6b503ae9386a99da8584e9bb12c4")
+                .unwrap();
+        let hello_there_expected =
+            hex::decode("aeaef02301bb0fc74af5bb81cee93f086b1e39159fc41319b47db3e8d1998348")
+                .unwrap();
+        // Create context with initial shared data
+        let mut ctx_world = MdCtx::new().unwrap();
+        ctx_world.digest_init(Md::sha256()).unwrap();
+        ctx_world.digest_update(b"Hello").unwrap();
+
+        // Copy the context into another
+        let mut ctx_there = MdCtx::new().unwrap();
+        ctx_there.copy(&ctx_world).unwrap();
+
+        // Update both contexts with different data
+        ctx_world.digest_update(b"World").unwrap();
+        ctx_there.digest_update(b"There").unwrap();
+
+        // Validate result of digest of "HelloWorld"
+        let mut result_world = vec![0; 32];
+        let result_len = ctx_world.digest_final(result_world.as_mut_slice()).unwrap();
+        assert_eq!(result_len, hello_world_expected.len());
+        assert_eq!(result_world, hello_world_expected);
+
+        // Validate result of digest of "HelloThere"
+        let mut result_there = vec![0; 32];
+        let result_len = ctx_there.digest_final(result_there.as_mut_slice()).unwrap();
+        assert_eq!(result_len, hello_there_expected.len());
+        assert_eq!(result_there, hello_there_expected);
     }
 
     #[test]
