@@ -4,7 +4,7 @@ use libc::strlen;
 use openssl_macros::corresponds;
 use std::ffi::{c_void, CString};
 
-struct Engine(*mut ffi::ENGINE);
+pub struct Engine(*mut ffi::ENGINE);
 
 impl Engine {
     /// Creates a new Engine.
@@ -71,21 +71,19 @@ impl Engine {
     /// Adds the engine to OpenSSL's internal engine list.
     #[corresponds(ENGINE_add)]
     #[inline]
-    pub fn add(&mut self) -> Result<(), ErrorStack> {
+    pub fn add(&mut self) -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_add(self.as_ptr()))?;
+            return cvt(ffi::ENGINE_add(self.as_ptr()));
         }
-        Ok(())
     }
 
     /// Removes the engine from OpenSSL's internal engine list.
     #[corresponds(ENGINE_remove)]
     #[inline]
-    pub fn remove(&mut self) -> Result<(), ErrorStack> {
+    pub fn remove(&mut self) -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_remove(self.as_ptr()))?;
+            return cvt(ffi::ENGINE_remove(self.as_ptr()));
         }
-        Ok(())
     }
 
     /// Returns an engine with the passed in `id`.
@@ -102,11 +100,10 @@ impl Engine {
     /// Remove all references to the passed in engine.
     #[corresponds(ENGINE_finish)]
     #[inline]
-    pub fn finish(&mut self) -> Result<(), ErrorStack> {
+    pub fn finish(&mut self) -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_finish(self.as_ptr()))?;
+            return cvt(ffi::ENGINE_finish(self.as_ptr()));
         }
-        Ok(())
     }
 
     /// Loads the builtin engines.
@@ -181,82 +178,83 @@ impl Engine {
     /// Sets the default RSA engine.
     #[corresponds(ENGINE_set_default_RSA)]
     #[inline]
-    pub fn set_default_rsa(&mut self) -> Result<(), ErrorStack> {
+    pub fn set_default_rsa(&mut self) -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_set_default_RSA(self.as_ptr()))?;
+            let result = cvt(ffi::ENGINE_set_default_RSA(self.as_ptr()))?;
+            Ok(result)
         }
-        Ok(())
     }
 
     /// Sets the default DSA engine.
     #[corresponds(ENGINE_set_default_DSA)]
     #[inline]
-    pub fn set_default_dsa(&mut self) -> Result<(), ErrorStack> {
+    pub fn set_default_dsa(&mut self) -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_set_default_DSA(self.as_ptr()))?;
+            return cvt(ffi::ENGINE_set_default_DSA(self.as_ptr()));
         }
-        Ok(())
     }
 
     /// Sets the default DH engine.
     #[corresponds(ENGINE_set_default_DH)]
     #[inline]
-    pub fn set_default_dh(&mut self) -> Result<(), ErrorStack> {
+    pub fn set_default_dh(&mut self) -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_set_default_DH(self.as_ptr()))?;
+            return cvt(ffi::ENGINE_set_default_DH(self.as_ptr()));
         }
-        Ok(())
     }
 
     /// Sets the default RAND engine.
     #[corresponds(ENGINE_set_default_RAND)]
     #[inline]
-    pub fn set_default_rand(&mut self) -> Result<(), ErrorStack> {
+    pub fn set_default_rand(&mut self) -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_set_default_RAND(self.as_ptr()))?;
+            return cvt(ffi::ENGINE_set_default_RAND(self.as_ptr()));
         }
-        Ok(())
     }
 
     /// Sets the default ciphers engine.
     #[corresponds(ENGINE_set_default_ciphers)]
     #[inline]
-    pub fn set_default_ciphers(&mut self) -> Result<(), ErrorStack> {
+    pub fn set_default_ciphers(&mut self) -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_set_default_ciphers(self.as_ptr()))?;
+            return cvt(ffi::ENGINE_set_default_ciphers(self.as_ptr()));
         }
-        Ok(())
     }
 
     /// Sets the default digests engine.
     #[corresponds(ENGINE_set_default_digests)]
     #[inline]
-    pub fn set_default_digests(&mut self) -> Result<(), ErrorStack> {
+    pub fn set_default_digests(&mut self) -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_set_default_digests(self.as_ptr()))?;
+            return cvt(ffi::ENGINE_set_default_digests(self.as_ptr()));
         }
-        Ok(())
     }
 
     /// Sets the default string for the engine.
     #[corresponds(ENGINE_set_default_string)]
     #[inline]
-    pub fn set_default_string(&mut self, list: &str) -> Result<(), ErrorStack> {
+    pub fn set_default_string(&mut self, list: &str) -> Result<i32, ErrorStack> {
         let list = CString::new(list).unwrap();
         unsafe {
-            cvt(ffi::ENGINE_set_default_string(self.as_ptr(), list.as_ptr()))?;
+            return cvt(ffi::ENGINE_set_default_string(self.as_ptr(), list.as_ptr()));
         }
-        Ok(())
+    }
+    /// Sets the default engine.
+    #[corresponds(ENGINE_init)]
+    #[inline]
+    pub fn init(&mut self) -> Result<i32, ErrorStack> {
+        unsafe {
+            return cvt(ffi::ENGINE_init(self.as_ptr()));
+        }
     }
 
     /// Sets the default engine.
     #[corresponds(ENGINE_set_default)]
     #[inline]
-    pub fn set_default(&mut self, flags: u32) -> Result<(), ErrorStack> {
+    pub fn set_default(&mut self, flags: u32) -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_set_default(self.as_ptr(), flags))?;
+            return cvt(ffi::ENGINE_set_default(self.as_ptr(), flags));
         }
-        Ok(())
     }
 
     /// Returns the (global?) engine table flags.
@@ -280,11 +278,10 @@ impl Engine {
     /// Registers the input engine as the RSA engine.
     #[corresponds(ENGINE_register_RSA)]
     #[inline]
-    pub fn register_rsa(&mut self) -> Result<(), ErrorStack> {
+    pub fn register_rsa(&mut self) -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_register_RSA(self.as_ptr()))?;
+            return cvt(ffi::ENGINE_register_RSA(self.as_ptr()));
         }
-        Ok(())
     }
 
     /// Unregisters the input engine as the RSA engine.
@@ -308,11 +305,10 @@ impl Engine {
     /// Registers the input engine as the DSA engine.
     #[corresponds(ENGINE_register_DSA)]
     #[inline]
-    pub fn register_dsa(&mut self) -> Result<(), ErrorStack> {
+    pub fn register_dsa(&mut self) -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_register_DSA(self.as_ptr()))?;
+            return cvt(ffi::ENGINE_register_DSA(self.as_ptr()));
         }
-        Ok(())
     }
 
     /// Unregisters the input engine as the DSA engine.
@@ -336,11 +332,10 @@ impl Engine {
     /// Registers the input engine as the DH engine.
     #[corresponds(ENGINE_register_DH)]
     #[inline]
-    pub fn register_dh(&mut self) -> Result<(), ErrorStack> {
+    pub fn register_dh(&mut self) -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_register_DH(self.as_ptr()))?;
+            return cvt(ffi::ENGINE_register_DH(self.as_ptr()));
         }
-        Ok(())
     }
 
     /// Unregisters the input engine as the DH engine.
@@ -364,11 +359,10 @@ impl Engine {
     /// Registers the input engine as the RAND engine.
     #[corresponds(ENGINE_register_RAND)]
     #[inline]
-    pub fn register_rand(&mut self) -> Result<(), ErrorStack> {
+    pub fn register_rand(&mut self) -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_register_RAND(self.as_ptr()))?;
+            return cvt(ffi::ENGINE_register_RAND(self.as_ptr()));
         }
-        Ok(())
     }
 
     /// Unregisters the input engine as the RAND engine.
@@ -392,11 +386,10 @@ impl Engine {
     /// Registers ciphers from the input engine.
     #[corresponds(ENGINE_register_ciphers)]
     #[inline]
-    pub fn register_ciphers(&mut self) -> Result<(), ErrorStack> {
+    pub fn register_ciphers(&mut self) -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_register_ciphers(self.as_ptr()))?;
+            return cvt(ffi::ENGINE_register_ciphers(self.as_ptr()));
         }
-        Ok(())
     }
 
     /// Unregisters the ciphers from the input engine.
@@ -420,11 +413,10 @@ impl Engine {
     /// Registers digests from the input engine.
     #[corresponds(ENGINE_register_digests)]
     #[inline]
-    pub fn register_digests(&mut self) -> Result<(), ErrorStack> {
+    pub fn register_digests(&mut self) -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_register_digests(self.as_ptr()))?;
+            return cvt(ffi::ENGINE_register_digests(self.as_ptr()));
         }
-        Ok(())
     }
 
     /// Unregisters the digests from the input engine.
@@ -447,20 +439,18 @@ impl Engine {
 
     #[corresponds(ENGINE_register_complete)]
     #[inline]
-    pub fn register_complete(&mut self) -> Result<(), ErrorStack> {
+    pub fn register_complete(&mut self) -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_register_complete(self.as_ptr()))?;
+            return cvt(ffi::ENGINE_register_complete(self.as_ptr()));
         }
-        Ok(())
     }
 
     #[corresponds(ENGINE_register_all_complete)]
     #[inline]
-    pub fn register_all_complete() -> Result<(), ErrorStack> {
+    pub fn register_all_complete() -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_register_all_complete())?;
+            return cvt(ffi::ENGINE_register_all_complete());
         }
-        Ok(())
     }
 
     #[corresponds(ENGINE_ctrl)]
@@ -477,11 +467,10 @@ impl Engine {
 
     #[corresponds(ENGINE_cmd_is_executable)]
     #[inline]
-    pub fn cmd_is_executable(&mut self, cmd: i32) -> Result<(), ErrorStack> {
+    pub fn cmd_is_executable(&mut self, cmd: i32) -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_cmd_is_executable(self.as_ptr(), cmd))?;
+            return cvt(ffi::ENGINE_cmd_is_executable(self.as_ptr(), cmd));
         }
-        Ok(())
     }
 
     #[corresponds(ENGINE_ctrl_cmd)]
@@ -497,39 +486,49 @@ impl Engine {
         _cmd: &str,
         _arg: &str,
         _optional: i32,
-    ) -> Result<(), ErrorStack> {
-        todo!();
+    ) -> Result<i32, ErrorStack> {
+        let cmd = CString::new(_cmd).unwrap();
+        let arg = CString::new(_arg).unwrap();
+        unsafe {
+            return cvt(ffi::ENGINE_ctrl_cmd_string(self.as_ptr(), cmd.as_ptr(), arg.as_ptr(), 0));
+        }
     }
-
+    #[corresponds(ENGINE_ctrl_cmd_string)]
+    #[inline]
+    pub fn load(
+        &mut self
+    ) -> Result<i32, ErrorStack> {
+        let cmd = CString::new("LOAD").unwrap();
+        unsafe {
+            return cvt(ffi::ENGINE_ctrl_cmd_string(self.as_ptr(), cmd.as_ptr(), std::ptr::null(), 0));
+        }
+    }
     #[corresponds(ENGINE_up_ref)]
     #[inline]
-    pub fn up_ref(&mut self) -> Result<(), ErrorStack> {
+    pub fn up_ref(&mut self) -> Result<i32, ErrorStack> {
         unsafe {
-            cvt(ffi::ENGINE_up_ref(self.as_ptr()))?;
+            return cvt(ffi::ENGINE_up_ref(self.as_ptr()));
         }
-        Ok(())
     }
 
     /// Sets the ID on the engine.
     #[corresponds(ENGINE_set_id)]
     #[inline]
-    pub fn set_id(&mut self, id: &str) -> Result<(), ErrorStack> {
+    pub fn set_id(&mut self, id: &str) -> Result<i32, ErrorStack> {
         let id = CString::new(id).unwrap();
         unsafe {
-            cvt(ffi::ENGINE_set_id(self.as_ptr(), id.as_ptr()))?;
+            return cvt(ffi::ENGINE_set_id(self.as_ptr(), id.as_ptr()));
         }
-        Ok(())
     }
 
     /// Sets the name on the engine.
     #[corresponds(ENGINE_set_name)]
     #[inline]
-    pub fn set_name(&mut self, name: &str) -> Result<(), ErrorStack> {
+    pub fn set_name(&mut self, name: &str) -> Result<i32, ErrorStack> {
         let name = CString::new(name).unwrap();
         unsafe {
-            cvt(ffi::ENGINE_set_name(self.as_ptr(), name.as_ptr()))?;
+            return cvt(ffi::ENGINE_set_name(self.as_ptr(), name.as_ptr()));
         }
-        Ok(())
     }
 
     /// Sets the RSA method on the engine.
