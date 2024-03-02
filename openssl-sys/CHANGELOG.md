@@ -2,10 +2,20 @@
 
 ## [Unreleased]
 
+## [v0.9.101] - 2024-02-21
+
+### Fixed
+
+* Fixed a bug where, when building with the `vendored` feature, this crate always needed to be rebuilt.
+
+## [v0.9.100] - 2024-02-19
+
 ### Added
 
 * Added `OSSL_PARAM`, `OSSL_PARAM_construct_uint` , `OSSL_PARAM_construct_end`.
 * Added `EVP_PKEY_CTX_set_params` and `EVP_PKEY_CTX_get_params`.
+* Added `X509_alias_get0`.
+* Added `EVP_default_properties_enable_fips`.
 
 ## [v0.9.99] - 2024-01-19
 
@@ -583,7 +593,9 @@ Fixed builds against OpenSSL built with `no-cast`.
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.99..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.101..master
+[v0.9.101]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.100...openssl-sys-v0.9.101
+[v0.9.100]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.99...openssl-sys-v0.9.100
 [v0.9.99]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.98...openssl-sys-v0.9.99
 [v0.9.98]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.97...openssl-sys-v0.9.98
 [v0.9.97]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.96...openssl-sys-v0.9.97

@@ -311,6 +311,7 @@ extern "C" {
     pub fn X509_get_version(x: *const X509) -> c_long;
     pub fn X509_set_serialNumber(x: *mut X509, sn: *mut ASN1_INTEGER) -> c_int;
     pub fn X509_get_serialNumber(x: *mut X509) -> *mut ASN1_INTEGER;
+    pub fn X509_alias_get0(x: *mut X509, len: *mut c_int) -> *mut c_uchar;
 }
 const_ptr_api! {
     extern "C" {
