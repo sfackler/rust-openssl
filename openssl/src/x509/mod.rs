@@ -39,7 +39,6 @@ use crate::ssl::SslRef;
 use crate::stack::{Stack, StackRef, Stackable};
 use crate::string::OpensslString;
 use crate::util::{ForeignTypeExt, ForeignTypeRefExt};
-use crate::x509::extension::AuthorityKeyIdentifier;
 use crate::{cvt, cvt_n, cvt_p, cvt_p_const};
 use openssl_macros::corresponds;
 
@@ -1869,15 +1868,21 @@ impl X509Crl {
         ffi::d2i_X509_CRL
     }
 
+    #[cfg(ossl110)]
     const X509_VERSION_3: i32 = 2;
+    #[cfg(ossl110)]
     const X509_CRL_VERSION_2: i32 = 1;
 
+    // if not cfg(ossl110) issuer_cert is unused
+    #[allow(unused_variables)]
     pub fn new(issuer_cert: &X509, conf: Option<&ConfRef>) -> Result<Self, ErrorStack> {
         unsafe {
             let crl = Self(cvt_p(ffi::X509_CRL_new())?);
 
             #[cfg(ossl110)]
             if issuer_cert.version() >= Self::X509_VERSION_3 {
+                use crate::x509::extension::AuthorityKeyIdentifier;
+
                 #[cfg(any(ossl110, libressl251, boringssl))]
                 {
                     // "if present, MUST be v2" (source: RFC 5280, page 55)
