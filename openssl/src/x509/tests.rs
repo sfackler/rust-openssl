@@ -703,7 +703,7 @@ fn test_crl_sign() {
     let pkey = include_bytes!("../../test/rsa.pem");
     let pkey = PKey::private_key_from_pem(pkey).unwrap();
 
-    let mut crl = X509Crl::new(&ca).unwrap();
+    let mut crl = X509Crl::new(&ca, None).unwrap();
     crl.sign(&pkey, MessageDigest::sha256()).unwrap();
     assert!(crl.verify(&pkey).unwrap());
 }

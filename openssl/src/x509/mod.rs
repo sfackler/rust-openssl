@@ -39,6 +39,7 @@ use crate::ssl::SslRef;
 use crate::stack::{Stack, StackRef, Stackable};
 use crate::string::OpensslString;
 use crate::util::{ForeignTypeExt, ForeignTypeRefExt};
+use crate::x509::extension::AuthorityKeyIdentifier;
 use crate::{cvt, cvt_n, cvt_p, cvt_p_const};
 use openssl_macros::corresponds;
 
@@ -1868,20 +1869,50 @@ impl X509Crl {
         ffi::d2i_X509_CRL
     }
 
-    pub fn new(issuer_cert: &X509) -> Result<Self, ErrorStack> {
+    const X509_VERSION_3: i32 = 2;
+    const X509_CRL_VERSION_2: i32 = 1;
+
+    pub fn new(issuer_cert: &X509, conf: Option<&ConfRef>) -> Result<Self, ErrorStack> {
         unsafe {
             let crl = Self(cvt_p(ffi::X509_CRL_new())?);
-            #[cfg(ossl110)]
-            {
-                cvt(ffi::X509_CRL_set_version(
+
+            if issuer_cert.version() >= Self::X509_VERSION_3 {
+                #[cfg(any(ossl110, libressl251, boringssl))]
+                {
+                    // "if present, MUST be v2" (source: RFC 5280, page 55)
+                    cvt(ffi::X509_CRL_set_version(
+                        crl.as_ptr(),
+                        Self::X509_CRL_VERSION_2 as c_long,
+                    ))?;
+                }
+
+                cvt(ffi::X509_CRL_set_issuer_name(
                     crl.as_ptr(),
-                    issuer_cert.version() as c_long,
+                    issuer_cert.issuer_name().as_ptr(),
                 ))?;
+
+                let context = {
+                    let mut ctx = std::mem::MaybeUninit::<ffi::X509V3_CTX>::zeroed();
+                    ffi::X509V3_set_ctx(
+                        ctx.as_mut_ptr(),
+                        issuer_cert.as_ptr(),
+                        std::ptr::null_mut(),
+                        std::ptr::null_mut(),
+                        crl.as_ptr(),
+                        0,
+                    );
+                    let mut ctx = ctx.assume_init();
+
+                    if let Some(conf) = conf {
+                        ffi::X509V3_set_nconf(&mut ctx, conf.as_ptr());
+                    }
+
+                    X509v3Context(ctx, PhantomData)
+                };
+
+                let ext = AuthorityKeyIdentifier::new().keyid(true).build(&context)?;
+                cvt(ffi::X509_CRL_add_ext(crl.as_ptr(), ext.as_ptr(), -1))?;
             }
-            cvt(ffi::X509_CRL_set_issuer_name(
-                crl.as_ptr(),
-                issuer_cert.issuer_name().as_ptr(),
-            ))?;
 
             cfg_if!(
                 if #[cfg(any(ossl110, libressl270, boringssl))] {
@@ -1987,9 +2018,11 @@ impl X509Crl {
         }
     }
 
+    /// This is an internal function, therefore the caller is expected to ensure not to call this with a CRLv1
     /// Set the crl_number extension's value.
     /// If the extension is not present, it will be added.
-    pub fn set_crl_number(&mut self, value: &BigNum) -> Result<(), ErrorStack> {
+    fn set_crl_number(&mut self, value: &BigNum) -> Result<(), ErrorStack> {
+        debug_assert_eq!(self.version(), Self::X509_CRL_VERSION_2);
         unsafe {
             let value = Asn1Integer::from_bn(value)?;
             cvt(ffi::X509_CRL_add1_ext_i2d(
@@ -2001,6 +2034,26 @@ impl X509Crl {
                 ffi::X509V3_ADD_REPLACE.try_into().expect("This is an openssl flag and should therefore always fit into the expected integer type"),
             ))
             .map(|_| ())
+        }
+    }
+
+    /// Increment the crl number (or try to add the extension if not present)
+    ///
+    /// Returns the new crl number, unless self is a crlv1, which does not support extensions
+    pub fn increment_crl_number(&mut self) -> Result<Option<BigNum>, ErrorStack> {
+        if self.version() == Self::X509_CRL_VERSION_2 {
+            let new_crl_number = if let Some(mut n) = self.read_crl_number()? {
+                n.add_word(1)?;
+                n
+            } else {
+                BigNum::from_u32(1)?
+            };
+
+            self.set_crl_number(&new_crl_number)?;
+
+            Ok(Some(new_crl_number))
+        } else {
+            Ok(None)
         }
     }
 
