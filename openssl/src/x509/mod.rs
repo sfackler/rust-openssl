@@ -1895,6 +1895,10 @@ impl X509Crl {
         }
     }
 
+    pub fn version(&self) -> i32 {
+        unsafe { ffi::X509_CRL_get_version(self.as_ptr()) as i32 }
+    }
+
     /// use a negative value to set a time before 'now'
     pub fn set_last_update(&mut self, seconds_from_now: Option<i32>) -> Result<(), ErrorStack> {
         let time = Asn1Time::seconds_from_now(seconds_from_now.unwrap_or(0) as c_long)?;
