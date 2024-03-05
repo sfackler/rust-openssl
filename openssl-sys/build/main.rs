@@ -190,9 +190,12 @@ fn validate_headers(include_dirs: &[PathBuf]) -> Version {
 Header expansion error:
 {:?}
 
-Failed to find OpenSSL development headers.
+Failed to find OpenSSL development headers.  Note: openssl-sys is compatible
+only with OpenSSL versions: 1.0.1, 1.0.2, 1.1.0, 1.1.1, and 3.0.0.  Please
+ensure that the OpenSSL installation being linked is one of the supported
+versions.
 
-You can try fixing this setting the `OPENSSL_DIR` environment variable
+You can try fixing this by setting the `OPENSSL_DIR` environment variable
 pointing to your OpenSSL installation or installing OpenSSL headers package
 specific to your distribution:
 
