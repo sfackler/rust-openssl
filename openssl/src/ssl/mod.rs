@@ -82,7 +82,7 @@ use crate::x509::store::{X509Store, X509StoreBuilderRef, X509StoreRef};
 #[cfg(any(ossl102, boringssl, libressl261))]
 use crate::x509::verify::X509VerifyParamRef;
 use crate::x509::{X509Name, X509Ref, X509StoreContextRef, X509VerifyResult, X509};
-use crate::{cvt, cvt_n, cvt_p, init};
+use crate::{cvt, cvt_n, cvt_p, cvt_p_const, init};
 use bitflags::bitflags;
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
@@ -3480,6 +3480,47 @@ impl SslRef {
             let mut key = ptr::null_mut();
             match cvt_long(ffi::SSL_get_tmp_key(self.as_ptr(), &mut key)) {
                 Ok(_) => Ok(PKey::<Private>::from_ptr(key)),
+                Err(e) => Err(e),
+            }
+        }
+    }
+
+    /// Returns the NID of the negotiated group used for the handshake key
+    /// exchange process.
+    /// For TLSv1.3 connections this typically reflects the state of the
+    /// current connection, though in the case of PSK-only resumption, the
+    /// returned value will be from a previous connection.
+    /// For earlier TLS versions, when a session has been resumed, it always
+    /// reflects the group used for key exchange during the initial handshake
+    /// (otherwise it is from the current, non-resumption, connection).
+    /// This can be called by either client or server.
+    /// If the NID for the shared group is unknown then the value is set to the
+    /// bitwise OR of TLSEXT_nid_unknown (0x1000000) and the id of the group.
+    #[corresponds(SSL_get_negotiated_group)]
+    #[cfg(ossl300)]
+    pub fn negotiated_group(&self) -> Result<c_int, ErrorStack> {
+        unsafe { cvt(ffi::SSL_get_negotiated_group(self.as_ptr())) }
+    }
+
+    /// Return retrieve the TLS group name associated with a given TLS
+    /// group ID, as registered via built-in or external providers and as
+    /// returned by a call to SSL_get1_groups() or SSL_get_shared_group().
+    ///
+    /// If non-NULL, SSL_group_to_name() returns the TLS group name
+    /// corresponding to the given id as a NUL-terminated string.
+    /// If SSL_group_to_name() returns NULL, an error occurred; possibly no
+    /// corresponding tlsname was registered during provider initialisation.
+    ///
+    /// Note that the return value is valid only during the lifetime of the
+    /// SSL object ssl.
+    #[corresponds(SSL_group_to_name)]
+    #[cfg(ossl300)]
+    pub fn group_to_name<'s>(&'s self, id: c_int) -> Result<&'s str, ErrorStack> {
+        unsafe {
+            match cvt_p_const(ffi::SSL_group_to_name(self.as_ptr(), id)) {
+                Ok(constp) => Ok(CStr::from_ptr(constp)
+                    .to_str()
+                    .expect("Invalid UTF8 in input")),
                 Err(e) => Err(e),
             }
         }
