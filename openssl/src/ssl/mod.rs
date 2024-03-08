@@ -3515,7 +3515,7 @@ impl SslRef {
     /// SSL object ssl.
     #[corresponds(SSL_group_to_name)]
     #[cfg(ossl300)]
-    pub fn group_to_name<'s>(&'s self, id: c_int) -> Result<&'s str, ErrorStack> {
+    pub fn group_to_name(&self, id: c_int) -> Result<&str, ErrorStack> {
         unsafe {
             match cvt_p_const(ffi::SSL_group_to_name(self.as_ptr(), id)) {
                 Ok(constp) => Ok(CStr::from_ptr(constp)
