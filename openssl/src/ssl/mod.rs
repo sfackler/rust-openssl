@@ -59,6 +59,8 @@
 //! ```
 #[cfg(ossl300)]
 use crate::cvt_long;
+#[cfg(ossl300)]
+use crate::cvt_p_const;
 use crate::dh::{Dh, DhRef};
 #[cfg(all(ossl101, not(ossl110)))]
 use crate::ec::EcKey;
@@ -82,7 +84,7 @@ use crate::x509::store::{X509Store, X509StoreBuilderRef, X509StoreRef};
 #[cfg(any(ossl102, boringssl, libressl261))]
 use crate::x509::verify::X509VerifyParamRef;
 use crate::x509::{X509Name, X509Ref, X509StoreContextRef, X509VerifyResult, X509};
-use crate::{cvt, cvt_n, cvt_p, cvt_p_const, init};
+use crate::{cvt, cvt_n, cvt_p, init};
 use bitflags::bitflags;
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
