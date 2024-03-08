@@ -3496,6 +3496,7 @@ impl SslRef {
     /// reflects the group used for key exchange during the initial handshake
     /// (otherwise it is from the current, non-resumption, connection).
     /// This can be called by either client or server.
+    ///
     /// If the NID for the shared group is unknown then the value is set to the
     /// bitwise OR of TLSEXT_nid_unknown (0x1000000) and the id of the group.
     #[corresponds(SSL_get_negotiated_group)]
@@ -3504,9 +3505,9 @@ impl SslRef {
         unsafe { cvt(ffi::SSL_get_negotiated_group(self.as_ptr())) }
     }
 
-    /// Return retrieve the TLS group name associated with a given TLS
-    /// group ID, as registered via built-in or external providers and as
-    /// returned by a call to SSL_get1_groups() or SSL_get_shared_group().
+    /// Return the TLS group name associated with a given TLS group ID, as
+    /// registered via built-in or external providers and as returned by a call
+    /// to SSL_get1_groups() or SSL_get_shared_group().
     ///
     /// If non-NULL, SSL_group_to_name() returns the TLS group name
     /// corresponding to the given id as a NUL-terminated string.
