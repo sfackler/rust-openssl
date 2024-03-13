@@ -69,6 +69,8 @@ use crate::error::ErrorStack;
 use crate::ex_data::Index;
 #[cfg(ossl111)]
 use crate::hash::MessageDigest;
+#[cfg(ossl300)]
+use crate::nid::NegotiatedGroup;
 #[cfg(any(ossl110, libressl270))]
 use crate::nid::Nid;
 use crate::pkey::{HasPrivate, PKeyRef, Params, Private};
@@ -3501,8 +3503,11 @@ impl SslRef {
     /// bitwise OR of TLSEXT_nid_unknown (0x1000000) and the id of the group.
     #[corresponds(SSL_get_negotiated_group)]
     #[cfg(ossl300)]
-    pub fn negotiated_group(&self) -> Result<c_int, ErrorStack> {
-        unsafe { cvt(ffi::SSL_get_negotiated_group(self.as_ptr())) }
+    pub fn negotiated_group(&self) -> Result<NegotiatedGroup, ErrorStack> {
+        use crate::nid::NegotiatedGroup;
+
+        let raw = unsafe { cvt(ffi::SSL_get_negotiated_group(self.as_ptr())) };
+        raw.map(NegotiatedGroup::from_raw)
     }
 
     /// Return the TLS group name associated with a given TLS group ID, as
