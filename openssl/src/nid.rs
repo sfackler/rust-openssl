@@ -1096,6 +1096,76 @@ impl Nid {
     pub const CHACHA20_POLY1305: Nid = Nid(ffi::NID_chacha20_poly1305);
 }
 
+/// An abstract type wrapping a numerical identifier for a negotiated group.
+///
+/// This is most similar to a `Nid` (when it represents a known group)
+/// but can also represent a specific "unknown shared group".
+/// If the NID for the shared group is unknown then the value is set to the bitwise OR of TLSEXT_nid_unknown (0x1000000) and the id of the group.
+///
+/// # Examples
+///
+/// To view the integer representation of a `NegotiatedGroup`:
+///
+/// ```
+/// use openssl::nid::Nid;
+/// use openssl::nid::NegotiatedGroup;
+///
+/// assert!(Nid::AES_256_GCM.as_raw() == 901);
+/// assert!(NegotiatedGroup::from_raw(901).nid() == Some(Nid::AES_256_GCM));
+/// assert!(NegotiatedGroup::from_raw(901).unknown_group_id() == None);
+///
+/// let bogus_id: i32 = 0x6399;
+/// let raw = bogus_id | NegotiatedGroup::TLSEXT_nid_unknown;
+/// assert!(NegotiatedGroup::from_raw(raw).unknown_group_id() == Some(bogus_id));
+/// assert!(NegotiatedGroup::from_raw(raw).nid() == None);
+/// ```
+///
+/// # External Documentation
+///
+/// The following documentation provides context about returned numeric identifiers
+/// for negotiated groups in OpenSSL.
+///
+/// - [SSL_get_negotiated_group](https://www.openssl.org/docs/manmaster/man3/SSL_get_negotiated_group.html)
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[cfg(ossl300)]
+pub struct NegotiatedGroup(c_int);
+
+#[cfg(ossl300)]
+impl NegotiatedGroup {
+    #[allow(non_upper_case_globals)]
+    pub const TLSEXT_nid_unknown: i32 = 0x1000000;
+
+    /// Create a `NegotiatedGroup` from an integer representation.
+    pub const fn from_raw(raw: c_int) -> Self {
+        Self(raw)
+    }
+
+    /// Return the integer representation of a `NegotiatedGroup`.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub const fn as_raw(&self) -> c_int {
+        self.0
+    }
+
+    /// Return a `Nid` for the known negotiated group or `None``.
+    pub fn nid(self) -> Option<Nid> {
+        if (self.0 & Self::TLSEXT_nid_unknown) == 0 {
+            Some(Nid::from_raw(self.0))
+        } else {
+            None
+        }
+    }
+
+    /// Return a `i32` id for the unknown negotiated group or `None`.
+    pub fn unknown_group_id(self) -> Option<i32> {
+        if (self.0 & Self::TLSEXT_nid_unknown) != 0 {
+            let id = self.0 ^ Self::TLSEXT_nid_unknown;
+            Some(id)
+        } else {
+            None
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::Nid;

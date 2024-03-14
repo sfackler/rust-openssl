@@ -951,3 +951,8 @@ extern "C" {
     #[cfg(any(ossl110, libressl360))]
     pub fn SSL_get_security_level(s: *const SSL) -> c_int;
 }
+
+extern "C" {
+    #[cfg(ossl300)]
+    pub fn SSL_group_to_name(ssl: *mut SSL, id: c_int) -> *const c_char;
+}

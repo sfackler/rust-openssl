@@ -363,6 +363,8 @@ pub const SSL_CTRL_GET_MIN_PROTO_VERSION: c_int = 130;
 pub const SSL_CTRL_GET_MAX_PROTO_VERSION: c_int = 131;
 #[cfg(ossl300)]
 pub const SSL_CTRL_GET_TMP_KEY: c_int = 133;
+#[cfg(ossl300)]
+pub const SSL_CTRL_GET_NEGOTIATED_GROUP: c_int = 134;
 
 pub unsafe fn SSL_CTX_set_tmp_dh(ctx: *mut SSL_CTX, dh: *mut DH) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TMP_DH, 0, dh as *mut c_void)
@@ -518,6 +520,10 @@ cfg_if! {
 
         pub unsafe fn SSL_get_tmp_key(ssl: *mut SSL, key: *mut *mut EVP_PKEY) -> c_long {
             SSL_ctrl(ssl, SSL_CTRL_GET_TMP_KEY, 0, key as *mut c_void)
+        }
+
+        pub unsafe fn SSL_get_negotiated_group(ssl: *mut SSL) -> c_int {
+            SSL_ctrl(ssl, SSL_CTRL_GET_NEGOTIATED_GROUP, 0, ptr::null_mut()) as c_int
         }
     }
 }
