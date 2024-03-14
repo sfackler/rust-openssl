@@ -1112,6 +1112,12 @@ impl Nid {
 ///
 /// assert!(Nid::AES_256_GCM.as_raw() == 901);
 /// assert!(NegotiatedGroup::from_raw(901).nid() == Some(Nid::AES_256_GCM));
+/// assert!(NegotiatedGroup::from_raw(901).unknown_group_id() == None);
+///
+/// let bogus_id: i32 = 0x6399;
+/// let raw = bogus_id | NegotiatedGroup::TLSEXT_nid_unknown;
+/// assert!(NegotiatedGroup::from_raw(raw).unknown_group_id() == Some(bogus_id));
+/// assert!(NegotiatedGroup::from_raw(raw).nid() == None);
 /// ```
 ///
 /// # External Documentation
