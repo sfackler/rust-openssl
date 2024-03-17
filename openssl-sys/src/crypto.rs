@@ -1,16 +1,20 @@
 use super::*;
 use libc::*;
 
-extern "C" {
-    #[deprecated(note = "use CRYPTO_set_locking_callback__fixed_rust instead")]
-    #[cfg(not(ossl110))]
-    pub fn CRYPTO_set_locking_callback(
-        func: unsafe extern "C" fn(mode: c_int, n: c_int, file: *const c_char, line: c_int),
-    );
-
-    #[deprecated(note = "use CRYPTO_set_id_callback__fixed_rust instead")]
-    #[cfg(not(ossl110))]
-    pub fn CRYPTO_set_id_callback(func: unsafe extern "C" fn() -> c_ulong);
+// These symbols were originally bound with the wrong signatures. They were then
+// deprecated in favor of `__fixed_rust`-suffixed versions. The unsuffixed
+// symbols are now fixed, so the suffixed ones are deprecated aliases.
+#[cfg(not(ossl110))]
+#[deprecated(note = "use CRYPTO_set_locking_callback instead")]
+pub unsafe fn CRYPTO_set_locking_callback__fixed_rust(
+    func: Option<unsafe extern "C" fn(mode: c_int, n: c_int, file: *const c_char, line: c_int)>,
+) {
+    CRYPTO_set_locking_callback(func)
+}
+#[cfg(not(ossl110))]
+#[deprecated(note = "use CRYPTO_set_id_callback instead")]
+pub unsafe fn CRYPTO_set_id_callback__fixed_rust(func: Option<unsafe extern "C" fn() -> c_ulong>) {
+    CRYPTO_set_id_callback(func)
 }
 
 cfg_if! {

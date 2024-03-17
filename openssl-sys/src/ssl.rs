@@ -579,51 +579,57 @@ pub unsafe fn SSL_CTX_set_read_ahead(ctx: *mut SSL_CTX, m: c_long) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_SET_READ_AHEAD, m, ptr::null_mut())
 }
 
-#[allow(clashing_extern_declarations)]
-extern "C" {
-    #[deprecated(note = "use SSL_CTX_set_tmp_dh_callback__fixed_rust instead")]
-    pub fn SSL_CTX_set_tmp_dh_callback(
-        ctx: *mut SSL_CTX,
-        dh: unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int) -> *mut DH,
-    );
-    #[deprecated(note = "use SSL_set_tmp_dh_callback__fixed_rust instead")]
-    pub fn SSL_set_tmp_dh_callback(
-        ctx: *mut SSL,
-        dh: unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int) -> *mut DH,
-    );
-    #[deprecated(note = "use SSL_CTX_set_tmp_ecdh_callback__fixed_rust instead")]
-    #[cfg(not(ossl110))]
-    pub fn SSL_CTX_set_tmp_ecdh_callback(
-        ctx: *mut SSL_CTX,
-        ecdh: unsafe extern "C" fn(
-            ssl: *mut SSL,
-            is_export: c_int,
-            keylength: c_int,
-        ) -> *mut EC_KEY,
-    );
-    #[deprecated(note = "use SSL_set_tmp_ecdh_callback__fixed_rust instead")]
-    #[cfg(not(ossl110))]
-    pub fn SSL_set_tmp_ecdh_callback(
-        ssl: *mut SSL,
-        ecdh: unsafe extern "C" fn(
-            ssl: *mut SSL,
-            is_export: c_int,
-            keylength: c_int,
-        ) -> *mut EC_KEY,
-    );
-
-    #[deprecated(note = "use SSL_CTX_callback_ctrl__fixed_rust instead")]
-    pub fn SSL_CTX_callback_ctrl(
-        ctx: *mut SSL_CTX,
-        cmd: c_int,
-        fp: Option<extern "C" fn()>,
-    ) -> c_long;
-
-    #[deprecated(note = "use SSL_CTX_set_alpn_select_cb__fixed_rust instead")]
-    #[cfg(any(ossl102, libressl261))]
-    pub fn SSL_CTX_set_alpn_select_cb(
-        ssl: *mut SSL_CTX,
-        cb: extern "C" fn(
+// These symbols were originally bound with the wrong signatures. They were then
+// deprecated in favor of `__fixed_rust`-suffixed versions. The unsuffixed
+// symbols are now fixed, so the suffixed ones are deprecated aliases.
+#[deprecated(note = "use SSL_CTX_set_tmp_dh_callback instead")]
+pub unsafe fn SSL_CTX_set_tmp_dh_callback__fixed_rust(
+    ctx: *mut SSL_CTX,
+    dh: Option<unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int) -> *mut DH>,
+) {
+    SSL_CTX_set_tmp_dh_callback(ctx, dh)
+}
+#[deprecated(note = "use SSL_set_tmp_dh_callback instead")]
+pub unsafe fn SSL_set_tmp_dh_callback__fixed_rust(
+    ctx: *mut SSL,
+    dh: Option<unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int) -> *mut DH>,
+) {
+    SSL_set_tmp_dh_callback(ctx, dh)
+}
+#[deprecated(note = "use SSL_CTX_set_tmp_ecdh_callback instead")]
+#[cfg(not(ossl110))]
+pub unsafe fn SSL_CTX_set_tmp_ecdh_callback__fixed_rust(
+    ctx: *mut SSL_CTX,
+    ecdh: Option<
+        unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int) -> *mut EC_KEY,
+    >,
+) {
+    SSL_CTX_set_tmp_ecdh_callback(ctx, ecdh)
+}
+#[deprecated(note = "use SSL_set_tmp_ecdh_callback instead")]
+#[cfg(not(ossl110))]
+pub unsafe fn SSL_set_tmp_ecdh_callback__fixed_rust(
+    ssl: *mut SSL,
+    ecdh: Option<
+        unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int) -> *mut EC_KEY,
+    >,
+) {
+    SSL_set_tmp_ecdh_callback(ssl, ecdh)
+}
+#[deprecated(note = "use SSL_CTX_callback_ctrl instead")]
+pub unsafe fn SSL_CTX_callback_ctrl__fixed_rust(
+    ctx: *mut SSL_CTX,
+    cmd: c_int,
+    fp: Option<unsafe extern "C" fn()>,
+) -> c_long {
+    SSL_CTX_callback_ctrl(ctx, cmd, fp)
+}
+#[deprecated(note = "use SSL_CTX_set_alpn_select_cb instead")]
+#[cfg(any(ossl102, libressl261))]
+pub unsafe fn SSL_CTX_set_alpn_select_cb__fixed_rust(
+    ssl: *mut SSL_CTX,
+    cb: Option<
+        unsafe extern "C" fn(
             ssl: *mut SSL,
             out: *mut *const c_uchar,
             outlen: *mut c_uchar,
@@ -631,8 +637,10 @@ extern "C" {
             inlen: c_uint,
             arg: *mut c_void,
         ) -> c_int,
-        arg: *mut c_void,
-    );
+    >,
+    arg: *mut c_void,
+) {
+    SSL_CTX_set_alpn_select_cb(ssl, cb, arg)
 }
 
 #[cfg(not(ossl110))]
