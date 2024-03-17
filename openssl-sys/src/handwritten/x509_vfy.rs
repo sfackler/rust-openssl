@@ -41,6 +41,8 @@ extern "C" {
 
     pub fn X509_STORE_add_cert(store: *mut X509_STORE, x: *mut X509) -> c_int;
 
+    pub fn X509_STORE_add_crl(store: *mut X509_STORE, x: *mut X509_CRL) -> c_int;
+
     pub fn X509_STORE_add_lookup(
         store: *mut X509_STORE,
         meth: *mut X509_LOOKUP_METHOD,
