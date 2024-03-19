@@ -50,7 +50,7 @@ pub mod store;
 #[cfg(test)]
 mod tests;
 
-#[cfg(ossl110)]
+#[cfg(any(ossl110, boringssl))]
 bitflags::bitflags! {
     /// KeyUsage bitset
     ///
@@ -687,7 +687,7 @@ impl X509Ref {
         }
     }
 
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, boringssl))]
     /// Retrieves set of basic key usage flags within certificate
     #[corresponds(X509_get_key_usage)]
     pub fn key_usage(&self) -> X509KeyUsage {

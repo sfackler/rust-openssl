@@ -1193,7 +1193,7 @@ fn test_store_all_certificates() {
     assert_eq!(store.all_certificates().len(), 1);
 }
 
-#[cfg(ossl110)]
+#[cfg(any(ossl110, boringssl))]
 #[test]
 fn should_get_x509_key_usage() {
     use crate::x509::X509KeyUsage;
@@ -1256,7 +1256,7 @@ fn should_get_x509_key_usage() {
     assert!(!usage.contains(X509KeyUsage::DECIPHER_ONLY));
 }
 
-#[cfg(ossl110)]
+#[cfg(any(ossl110, boringssl))]
 #[test]
 fn should_get_x509_key_usage_when_no_set() {
     use crate::x509::X509KeyUsage;
