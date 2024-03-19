@@ -58,15 +58,15 @@ bitflags::bitflags! {
     #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     #[repr(transparent)]
     pub struct X509KeyUsage: u32 {
-        const DIGITAL_SIGNATURE = ffi::X509v3_KU_DIGITAL_SIGNATURE;
-        const NON_REPUDIATION = ffi::X509v3_KU_NON_REPUDIATION;
-        const KEY_ENCIPHERMENT = ffi::X509v3_KU_KEY_ENCIPHERMENT;
-        const DATA_ENCIPHERMENT = ffi::X509v3_KU_DATA_ENCIPHERMENT;
-        const KEY_AGREEMENT = ffi::X509v3_KU_KEY_AGREEMENT;
-        const KEY_CERT_SIGN = ffi::X509v3_KU_KEY_CERT_SIGN;
-        const CRL_SIGN = ffi::X509v3_KU_CRL_SIGN;
-        const ENCIPHER_ONLY = ffi::X509v3_KU_ENCIPHER_ONLY;
-        const DECIPHER_ONLY = ffi::X509v3_KU_DECIPHER_ONLY;
+        const DIGITAL_SIGNATURE = ffi::X509v3_KU_DIGITAL_SIGNATURE as u32;
+        const NON_REPUDIATION = ffi::X509v3_KU_NON_REPUDIATION as u32;
+        const KEY_ENCIPHERMENT = ffi::X509v3_KU_KEY_ENCIPHERMENT as u32;
+        const DATA_ENCIPHERMENT = ffi::X509v3_KU_DATA_ENCIPHERMENT as u32;
+        const KEY_AGREEMENT = ffi::X509v3_KU_KEY_AGREEMENT as u32;
+        const KEY_CERT_SIGN = ffi::X509v3_KU_KEY_CERT_SIGN as u32;
+        const CRL_SIGN = ffi::X509v3_KU_CRL_SIGN as u32;
+        const ENCIPHER_ONLY = ffi::X509v3_KU_ENCIPHER_ONLY as u32;
+        const DECIPHER_ONLY = ffi::X509v3_KU_DECIPHER_ONLY as u32;
     }
 }
 
