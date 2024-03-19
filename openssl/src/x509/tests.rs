@@ -18,7 +18,6 @@ use crate::x509::store::X509Lookup;
 use crate::x509::store::X509StoreBuilder;
 #[cfg(any(ossl102, boringssl, libressl261))]
 use crate::x509::verify::{X509VerifyFlags, X509VerifyParam};
-use crate::x509::X509KeyUsage;
 #[cfg(any(ossl102, boringssl))]
 use crate::x509::X509PurposeId;
 #[cfg(any(ossl102, boringssl, libressl261))]
@@ -1194,8 +1193,11 @@ fn test_store_all_certificates() {
     assert_eq!(store.all_certificates().len(), 1);
 }
 
+#[cfg(ossl110)]
 #[test]
 fn should_get_x509_key_usage() {
+    use crate::x509::X509KeyUsage;
+
     let pkey = pkey();
 
     let mut name = X509Name::builder().unwrap();

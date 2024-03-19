@@ -51,6 +51,7 @@ pub mod store;
 mod tests;
 
 bitflags::bitflags! {
+    #[cfg(ossl110)]
     /// KeyUsage bitset
     ///
     /// Refer to KeyUsage extension for details and meaning of every flag
@@ -686,6 +687,7 @@ impl X509Ref {
         }
     }
 
+    #[cfg(ossl110)]
     /// Retrieves set of basic key usage flags within certificate
     #[corresponds(X509_get_key_usage)]
     pub fn key_usage(&self) -> X509KeyUsage {
