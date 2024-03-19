@@ -50,6 +50,25 @@ pub mod store;
 #[cfg(test)]
 mod tests;
 
+bitflags::bitflags! {
+    /// KeyUsage bitset
+    ///
+    /// Refer to KeyUsage extension for details and meaning of every flag
+    #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[repr(transparent)]
+    pub struct X509KeyUsage: u32 {
+        const DIGITAL_SIGNATURE = ffi::X509v3_KU_DIGITAL_SIGNATURE;
+        const NON_REPUDIATION = ffi::X509v3_KU_NON_REPUDIATION;
+        const KEY_ENCIPHERMENT = ffi::X509v3_KU_KEY_ENCIPHERMENT;
+        const DATA_ENCIPHERMENT = ffi::X509v3_KU_DATA_ENCIPHERMENT;
+        const KEY_AGREEMENT = ffi::X509v3_KU_KEY_AGREEMENT;
+        const KEY_CERT_SIGN = ffi::X509v3_KU_KEY_CERT_SIGN;
+        const CRL_SIGN = ffi::X509v3_KU_CRL_SIGN;
+        const ENCIPHER_ONLY = ffi::X509v3_KU_ENCIPHER_ONLY;
+        const DECIPHER_ONLY = ffi::X509v3_KU_DECIPHER_ONLY;
+    }
+}
+
 /// A type of X509 extension.
 ///
 /// # Safety
@@ -665,6 +684,13 @@ impl X509Ref {
                 Some(slice::from_raw_parts(ptr, len as usize))
             }
         }
+    }
+
+    /// Retrieves set of basic key usage flags within certificate
+    #[corresponds(X509_get_key_usage)]
+    pub fn key_usage(&self) -> X509KeyUsage {
+        let res = unsafe { ffi::X509_get_key_usage(self.as_ptr()) };
+        X509KeyUsage::from_bits_retain(res)
     }
 
     to_pem! {

@@ -18,6 +18,7 @@ use crate::x509::store::X509Lookup;
 use crate::x509::store::X509StoreBuilder;
 #[cfg(any(ossl102, boringssl, libressl261))]
 use crate::x509::verify::{X509VerifyFlags, X509VerifyParam};
+use crate::x509::X509KeyUsage;
 #[cfg(any(ossl102, boringssl))]
 use crate::x509::X509PurposeId;
 #[cfg(any(ossl102, boringssl, libressl261))]
@@ -1191,4 +1192,64 @@ fn test_store_all_certificates() {
     };
 
     assert_eq!(store.all_certificates().len(), 1);
+}
+
+#[test]
+fn should_get_x509_key_usage() {
+    let pkey = pkey();
+
+    let mut name = X509Name::builder().unwrap();
+    name.append_entry_by_nid(Nid::COMMONNAME, "key_usage.com")
+        .unwrap();
+    let name = name.build();
+
+    let mut builder = X509::builder().unwrap();
+    builder.set_version(2).unwrap();
+    builder.set_subject_name(&name).unwrap();
+    builder.set_issuer_name(&name).unwrap();
+    builder
+        .set_not_before(&Asn1Time::days_from_now(0).unwrap())
+        .unwrap();
+    builder
+        .set_not_after(&Asn1Time::days_from_now(365).unwrap())
+        .unwrap();
+    builder.set_pubkey(&pkey).unwrap();
+
+    let mut serial = BigNum::new().unwrap();
+    serial.rand(128, MsbOption::MAYBE_ZERO, false).unwrap();
+    builder
+        .set_serial_number(&serial.to_asn1_integer().unwrap())
+        .unwrap();
+
+    let key_usage = KeyUsage::new()
+        .digital_signature()
+        .key_encipherment()
+        .build()
+        .unwrap();
+    builder.append_extension(key_usage).unwrap();
+    builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+
+    let x509 = builder.build();
+
+    assert!(pkey.public_eq(&x509.public_key().unwrap()));
+    assert!(x509.verify(&pkey).unwrap());
+
+    let cn = x509
+        .subject_name()
+        .entries_by_nid(Nid::COMMONNAME)
+        .next()
+        .unwrap();
+    assert_eq!(cn.data().as_slice(), b"key_usage.com");
+
+    let usage = x509.key_usage();
+    assert!(usage.contains(X509KeyUsage::DIGITAL_SIGNATURE));
+    assert!(usage.contains(X509KeyUsage::KEY_ENCIPHERMENT));
+    assert!(!usage.contains(X509KeyUsage::CRL_SIGN));
+    assert!(!usage.contains(X509KeyUsage::NON_REPUDIATION));
+    assert!(!usage.contains(X509KeyUsage::DATA_ENCIPHERMENT));
+    assert!(!usage.contains(X509KeyUsage::KEY_AGREEMENT));
+    assert!(!usage.contains(X509KeyUsage::KEY_CERT_SIGN));
+    assert!(!usage.contains(X509KeyUsage::CRL_SIGN));
+    assert!(!usage.contains(X509KeyUsage::ENCIPHER_ONLY));
+    assert!(!usage.contains(X509KeyUsage::DECIPHER_ONLY));
 }
