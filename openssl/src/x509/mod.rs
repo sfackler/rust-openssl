@@ -50,8 +50,8 @@ pub mod store;
 #[cfg(test)]
 mod tests;
 
+#[cfg(ossl110)]
 bitflags::bitflags! {
-    #[cfg(ossl110)]
     /// KeyUsage bitset
     ///
     /// Refer to KeyUsage extension for details and meaning of every flag
