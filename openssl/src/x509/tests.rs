@@ -1255,3 +1255,51 @@ fn should_get_x509_key_usage() {
     assert!(!usage.contains(X509KeyUsage::ENCIPHER_ONLY));
     assert!(!usage.contains(X509KeyUsage::DECIPHER_ONLY));
 }
+
+#[cfg(ossl110)]
+#[test]
+fn should_get_x509_key_usage_when_no_set() {
+    use crate::x509::X509KeyUsage;
+
+    let pkey = pkey();
+
+    let mut name = X509Name::builder().unwrap();
+    name.append_entry_by_nid(Nid::COMMONNAME, "key_usage.com")
+        .unwrap();
+    let name = name.build();
+
+    let mut builder = X509::builder().unwrap();
+    builder.set_version(2).unwrap();
+    builder.set_subject_name(&name).unwrap();
+    builder.set_issuer_name(&name).unwrap();
+    builder
+        .set_not_before(&Asn1Time::days_from_now(0).unwrap())
+        .unwrap();
+    builder
+        .set_not_after(&Asn1Time::days_from_now(365).unwrap())
+        .unwrap();
+    builder.set_pubkey(&pkey).unwrap();
+
+    let mut serial = BigNum::new().unwrap();
+    serial.rand(128, MsbOption::MAYBE_ZERO, false).unwrap();
+    builder
+        .set_serial_number(&serial.to_asn1_integer().unwrap())
+        .unwrap();
+
+    builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+
+    let x509 = builder.build();
+
+    assert!(pkey.public_eq(&x509.public_key().unwrap()));
+    assert!(x509.verify(&pkey).unwrap());
+
+    let cn = x509
+        .subject_name()
+        .entries_by_nid(Nid::COMMONNAME)
+        .next()
+        .unwrap();
+    assert_eq!(cn.data().as_slice(), b"key_usage.com");
+
+    let usage = x509.key_usage();
+    assert_eq!(usage, X509KeyUsage::empty());
+}

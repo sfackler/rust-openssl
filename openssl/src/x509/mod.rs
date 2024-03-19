@@ -692,7 +692,12 @@ impl X509Ref {
     #[corresponds(X509_get_key_usage)]
     pub fn key_usage(&self) -> X509KeyUsage {
         let res = unsafe { ffi::X509_get_key_usage(self.as_ptr()) };
-        X509KeyUsage::from_bits_retain(res)
+        //u32::MAX indicates key usage is not set
+        if res == u32::MAX {
+            X509KeyUsage::empty()
+        } else {
+            X509KeyUsage::from_bits_retain(res)
+        }
     }
 
     to_pem! {
