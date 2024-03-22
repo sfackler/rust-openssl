@@ -1672,12 +1672,12 @@ impl X509Revoked {
         ffi::d2i_X509_REVOKED
     }
 
-    pub fn new(to_revoke: &X509) -> Result<Self, ErrorStack> {
+    pub fn new(to_revoke: &X509Ref) -> Result<Self, ErrorStack> {
         unsafe { Ok(Self(Self::new_raw(to_revoke)?)) }
     }
 
     /// the caller has to ensure the pointer is freed
-    unsafe fn new_raw(to_revoke: &X509) -> Result<*mut ffi::X509_REVOKED, ErrorStack> {
+    unsafe fn new_raw(to_revoke: &X509Ref) -> Result<*mut ffi::X509_REVOKED, ErrorStack> {
         let result = cvt_p(ffi::X509_REVOKED_new())?;
 
         if ffi::X509_REVOKED_set_serialNumber(result, to_revoke.serial_number().as_ptr()) <= 0 {
@@ -1875,7 +1875,7 @@ impl X509Crl {
 
     // if not cfg(ossl110) issuer_cert is unused
     #[allow(unused_variables)]
-    pub fn new(issuer_cert: &X509, conf: Option<&ConfRef>) -> Result<Self, ErrorStack> {
+    pub fn new(issuer_cert: &X509Ref, conf: Option<&ConfRef>) -> Result<Self, ErrorStack> {
         unsafe {
             let crl = Self(cvt_p(ffi::X509_CRL_new())?);
 
