@@ -1,11 +1,6 @@
 use super::super::*;
 use libc::*;
 
-pub enum RSA_METHOD {}
-pub enum DSA_METHOD {}
-pub enum DH_METHOD {}
-pub enum RAND_METHOD {}
-
 pub enum ENGINE_GEN_INT_FUNC_PTR {}
 pub enum ENGINE_CIPHERS_PTR {}
 pub enum ENGINE_DIGESTS_PTR {}
@@ -239,6 +234,6 @@ extern "C" {
 }
 
 extern "C" {
-    #[cfg(any(ossl100))]
+    #[cfg(ossl100)]
     pub fn ENGINE_cleanup();
 }

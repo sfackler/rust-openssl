@@ -174,6 +174,23 @@ pub enum DH_METHOD {}
 
 cfg_if! {
     if #[cfg(any(ossl110, libressl280))] {
+        pub enum RAND {}
+    } else {
+        #[repr(C)]
+        pub struct RAND {
+            pub seed: fn (buf: *const c_void, num: c_int) -> c_int,
+            pub bytes: fn (buf: *mut c_uchar, num: c_int) -> c_int,
+            pub cleanup: fn () -> c_int,
+            pub add: fn (buf: *const c_void, num: c_int, entropy: f64) -> c_int,
+            pub pseudorand: fn (buf: *const c_uchar, num: c_int) -> c_int,
+            pub status: fn () -> c_int,
+        }
+    }
+}
+pub enum RAND_METHOD {}
+
+cfg_if! {
+    if #[cfg(any(ossl110, libressl280))] {
         pub enum DSA {}
     } else {
         #[repr(C)]
