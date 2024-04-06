@@ -38,10 +38,10 @@ use crate::ssl::SslRef;
 use crate::stack::{Stack, StackRef, Stackable};
 use crate::string::OpensslString;
 use crate::util::{ForeignTypeExt, ForeignTypeRefExt};
-use crate::{cvt, cvt_n, cvt_p};
+use crate::{cvt, cvt_n, cvt_p, cvt_p_const};
 use openssl_macros::corresponds;
 
-#[cfg(any(ossl102, libressl261))]
+#[cfg(any(ossl102, boringssl, libressl261))]
 pub mod verify;
 
 pub mod extension;
@@ -383,11 +383,6 @@ foreign_type_and_impl_send_sync! {
     pub struct X509Ref;
 }
 
-#[cfg(boringssl)]
-type X509LenTy = c_uint;
-#[cfg(not(boringssl))]
-type X509LenTy = c_int;
-
 impl X509Ref {
     /// Returns this certificate's subject name.
     #[corresponds(X509_get_subject_name)]
@@ -485,7 +480,7 @@ impl X509Ref {
 
     /// Retrieves the path length extension from a certificate, if it exists.
     #[corresponds(X509_get_pathlen)]
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, boringssl))]
     pub fn pathlen(&self) -> Option<u32> {
         let v = unsafe { ffi::X509_get_pathlen(self.as_ptr()) };
         u32::try_from(v).ok()
@@ -493,7 +488,7 @@ impl X509Ref {
 
     /// Returns this certificate's subject key id, if it exists.
     #[corresponds(X509_get0_subject_key_id)]
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, boringssl))]
     pub fn subject_key_id(&self) -> Option<&Asn1OctetStringRef> {
         unsafe {
             let data = ffi::X509_get0_subject_key_id(self.as_ptr());
@@ -503,7 +498,7 @@ impl X509Ref {
 
     /// Returns this certificate's authority key id, if it exists.
     #[corresponds(X509_get0_authority_key_id)]
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, boringssl))]
     pub fn authority_key_id(&self) -> Option<&Asn1OctetStringRef> {
         unsafe {
             let data = ffi::X509_get0_authority_key_id(self.as_ptr());
@@ -654,6 +649,24 @@ impl X509Ref {
         }
     }
 
+    /// Returns this certificate's "alias". This field is populated by
+    /// OpenSSL in some situations -- specifically OpenSSL will store a
+    /// PKCS#12 `friendlyName` in this field. This is not a part of the X.509
+    /// certificate itself, OpenSSL merely attaches it to this structure in
+    /// memory.
+    #[corresponds(X509_alias_get0)]
+    pub fn alias(&self) -> Option<&[u8]> {
+        unsafe {
+            let mut len = 0;
+            let ptr = ffi::X509_alias_get0(self.as_ptr(), &mut len);
+            if ptr.is_null() {
+                None
+            } else {
+                Some(slice::from_raw_parts(ptr, len as usize))
+            }
+        }
+    }
+
     to_pem! {
         /// Serializes the certificate into a PEM-encoded X509 structure.
         ///
@@ -760,15 +773,17 @@ impl X509 {
                 let r =
                     ffi::PEM_read_bio_X509(bio.as_ptr(), ptr::null_mut(), None, ptr::null_mut());
                 if r.is_null() {
-                    let err = ffi::ERR_peek_last_error();
-                    if ffi::ERR_GET_LIB(err) as X509LenTy == ffi::ERR_LIB_PEM
-                        && ffi::ERR_GET_REASON(err) == ffi::PEM_R_NO_START_LINE
-                    {
-                        ffi::ERR_clear_error();
-                        break;
+                    let e = ErrorStack::get();
+
+                    if let Some(err) = e.errors().last() {
+                        if err.library_code() == ffi::ERR_LIB_PEM as libc::c_int
+                            && err.reason_code() == ffi::PEM_R_NO_START_LINE as libc::c_int
+                        {
+                            break;
+                        }
                     }
 
-                    return Err(ErrorStack::get());
+                    return Err(e);
                 } else {
                     certs.push(X509(r));
                 }
@@ -832,7 +847,7 @@ impl Ord for X509 {
 
 impl PartialOrd for X509 {
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        X509Ref::partial_cmp(self, other)
+        Some(self.cmp(other))
     }
 }
 
@@ -1022,6 +1037,7 @@ impl X509Extension {
     /// # Safety
     ///
     /// This method modifies global state without locking and therefore is not thread safe
+    #[cfg(not(libressl390))]
     #[corresponds(X509V3_EXT_add_alias)]
     #[deprecated(
         note = "Use x509::extension types or new_from_der and then this is not necessary",
@@ -1746,6 +1762,17 @@ unsafe impl ExtensionType for CertificateIssuer {
     type Output = Stack<GeneralName>;
 }
 
+/// The CRL extension identifying how to access information and services for the issuer of the CRL
+pub enum AuthorityInformationAccess {}
+
+// SAFETY: AuthorityInformationAccess is defined to be a stack of AccessDescription in the RFC
+// and in OpenSSL.
+unsafe impl ExtensionType for AuthorityInformationAccess {
+    const NID: Nid = Nid::from_raw(ffi::NID_info_access);
+
+    type Output = Stack<AccessDescription>;
+}
+
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_CRL;
     fn drop = ffi::X509_CRL_free;
@@ -1915,6 +1942,36 @@ impl X509CrlRef {
     {
         unsafe { cvt_n(ffi::X509_CRL_verify(self.as_ptr(), key.as_ptr())).map(|n| n != 0) }
     }
+
+    /// Get the criticality and value of an extension.
+    ///
+    /// This returns None if the extension is not present or occurs multiple times.
+    #[corresponds(X509_CRL_get_ext_d2i)]
+    pub fn extension<T: ExtensionType>(&self) -> Result<Option<(bool, T::Output)>, ErrorStack> {
+        let mut critical = -1;
+        let out = unsafe {
+            // SAFETY: self.as_ptr() is a valid pointer to an X509_CRL.
+            let ext = ffi::X509_CRL_get_ext_d2i(
+                self.as_ptr(),
+                T::NID.as_raw(),
+                &mut critical as *mut _,
+                ptr::null_mut(),
+            );
+            // SAFETY: Extensions's contract promises that the type returned by
+            // OpenSSL here is T::Output.
+            T::Output::from_ptr_opt(ext as *mut _)
+        };
+        match (critical, out) {
+            (0, Some(out)) => Ok(Some((false, out))),
+            (1, Some(out)) => Ok(Some((true, out))),
+            // -1 means the extension wasn't found, -2 means multiple were found.
+            (-1 | -2, _) => Ok(None),
+            // A critical value of 0 or 1 suggests success, but a null pointer
+            // was returned so something went wrong.
+            (0 | 1, None) => Err(ErrorStack::get()),
+            (c_int::MIN..=-2 | 2.., _) => panic!("OpenSSL should only return -2, -1, 0, or 1 for an extension's criticality but it returned {}", critical),
+        }
+    }
 }
 
 /// The result of peer certificate verification.
@@ -2055,10 +2112,7 @@ impl GeneralName {
         }
     }
 
-    pub(crate) fn new_other_name(
-        oid: Asn1Object,
-        value: &Vec<u8>,
-    ) -> Result<GeneralName, ErrorStack> {
+    pub(crate) fn new_other_name(oid: Asn1Object, value: &[u8]) -> Result<GeneralName, ErrorStack> {
         unsafe {
             ffi::init();
 
@@ -2398,10 +2452,8 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl350))] {
+    if #[cfg(any(ossl110, libressl350, boringssl))] {
         use ffi::X509_OBJECT_free;
-    } else if #[cfg(boringssl)] {
-        use ffi::X509_OBJECT_free_contents as X509_OBJECT_free;
     } else {
         #[allow(bad_style)]
         unsafe fn X509_OBJECT_free(x: *mut ffi::X509_OBJECT) {
@@ -2499,7 +2551,7 @@ impl X509PurposeRef {
         unsafe {
             let sname = CString::new(sname).unwrap();
             cfg_if! {
-                if #[cfg(any(ossl110, libressl280))] {
+                if #[cfg(any(ossl110, libressl280, boringssl))] {
                     let purpose = cvt_n(ffi::X509_PURPOSE_get_by_sname(sname.as_ptr() as *const _))?;
                 } else {
                     let purpose = cvt_n(ffi::X509_PURPOSE_get_by_sname(sname.as_ptr() as *mut _))?;
@@ -2513,8 +2565,8 @@ impl X509PurposeRef {
     #[corresponds(X509_PURPOSE_get0)]
     pub fn from_idx(idx: c_int) -> Result<&'static X509PurposeRef, ErrorStack> {
         unsafe {
-            let ptr = cvt_p(ffi::X509_PURPOSE_get0(idx))?;
-            Ok(X509PurposeRef::from_ptr(ptr))
+            let ptr = cvt_p_const(ffi::X509_PURPOSE_get0(idx))?;
+            Ok(X509PurposeRef::from_const_ptr(ptr))
         }
     }
 
@@ -2530,8 +2582,14 @@ impl X509PurposeRef {
     /// - `X509_PURPOSE_TIMESTAMP_SIGN`
     pub fn purpose(&self) -> X509PurposeId {
         unsafe {
-            let x509_purpose: *mut ffi::X509_PURPOSE = self.as_ptr();
-            X509PurposeId::from_raw((*x509_purpose).purpose)
+            cfg_if! {
+                if #[cfg(any(ossl110, libressl280, boringssl))] {
+                    let x509_purpose = self.as_ptr() as *const ffi::X509_PURPOSE;
+                } else {
+                    let x509_purpose = self.as_ptr() as *mut ffi::X509_PURPOSE;
+                }
+            }
+            X509PurposeId::from_raw(ffi::X509_PURPOSE_get_id(x509_purpose))
         }
     }
 }

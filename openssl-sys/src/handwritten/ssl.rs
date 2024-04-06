@@ -640,7 +640,13 @@ extern "C" {
     pub fn SSL_stateless(s: *mut SSL) -> c_int;
     pub fn SSL_connect(ssl: *mut SSL) -> c_int;
     pub fn SSL_read(ssl: *mut SSL, buf: *mut c_void, num: c_int) -> c_int;
+    #[cfg(any(ossl111, libressl350))]
+    pub fn SSL_read_ex(ssl: *mut SSL, buf: *mut c_void, num: usize, readbytes: *mut usize)
+        -> c_int;
     pub fn SSL_peek(ssl: *mut SSL, buf: *mut c_void, num: c_int) -> c_int;
+    #[cfg(any(ossl111, libressl350))]
+    pub fn SSL_peek_ex(ssl: *mut SSL, buf: *mut c_void, num: usize, readbytes: *mut usize)
+        -> c_int;
     #[cfg(any(ossl111, libressl340))]
     pub fn SSL_read_early_data(
         s: *mut SSL,
@@ -661,6 +667,13 @@ extern "C" {
 
 extern "C" {
     pub fn SSL_write(ssl: *mut SSL, buf: *const c_void, num: c_int) -> c_int;
+    #[cfg(any(ossl111, libressl350))]
+    pub fn SSL_write_ex(
+        ssl: *mut SSL,
+        buf: *const c_void,
+        num: size_t,
+        written: *mut size_t,
+    ) -> c_int;
     #[cfg(any(ossl111, libressl340))]
     pub fn SSL_write_early_data(
         s: *mut SSL,
@@ -923,4 +936,18 @@ extern "C" {
     pub fn SSL_get_num_tickets(s: *const SSL) -> size_t;
     #[cfg(all(ossl111, not(ossl111b)))]
     pub fn SSL_get_num_tickets(s: *mut SSL) -> size_t;
+}
+
+extern "C" {
+    #[cfg(any(ossl110, libressl360))]
+    pub fn SSL_CTX_set_security_level(ctx: *mut SSL_CTX, level: c_int);
+
+    #[cfg(any(ossl110, libressl360))]
+    pub fn SSL_set_security_level(s: *mut SSL, level: c_int);
+
+    #[cfg(any(ossl110, libressl360))]
+    pub fn SSL_CTX_get_security_level(ctx: *const SSL_CTX) -> c_int;
+
+    #[cfg(any(ossl110, libressl360))]
+    pub fn SSL_get_security_level(s: *const SSL) -> c_int;
 }

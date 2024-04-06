@@ -55,6 +55,10 @@ impl Provider {
                 retain_fallbacks as _,
             ))?;
 
+            // OSSL_PROVIDER_try_load seems to leave errors on the stack, even
+            // when it succeeds.
+            let _ = ErrorStack::get();
+
             Ok(Provider::from_ptr(p))
         }
     }

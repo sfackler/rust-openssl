@@ -304,8 +304,19 @@ mod test {
         let parsed = pkcs12.parse2("mypass").unwrap();
 
         assert_eq!(
-            hex::encode(parsed.cert.unwrap().digest(MessageDigest::sha1()).unwrap()),
+            hex::encode(
+                parsed
+                    .cert
+                    .as_ref()
+                    .unwrap()
+                    .digest(MessageDigest::sha1())
+                    .unwrap()
+            ),
             "59172d9313e84459bcff27f967e79e6e9217e584"
+        );
+        assert_eq!(
+            parsed.cert.as_ref().unwrap().alias(),
+            Some(b"foobar.com" as &[u8])
         );
 
         let chain = parsed.ca.unwrap();
