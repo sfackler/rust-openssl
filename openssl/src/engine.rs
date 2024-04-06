@@ -263,9 +263,7 @@ impl Engine {
     #[corresponds(ENGINE_get_table_flags)]
     #[inline]
     pub fn get_table_flags() -> u32 {
-        unsafe {
-            ffi::ENGINE_get_table_flags()
-        }
+        unsafe { ffi::ENGINE_get_table_flags() }
     }
 
     /// Sets the (global?) engine table flags.
