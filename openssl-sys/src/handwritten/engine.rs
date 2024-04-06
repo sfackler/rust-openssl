@@ -22,7 +22,7 @@ pub const ENGINE_METHOD_EC: u32 = 0x0800;
 pub const ENGINE_METHOD_ALL: u32 = 0xffff;
 pub const ENGINE_METHOD_NONE: u32 = 0xffff;
 
-#[cfg(all(ossl110, not(ossl300)))]
+#[cfg(ossl110)]
 extern "C" {
     pub fn ENGINE_get_first() -> *mut ENGINE;
 
@@ -231,9 +231,6 @@ extern "C" {
         callback_data: *mut c_void,
     ) -> *mut EVP_PKEY;
 
-}
-
-extern "C" {
     #[cfg(ossl100)]
     pub fn ENGINE_cleanup();
 }

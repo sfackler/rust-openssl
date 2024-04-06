@@ -82,7 +82,7 @@ fn main() {
             cfg.header("openssl/kdf.h");
         }
 
-        if (0x10100000..0x30000000).contains(&version) {
+        if version >= 0x10000000 {
             cfg.header("openssl/engine.h");
         }
 
