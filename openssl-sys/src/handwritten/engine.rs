@@ -20,7 +20,7 @@ pub const ENGINE_METHOD_PKEY_ASN1_METHS: u32 = 0x0400;
 pub const ENGINE_METHOD_EC: u32 = 0x0800;
 
 pub const ENGINE_METHOD_ALL: u32 = 0xffff;
-pub const ENGINE_METHOD_NONE: u32 = 0xffff;
+pub const ENGINE_METHOD_NONE: u32 = 0x0000;
 
 #[cfg(ossl110)]
 extern "C" {

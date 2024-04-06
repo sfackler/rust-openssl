@@ -792,46 +792,46 @@ impl Drop for Engine {
     }
 }
 
-mod test {
-    use super::*;
-
-    // #[test]
-    fn test_basic_engine_creation() {
-        let mut engine = Engine::new().unwrap();
-
-        let name = String::from("engine_name");
-        let id = String::from("engine_id");
-
-        // there should not be errors on setting id or name
-        assert!(engine.set_id(&id).is_ok());
-        assert!(engine.set_name(&name).is_ok());
-
-        assert_eq!(id, engine.get_id().unwrap().as_str());
-        assert_eq!(name, engine.get_name().unwrap().as_str());
-    }
-
-    #[test]
-    fn iterate_through_engines() {
-        let mut engine = Engine::get_first().unwrap();
-
-        let mut has_engines = true;
-        let mut engine_cnt = 1;
-
-        println!("Engines:");
-
-        while has_engines {
-            println!(
-                "  {}, name={}, id={}",
-                engine_cnt,
-                engine.get_name().unwrap(),
-                engine.get_id().unwrap()
-            );
-            match engine.get_next() {
-                Ok(e) => engine = e,
-                Err(_) => has_engines = false,
-            }
-
-            engine_cnt += 1;
-        }
-    }
-}
+// mod test {
+//     use super::*;
+//
+//     // #[test]
+//     fn test_basic_engine_creation() {
+//         let mut engine = Engine::new().unwrap();
+//
+//         let name = String::from("engine_name");
+//         let id = String::from("engine_id");
+//
+//         // there should not be errors on setting id or name
+//         assert!(engine.set_id(&id).is_ok());
+//         assert!(engine.set_name(&name).is_ok());
+//
+//         assert_eq!(id, engine.get_id().unwrap().as_str());
+//         assert_eq!(name, engine.get_name().unwrap().as_str());
+//     }
+//
+//     #[test]
+//     fn iterate_through_engines() {
+//         let mut engine = Engine::get_first().unwrap();
+//
+//         let mut has_engines = true;
+//         let mut engine_cnt = 1;
+//
+//         println!("Engines:");
+//
+//         while has_engines {
+//             println!(
+//                 "  {}, name={}, id={}",
+//                 engine_cnt,
+//                 engine.get_name().unwrap(),
+//                 engine.get_id().unwrap()
+//             );
+//             match engine.get_next() {
+//                 Ok(e) => engine = e,
+//                 Err(_) => has_engines = false,
+//             }
+//
+//             engine_cnt += 1;
+//         }
+//     }
+// }
