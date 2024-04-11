@@ -304,69 +304,57 @@ impl Clone for RsaMethod {
     }
 }
 
+#[cfg(test)]
+#[cfg(ossl111)]
 mod test {
     use super::*;
     use cfg_if::cfg_if;
 
-    #[cfg(test)]
-    fn rsa_method_test() {
-        // Because there isn't a great way to test all of this RSA_METHOD functionality, what we
-        // do here is setup function pointers in this test module, and we call all of the
-        // RSA_METHOD functions as implemented above, simply to assert that everything
-        // (getters/setters) work as expected.
-
-        let name: &str = "TESTING RSA METHOD";
-
-        let mut rsa_method = RsaMethod::new(name, 0);
+    #[test]
+    fn new() {
+        let rsa_method = RsaMethod::new("TESTING METHOD", 0);
         assert!(rsa_method.is_ok());
-        let mut rsa_method = rsa_method.unwrap();
+    }
 
-        let clone = rsa_method.clone();
-        drop(clone);
+    #[test]
+    #[allow(clippy::redundant_clone)]
+    fn clone() {
+        let rsa_method = RsaMethod::new("TEST METHOD", 0);
+        drop(rsa_method.clone());
+    }
+
+    #[test]
+    fn name_change() {
+        let initial_name = "INITIAL NAME";
+        let rsa_method = RsaMethod::new(initial_name, 0);
+        assert!(rsa_method.is_ok());
+
+        let rsa_method = rsa_method.unwrap();
 
         let expected_name = rsa_method.get_name().unwrap();
-        assert_eq!(name, expected_name);
+        assert_eq!(initial_name, expected_name);
 
-        {
-            let new_name: &str = "NEW TESTING NAME";
-            rsa_method.set_name(new_name).unwrap();
-            let actual_new_name = rsa_method.get_name().unwrap();
-            assert_eq!(new_name, actual_new_name);
-        }
+        let updated_name = "UPDATED NAME";
+        assert!(rsa_method.set_name(updated_name).is_ok());
+        assert!(rsa_method.get_name().is_ok());
+        assert_eq!(updated_name, rsa_method.get_name().unwrap());
+    }
 
-        {
-            let new_flags: i32 = 0x00ff;
-            rsa_method.set_flags(new_flags).unwrap();
-            let actual_new_flags = rsa_method.get_flags().unwrap();
-            assert_eq!(new_flags, actual_new_flags);
-        }
+    #[test]
+    fn flags_change() {
+        let initial_flags: i32 = 0x8a8a; // nothing special, just uniquely identifiable
+        let rsa_method = RsaMethod::new("TESTING METHOD", initial_flags);
+        assert!(rsa_method.is_ok());
 
-        {
-            let some_app_data: *mut c_void = 0x0900 as *mut c_void;
-            rsa_method.set_app_data(some_app_data).unwrap();
-            let actual_app_data = rsa_method.get_app_data().unwrap();
-            assert_eq!(some_app_data, actual_app_data);
-        }
+        let rsa_method = rsa_method.unwrap();
 
-        // test all of the setters - the dummy functions for here are set down below
+        let expected_flags = rsa_method.get_flags().unwrap();
+        assert_eq!(initial_flags, expected_flags);
 
-        assert!(rsa_method.set_pub_enc(test_pub_enc).is_ok());
-        assert!(rsa_method.set_pub_dec(test_pub_dec).is_ok());
-        assert!(rsa_method.set_priv_enc(test_priv_enc).is_ok());
-        assert!(rsa_method.set_priv_dec(test_priv_dec).is_ok());
-        assert!(rsa_method.set_mod_exp(test_mod_exp).is_ok());
-        assert!(rsa_method.set_bn_mod_exp(test_bn_mod_exp).is_ok());
-        assert!(rsa_method.set_init(test_init).is_ok());
-        assert!(rsa_method.set_finish(test_finish).is_ok());
-        assert!(rsa_method.set_sign(test_sign).is_ok());
-        assert!(rsa_method.set_verify(test_verify).is_ok());
-        assert!(rsa_method.set_keygen(test_keygen).is_ok());
-
-        cfg_if! {
-            if #[cfg(ossl111)] {
-                rsa_method.set_multi_prime_keygen(test_multi_prime_keygen);
-            }
-        }
+        let updated_flags = 0xa8a8;
+        assert!(rsa_method.set_flags(updated_flags).is_ok());
+        assert!(rsa_method.get_flags().is_ok());
+        assert_eq!(updated_flags, rsa_method.get_flags().unwrap());
     }
 
     #[no_mangle]
@@ -380,6 +368,13 @@ mod test {
         0
     }
 
+    #[test]
+    fn set_pub_enc() {
+        let rsa_method = RsaMethod::new("TESTING METHOD", 0);
+        assert!(rsa_method.is_ok());
+        assert!(rsa_method.unwrap().set_pub_enc(test_pub_enc).is_ok());
+    }
+
     #[no_mangle]
     extern "C" fn test_pub_dec(
         _flen: c_int,
@@ -389,6 +384,13 @@ mod test {
         _padding: c_int,
     ) -> c_int {
         0
+    }
+
+    #[test]
+    fn set_pub_dec() {
+        let rsa_method = RsaMethod::new("TESTING METHOD", 0);
+        assert!(rsa_method.is_ok());
+        assert!(rsa_method.unwrap().set_pub_dec(test_pub_dec).is_ok());
     }
 
     #[no_mangle]
@@ -402,6 +404,13 @@ mod test {
         0
     }
 
+    #[test]
+    fn set_priv_enc() {
+        let rsa_method = RsaMethod::new("TESTING METHOD", 0);
+        assert!(rsa_method.is_ok());
+        assert!(rsa_method.unwrap().set_priv_enc(test_priv_enc).is_ok());
+    }
+
     #[no_mangle]
     extern "C" fn test_priv_dec(
         _flen: c_int,
@@ -413,6 +422,13 @@ mod test {
         0
     }
 
+    #[test]
+    fn set_priv_dec() {
+        let rsa_method = RsaMethod::new("TESTING METHOD", 0);
+        assert!(rsa_method.is_ok());
+        assert!(rsa_method.unwrap().set_priv_dec(test_priv_dec).is_ok());
+    }
+
     #[no_mangle]
     extern "C" fn test_mod_exp(
         _r0: *mut BIGNUM,
@@ -421,6 +437,13 @@ mod test {
         _ctx: *mut BN_CTX,
     ) -> c_int {
         0
+    }
+
+    #[test]
+    fn set_mod_exp() {
+        let rsa_method = RsaMethod::new("TESTING METHOD", 0);
+        assert!(rsa_method.is_ok());
+        assert!(rsa_method.unwrap().set_mod_exp(test_mod_exp).is_ok());
     }
 
     #[no_mangle]
@@ -435,14 +458,35 @@ mod test {
         0
     }
 
+    #[test]
+    fn set_bn_mod_exp() {
+        let rsa_method = RsaMethod::new("TESTING METHOD", 0);
+        assert!(rsa_method.is_ok());
+        assert!(rsa_method.unwrap().set_bn_mod_exp(test_bn_mod_exp).is_ok());
+    }
+
     #[no_mangle]
     extern "C" fn test_init(_rsa: *mut RSA) -> c_int {
         0
     }
 
+    #[test]
+    fn set_init() {
+        let rsa_method = RsaMethod::new("TESTING METHOD", 0);
+        assert!(rsa_method.is_ok());
+        assert!(rsa_method.unwrap().set_init(test_init).is_ok());
+    }
+
     #[no_mangle]
     extern "C" fn test_finish(_rsa: *mut RSA) -> c_int {
         0
+    }
+
+    #[test]
+    fn set_finish() {
+        let rsa_method = RsaMethod::new("TESTING METHOD", 0);
+        assert!(rsa_method.is_ok());
+        assert!(rsa_method.unwrap().set_finish(test_finish).is_ok());
     }
 
     #[no_mangle]
@@ -457,6 +501,13 @@ mod test {
         0
     }
 
+    #[test]
+    fn set_sign() {
+        let rsa_method = RsaMethod::new("TESTING METHOD", 0);
+        assert!(rsa_method.is_ok());
+        assert!(rsa_method.unwrap().set_sign(test_sign).is_ok());
+    }
+
     #[no_mangle]
     extern "C" fn test_verify(
         _dtype: c_int,
@@ -469,6 +520,13 @@ mod test {
         0
     }
 
+    #[test]
+    fn set_verify() {
+        let rsa_method = RsaMethod::new("TESTING METHOD", 0);
+        assert!(rsa_method.is_ok());
+        assert!(rsa_method.unwrap().set_verify(test_verify).is_ok());
+    }
+
     #[no_mangle]
     extern "C" fn test_keygen(
         _rsa: *mut RSA,
@@ -479,7 +537,15 @@ mod test {
         0
     }
 
+    #[test]
+    fn set_keygen() {
+        let rsa_method = RsaMethod::new("TESTING METHOD", 0);
+        assert!(rsa_method.is_ok());
+        assert!(rsa_method.unwrap().set_keygen(test_keygen).is_ok());
+    }
+
     #[no_mangle]
+    #[cfg(ossl111)]
     extern "C" fn test_multi_prime_keygen(
         _rsa: *mut RSA,
         _bits: c_int,
@@ -489,4 +555,13 @@ mod test {
     ) -> c_int {
         0
     }
+
+    #[cfg(ossl111)]
+    #[test]
+    fn set_multi_prime_keygen() {
+        let rsa_method = RsaMethod::new("TESTING METHOD", 0);
+        assert!(rsa_method.is_ok());
+        assert!(rsa_method.unwrap().set_multi_prime_keygen(test_multi_prime_keygen).is_ok());
+    }
+
 }
