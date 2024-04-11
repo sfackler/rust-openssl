@@ -84,6 +84,10 @@ impl RsaMethod {
         Ok(app_data)
     }
 
+    /// # Safety
+    ///
+    /// This function allows you to pass whatever pointer you want into your RSA_METHOD. User
+    /// discretion is advised.
     #[corresponds(RSA_meth_set0_app_data)]
     #[inline]
     pub unsafe fn set_app_data(&self, app_data: *mut c_void) -> Result<(), ErrorStack> {
