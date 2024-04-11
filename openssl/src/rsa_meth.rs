@@ -357,6 +357,22 @@ mod test {
         assert_eq!(updated_flags, rsa_method.get_flags().unwrap());
     }
 
+    #[test]
+    fn app_data() {
+        let rsa_method = RsaMethod::new("TESTING METHOD", 0);
+        assert!(rsa_method.is_ok());
+
+        let rsa_method = rsa_method.unwrap();
+
+        let initial_app_data = 0x8a8a as *mut c_void;
+        assert!(rsa_method.set_app_data(initial_app_data).is_ok());
+        assert_eq!(initial_app_data, rsa_method.get_app_data().unwrap());
+
+        let updated_app_data = 0xfafa as *mut c_void;
+        assert!(rsa_method.set_app_data(updated_app_data).is_ok());
+        assert_eq!(updated_app_data, rsa_method.get_app_data().unwrap());
+    }
+
     #[no_mangle]
     extern "C" fn test_pub_enc(
         _flen: c_int,
@@ -561,7 +577,9 @@ mod test {
     fn set_multi_prime_keygen() {
         let rsa_method = RsaMethod::new("TESTING METHOD", 0);
         assert!(rsa_method.is_ok());
-        assert!(rsa_method.unwrap().set_multi_prime_keygen(test_multi_prime_keygen).is_ok());
+        assert!(rsa_method
+            .unwrap()
+            .set_multi_prime_keygen(test_multi_prime_keygen)
+            .is_ok());
     }
-
 }
