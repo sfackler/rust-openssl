@@ -39,7 +39,7 @@ impl RsaMethod {
     #[inline]
     pub fn get_name(&self) -> Result<String, ErrorStack> {
         unsafe {
-            let name: *const i8 = cvt_p_const(ffi::RSA_meth_get0_name(self.as_ptr()))?;
+            let name = cvt_p_const(ffi::RSA_meth_get0_name(self.as_ptr()))?;
             Ok(CStr::from_ptr(name).to_str().unwrap().to_owned())
         }
     }
@@ -306,6 +306,7 @@ impl Clone for RsaMethod {
 
 mod test {
     use super::*;
+    use cfg_if::cfg_if;
 
     #[cfg(test)]
     fn rsa_method_test() {
@@ -320,7 +321,8 @@ mod test {
         assert!(rsa_method.is_ok());
         let mut rsa_method = rsa_method.unwrap();
 
-        rsa_method.clone();
+        let clone = rsa_method.clone();
+        drop(clone);
 
         let expected_name = rsa_method.get_name().unwrap();
         assert_eq!(name, expected_name);
@@ -348,18 +350,23 @@ mod test {
 
         // test all of the setters - the dummy functions for here are set down below
 
-        rsa_method.set_pub_enc(test_pub_enc).unwrap();
-        rsa_method.set_pub_dec(test_pub_dec).unwrap();
-        rsa_method.set_priv_enc(test_priv_enc);
-        rsa_method.set_priv_dec(test_priv_dec);
-        rsa_method.set_mod_exp(test_mod_exp);
-        rsa_method.set_bn_mod_exp(test_bn_mod_exp);
-        rsa_method.set_init(test_init);
-        rsa_method.set_finish(test_finish);
-        rsa_method.set_sign(test_sign);
-        rsa_method.set_verify(test_verify);
-        rsa_method.set_keygen(test_keygen);
-        rsa_method.set_multi_prime_keygen(test_multi_prime_keygen);
+        assert!(rsa_method.set_pub_enc(test_pub_enc).is_ok());
+        assert!(rsa_method.set_pub_dec(test_pub_dec).is_ok());
+        assert!(rsa_method.set_priv_enc(test_priv_enc).is_ok());
+        assert!(rsa_method.set_priv_dec(test_priv_dec).is_ok());
+        assert!(rsa_method.set_mod_exp(test_mod_exp).is_ok());
+        assert!(rsa_method.set_bn_mod_exp(test_bn_mod_exp).is_ok());
+        assert!(rsa_method.set_init(test_init).is_ok());
+        assert!(rsa_method.set_finish(test_finish).is_ok());
+        assert!(rsa_method.set_sign(test_sign).is_ok());
+        assert!(rsa_method.set_verify(test_verify).is_ok());
+        assert!(rsa_method.set_keygen(test_keygen).is_ok());
+
+        cfg_if! {
+            if #[cfg(ossl111)] {
+                rsa_method.set_multi_prime_keygen(test_multi_prime_keygen);
+            }
+        }
     }
 
     #[no_mangle]
