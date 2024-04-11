@@ -86,7 +86,7 @@ impl RsaMethod {
 
     #[corresponds(RSA_meth_set0_app_data)]
     #[inline]
-    pub fn set_app_data(&self, app_data: *mut c_void) -> Result<(), ErrorStack> {
+    pub unsafe fn set_app_data(&self, app_data: *mut c_void) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set0_app_data(self.as_ptr(), app_data))?;
         }
@@ -315,7 +315,6 @@ impl Clone for RsaMethod {
 #[cfg(ossl111)]
 mod test {
     use super::*;
-    use cfg_if::cfg_if;
 
     #[test]
     fn new() {
@@ -372,11 +371,11 @@ mod test {
         let rsa_method = rsa_method.unwrap();
 
         let initial_app_data = 0x8a8a as *mut c_void;
-        assert!(rsa_method.set_app_data(initial_app_data).is_ok());
+        assert!(unsafe { rsa_method.set_app_data(initial_app_data).is_ok() });
         assert_eq!(initial_app_data, rsa_method.get_app_data().unwrap());
 
         let updated_app_data = 0xfafa as *mut c_void;
-        assert!(rsa_method.set_app_data(updated_app_data).is_ok());
+        assert!(unsafe { rsa_method.set_app_data(updated_app_data).is_ok() });
         assert_eq!(updated_app_data, rsa_method.get_app_data().unwrap());
     }
 
