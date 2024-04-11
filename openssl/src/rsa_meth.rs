@@ -1,10 +1,17 @@
+//! RSA Methods
+//!
+//! The [`RsaMethod`] type is a structure used for the provisioning of custom RSA implementations.
+//! It provides a set of functions used by OpenSSL for the implementation of the various RSA
+//! capabilities. See the wrapper's [RSA](/rsa) documentation, or the manual's documentation
+//! [`RSA_METHOD`](https://www.openssl.org/docs/man1.1.1/man3/RSA_meth_new.html) for more details.
+
 use crate::error::ErrorStack;
 use crate::{cvt, cvt_p, cvt_p_const};
 use ffi::{BIGNUM, BN_CTX, BN_GENCB, BN_MONT_CTX, RSA};
 use openssl_macros::corresponds;
 use std::ffi::{c_int, c_uchar, c_uint, c_void, CStr, CString};
 
-struct RsaMethod(*mut ffi::RSA_METHOD);
+pub struct RsaMethod(*mut ffi::RSA_METHOD);
 
 impl RsaMethod {
     /// Creates a new `RSA_METHOD` structure.
