@@ -24,6 +24,8 @@ pub use self::poly1305::*;
 pub use self::provider::*;
 pub use self::rand::*;
 pub use self::rsa::*;
+#[cfg(ossl110)]
+pub use self::rsa_meth::*;
 pub use self::safestack::*;
 pub use self::sha::*;
 pub use self::srtp::*;
@@ -61,6 +63,8 @@ mod poly1305;
 mod provider;
 mod rand;
 mod rsa;
+#[cfg(ossl110)]
+mod rsa_meth;
 mod safestack;
 mod sha;
 mod srtp;
