@@ -272,6 +272,7 @@ impl RsaMethod {
 
     #[corresponds(RSA_meth_set_multi_prime_keygen)]
     #[inline]
+    #[cfg(ossl111)]
     pub fn set_multi_prime_keygen(
         &self,
         keygen: extern "C" fn(

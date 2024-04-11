@@ -130,6 +130,7 @@ extern "C" {
         ) -> c_int,
     ) -> c_int;
 
+    #[cfg(ossl111)]
     pub fn RSA_meth_set_multi_prime_keygen(
         meth: *mut RSA_METHOD,
         keygen: extern "C" fn(
