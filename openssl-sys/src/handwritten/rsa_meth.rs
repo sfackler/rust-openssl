@@ -28,6 +28,7 @@ extern "C" {
             padding: c_int,
         ) -> c_int,
     ) -> c_int;
+
     pub fn RSA_meth_set_pub_dec(
         rsa: *mut RSA_METHOD,
         pub_dec: extern "C" fn(
