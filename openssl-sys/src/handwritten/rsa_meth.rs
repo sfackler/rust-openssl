@@ -18,29 +18,126 @@ extern "C" {
     pub fn RSA_meth_get0_app_data(meth: *const RSA_METHOD) -> *mut c_void;
     pub fn RSA_meth_set0_app_data(meth: *mut RSA_METHOD, app_data: *mut c_void) -> c_int;
 
-    pub fn RSA_meth_set_pub_enc(rsa: *mut RSA_METHOD, pub_enc: extern "C" fn(flen: c_int, from: *const c_uchar, to: *mut c_uchar, rsa: *mut RSA, padding: c_int) -> c_int) -> c_int;
-    pub fn RSA_meth_set_pub_dec(rsa: *mut RSA_METHOD, pub_dec: extern "C" fn(flen: c_int, from: *const c_uchar, to: *mut c_uchar, rsa: *mut RSA, padding: c_int) -> c_int) -> c_int;
+    pub fn RSA_meth_set_pub_enc(
+        rsa: *mut RSA_METHOD,
+        pub_enc: extern "C" fn(
+            flen: c_int,
+            from: *const c_uchar,
+            to: *mut c_uchar,
+            rsa: *mut RSA,
+            padding: c_int,
+        ) -> c_int,
+    ) -> c_int;
+    pub fn RSA_meth_set_pub_dec(
+        rsa: *mut RSA_METHOD,
+        pub_dec: extern "C" fn(
+            flen: c_int,
+            from: *const c_uchar,
+            to: *mut c_uchar,
+            rsa: *mut RSA,
+            padding: c_int,
+        ) -> c_int,
+    ) -> c_int;
 
-    pub fn RSA_meth_set_priv_enc(rsa: *mut RSA_METHOD, priv_enc: extern "C" fn(flen: c_int, from: *const c_uchar, to: *mut c_uchar, rsa: *mut RSA, padding: c_int) -> c_int) -> c_int;
-    pub fn RSA_meth_set_priv_dec(rsa: *mut RSA_METHOD, priv_dec: extern "C" fn(flen: c_int, from: *const c_uchar, to: *mut c_uchar, rsa: *mut RSA, padding: c_int) -> c_int) -> c_int;
+    pub fn RSA_meth_set_priv_enc(
+        rsa: *mut RSA_METHOD,
+        priv_enc: extern "C" fn(
+            flen: c_int,
+            from: *const c_uchar,
+            to: *mut c_uchar,
+            rsa: *mut RSA,
+            padding: c_int,
+        ) -> c_int,
+    ) -> c_int;
+    pub fn RSA_meth_set_priv_dec(
+        rsa: *mut RSA_METHOD,
+        priv_dec: extern "C" fn(
+            flen: c_int,
+            from: *const c_uchar,
+            to: *mut c_uchar,
+            rsa: *mut RSA,
+            padding: c_int,
+        ) -> c_int,
+    ) -> c_int;
 
     /// Notes from OpenSSL documentation: Can be null.
-    pub fn RSA_meth_set_mod_exp(rsa: *mut RSA_METHOD, mod_exp: extern "C" fn(r0: *mut BIGNUM, i: *const BIGNUM, rsa: *mut RSA, ctx: *mut BN_CTX) -> c_int) -> c_int;
+    pub fn RSA_meth_set_mod_exp(
+        rsa: *mut RSA_METHOD,
+        mod_exp: extern "C" fn(
+            r0: *mut BIGNUM,
+            i: *const BIGNUM,
+            rsa: *mut RSA,
+            ctx: *mut BN_CTX,
+        ) -> c_int,
+    ) -> c_int;
 
     /// Notes from OpenSSL documentation: Can be null.
-    pub fn RSA_meth_set_bn_mod_exp(rsa: *mut RSA_METHOD, bn_mod_exp: extern "C" fn(r: *mut BIGNUM, a: *const BIGNUM, p: *const BIGNUM, m: *const BIGNUM, ctx: *mut BN_CTX, m_ctx: *mut BN_MONT_CTX) -> c_int) -> c_int;
+    pub fn RSA_meth_set_bn_mod_exp(
+        rsa: *mut RSA_METHOD,
+        bn_mod_exp: extern "C" fn(
+            r: *mut BIGNUM,
+            a: *const BIGNUM,
+            p: *const BIGNUM,
+            m: *const BIGNUM,
+            ctx: *mut BN_CTX,
+            m_ctx: *mut BN_MONT_CTX,
+        ) -> c_int,
+    ) -> c_int;
 
     /// Notes from OpenSSL documentation: Can be null.
-    pub fn RSA_meth_set_init(rsa: *mut RSA_METHOD, init: extern "C" fn(rsa: *mut RSA) -> c_int) -> c_int;
+    pub fn RSA_meth_set_init(
+        rsa: *mut RSA_METHOD,
+        init: extern "C" fn(rsa: *mut RSA) -> c_int,
+    ) -> c_int;
 
     /// Notes from OpenSSL documentation: Can be null.
-    pub fn RSA_meth_set_finish(rsa: *mut RSA_METHOD, finish: extern "C" fn(rsa: *mut RSA) -> c_int) -> c_int;
+    pub fn RSA_meth_set_finish(
+        rsa: *mut RSA_METHOD,
+        finish: extern "C" fn(rsa: *mut RSA) -> c_int,
+    ) -> c_int;
 
-    pub fn RSA_meth_set_sign(rsa: *mut RSA_METHOD, sign: extern "C" fn(_type: c_int, m: *const c_uchar, m_length: c_uint, sigret: *mut c_uchar, siglen: *mut c_uint, rsa: *const RSA) -> c_int) -> c_int;
+    pub fn RSA_meth_set_sign(
+        rsa: *mut RSA_METHOD,
+        sign: extern "C" fn(
+            _type: c_int,
+            m: *const c_uchar,
+            m_length: c_uint,
+            sigret: *mut c_uchar,
+            siglen: *mut c_uint,
+            rsa: *const RSA,
+        ) -> c_int,
+    ) -> c_int;
 
-    pub fn RSA_meth_set_verify(rsa: *mut RSA_METHOD, verify: extern "C" fn(dtype: c_int, m: *const c_uchar, m_length: c_uint, sigbuf: *const c_uchar, siglen: c_uint, rsa: *const RSA) -> c_int) -> c_int;
+    pub fn RSA_meth_set_verify(
+        rsa: *mut RSA_METHOD,
+        verify: extern "C" fn(
+            dtype: c_int,
+            m: *const c_uchar,
+            m_length: c_uint,
+            sigbuf: *const c_uchar,
+            siglen: c_uint,
+            rsa: *const RSA,
+        ) -> c_int,
+    ) -> c_int;
 
-    pub fn RSA_meth_set_keygen(rsa: *mut RSA_METHOD, keygen: extern "C" fn(rsa: *mut RSA, bits: c_int, e: *mut BIGNUM, cb: *mut BN_GENCB) -> c_int) -> c_int;
+    pub fn RSA_meth_set_keygen(
+        rsa: *mut RSA_METHOD,
+        keygen: extern "C" fn(
+            rsa: *mut RSA,
+            bits: c_int,
+            e: *mut BIGNUM,
+            cb: *mut BN_GENCB,
+        ) -> c_int,
+    ) -> c_int;
 
-    pub fn RSA_meth_set_multi_prime_keygen(meth: *mut RSA_METHOD, keygen: extern "C" fn(rsa: *mut RSA, bits: c_int, primes: c_int, e: *mut BIGNUM, cb: *mut BN_GENCB) -> c_int) -> c_int;
+    pub fn RSA_meth_set_multi_prime_keygen(
+        meth: *mut RSA_METHOD,
+        keygen: extern "C" fn(
+            rsa: *mut RSA,
+            bits: c_int,
+            primes: c_int,
+            e: *mut BIGNUM,
+            cb: *mut BN_GENCB,
+        ) -> c_int,
+    ) -> c_int;
 }
