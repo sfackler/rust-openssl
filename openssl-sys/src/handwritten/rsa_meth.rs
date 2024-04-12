@@ -20,7 +20,7 @@ extern "C" {
 
     pub fn RSA_meth_set_pub_enc(
         rsa: *mut RSA_METHOD,
-        pub_enc: Option<extern "C" fn(
+        pub_enc: Option<unsafe extern "C" fn(
             flen: c_int,
             from: *const c_uchar,
             to: *mut c_uchar,
@@ -31,7 +31,7 @@ extern "C" {
 
     pub fn RSA_meth_set_pub_dec(
         rsa: *mut RSA_METHOD,
-        pub_dec: Option<extern "C" fn(
+        pub_dec: Option<unsafe extern "C" fn(
             flen: c_int,
             from: *const c_uchar,
             to: *mut c_uchar,
@@ -42,7 +42,7 @@ extern "C" {
 
     pub fn RSA_meth_set_priv_enc(
         rsa: *mut RSA_METHOD,
-        priv_enc: Option<extern "C" fn(
+        priv_enc: Option<unsafe extern "C" fn(
             flen: c_int,
             from: *const c_uchar,
             to: *mut c_uchar,
@@ -52,7 +52,7 @@ extern "C" {
     ) -> c_int;
     pub fn RSA_meth_set_priv_dec(
         rsa: *mut RSA_METHOD,
-        priv_dec: Option<extern "C" fn(
+        priv_dec: Option<unsafe extern "C" fn(
             flen: c_int,
             from: *const c_uchar,
             to: *mut c_uchar,
@@ -64,7 +64,7 @@ extern "C" {
     /// Notes from OpenSSL documentation: Can be null.
     pub fn RSA_meth_set_mod_exp(
         rsa: *mut RSA_METHOD,
-        mod_exp: Option<extern "C" fn(
+        mod_exp: Option<unsafe extern "C" fn(
             r0: *mut BIGNUM,
             i: *const BIGNUM,
             rsa: *mut RSA,
@@ -75,7 +75,7 @@ extern "C" {
     /// Notes from OpenSSL documentation: Can be null.
     pub fn RSA_meth_set_bn_mod_exp(
         rsa: *mut RSA_METHOD,
-        bn_mod_exp: Option<extern "C" fn(
+        bn_mod_exp: Option<unsafe extern "C" fn(
             r: *mut BIGNUM,
             a: *const BIGNUM,
             p: *const BIGNUM,
@@ -88,18 +88,18 @@ extern "C" {
     /// Notes from OpenSSL documentation: Can be null.
     pub fn RSA_meth_set_init(
         rsa: *mut RSA_METHOD,
-        init: Option<extern "C" fn(rsa: *mut RSA) -> c_int>,
+        init: Option<unsafe extern "C" fn(rsa: *mut RSA) -> c_int>,
     ) -> c_int;
 
     /// Notes from OpenSSL documentation: Can be null.
     pub fn RSA_meth_set_finish(
         rsa: *mut RSA_METHOD,
-        finish: Option<extern "C" fn(rsa: *mut RSA) -> c_int>,
+        finish: Option<unsafe extern "C" fn(rsa: *mut RSA) -> c_int>,
     ) -> c_int;
 
     pub fn RSA_meth_set_sign(
         rsa: *mut RSA_METHOD,
-        sign: Option<extern "C" fn(
+        sign: Option<unsafe extern "C" fn(
             _type: c_int,
             m: *const c_uchar,
             m_length: c_uint,
@@ -111,7 +111,7 @@ extern "C" {
 
     pub fn RSA_meth_set_verify(
         rsa: *mut RSA_METHOD,
-        verify: Option<extern "C" fn(
+        verify: Option<unsafe extern "C" fn(
             dtype: c_int,
             m: *const c_uchar,
             m_length: c_uint,
@@ -123,7 +123,7 @@ extern "C" {
 
     pub fn RSA_meth_set_keygen(
         rsa: *mut RSA_METHOD,
-        keygen: Option<extern "C" fn(
+        keygen: Option<unsafe extern "C" fn(
             rsa: *mut RSA,
             bits: c_int,
             e: *mut BIGNUM,
@@ -134,7 +134,7 @@ extern "C" {
     #[cfg(ossl111)]
     pub fn RSA_meth_set_multi_prime_keygen(
         meth: *mut RSA_METHOD,
-        keygen: Option<extern "C" fn(
+        keygen: Option<unsafe extern "C" fn(
             rsa: *mut RSA,
             bits: c_int,
             primes: c_int,
