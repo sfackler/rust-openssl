@@ -101,13 +101,13 @@ impl RsaMethod {
     #[inline]
     pub fn set_pub_enc(
         &self,
-        pub_enc: extern "C" fn(
+        pub_enc: Option<extern "C" fn(
             flen: c_int,
             from: *const c_uchar,
             to: *mut c_uchar,
             rsa: *mut RSA,
             padding: c_int,
-        ) -> c_int,
+        ) -> c_int>,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_pub_enc(self.as_ptr(), pub_enc))?;
@@ -119,13 +119,13 @@ impl RsaMethod {
     #[inline]
     pub fn set_pub_dec(
         &self,
-        pub_dec: extern "C" fn(
+        pub_dec: Option<extern "C" fn(
             flen: c_int,
             from: *const c_uchar,
             to: *mut c_uchar,
             rsa: *mut RSA,
             padding: c_int,
-        ) -> c_int,
+        ) -> c_int>,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_pub_dec(self.as_ptr(), pub_dec))?;
@@ -137,13 +137,13 @@ impl RsaMethod {
     #[inline]
     pub fn set_priv_enc(
         &self,
-        priv_enc: extern "C" fn(
+        priv_enc: Option<extern "C" fn(
             flen: c_int,
             from: *const c_uchar,
             to: *mut c_uchar,
             rsa: *mut RSA,
             padding: c_int,
-        ) -> c_int,
+        ) -> c_int>,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_priv_enc(self.as_ptr(), priv_enc))?;
@@ -155,13 +155,13 @@ impl RsaMethod {
     #[inline]
     pub fn set_priv_dec(
         &self,
-        priv_dec: extern "C" fn(
+        priv_dec: Option<extern "C" fn(
             flen: c_int,
             from: *const c_uchar,
             to: *mut c_uchar,
             rsa: *mut RSA,
             padding: c_int,
-        ) -> c_int,
+        ) -> c_int>,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_priv_dec(self.as_ptr(), priv_dec))?;
@@ -173,12 +173,12 @@ impl RsaMethod {
     #[inline]
     pub fn set_mod_exp(
         &self,
-        mod_exp: extern "C" fn(
+        mod_exp: Option<extern "C" fn(
             r0: *mut BIGNUM,
             i: *const BIGNUM,
             rsa: *mut RSA,
             ctx: *mut BN_CTX,
-        ) -> c_int,
+        ) -> c_int>,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_mod_exp(self.as_ptr(), mod_exp))?;
@@ -190,14 +190,14 @@ impl RsaMethod {
     #[inline]
     pub fn set_bn_mod_exp(
         &self,
-        bn_mod_exp: extern "C" fn(
+        bn_mod_exp: Option<extern "C" fn(
             r: *mut BIGNUM,
             a: *const BIGNUM,
             p: *const BIGNUM,
             m: *const BIGNUM,
             ctx: *mut BN_CTX,
             m_ctx: *mut BN_MONT_CTX,
-        ) -> c_int,
+        ) -> c_int>,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_bn_mod_exp(self.as_ptr(), bn_mod_exp))?;
@@ -207,7 +207,7 @@ impl RsaMethod {
 
     #[corresponds(RSA_met_set_init)]
     #[inline]
-    pub fn set_init(&self, init: extern "C" fn(rsa: *mut RSA) -> c_int) -> Result<(), ErrorStack> {
+    pub fn set_init(&self, init: Option<extern "C" fn(rsa: *mut RSA) -> c_int>) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_init(self.as_ptr(), init))?;
         }
@@ -218,7 +218,7 @@ impl RsaMethod {
     #[inline]
     pub fn set_finish(
         &self,
-        finish: extern "C" fn(rsa: *mut RSA) -> c_int,
+        finish: Option<extern "C" fn(rsa: *mut RSA) -> c_int>,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_finish(self.as_ptr(), finish))?;
@@ -230,14 +230,14 @@ impl RsaMethod {
     #[inline]
     pub fn set_sign(
         &self,
-        sign: extern "C" fn(
+        sign: Option<extern "C" fn(
             _type: c_int,
             m: *const c_uchar,
             m_length: c_uint,
             sigret: *mut c_uchar,
             siglen: *mut c_uint,
             rsa: *const RSA,
-        ) -> c_int,
+        ) -> c_int>,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_sign(self.as_ptr(), sign))?;
@@ -249,14 +249,14 @@ impl RsaMethod {
     #[inline]
     pub fn set_verify(
         &self,
-        verify: extern "C" fn(
+        verify: Option<extern "C" fn(
             dtype: c_int,
             m: *const c_uchar,
             m_length: c_uint,
             sigbuf: *const c_uchar,
             siglen: c_uint,
             rsa: *const RSA,
-        ) -> c_int,
+        ) -> c_int>,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_verify(self.as_ptr(), verify))?;
@@ -268,12 +268,12 @@ impl RsaMethod {
     #[inline]
     pub fn set_keygen(
         &self,
-        keygen: extern "C" fn(
+        keygen: Option<extern "C" fn(
             rsa: *mut RSA,
             bits: c_int,
             e: *mut BIGNUM,
             cb: *mut BN_GENCB,
-        ) -> c_int,
+        ) -> c_int>,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_keygen(self.as_ptr(), keygen))?;
@@ -286,13 +286,13 @@ impl RsaMethod {
     #[cfg(ossl111)]
     pub fn set_multi_prime_keygen(
         &self,
-        keygen: extern "C" fn(
+        keygen: Option<extern "C" fn(
             rsa: *mut RSA,
             bits: c_int,
             primes: c_int,
             e: *mut BIGNUM,
             cb: *mut BN_GENCB,
-        ) -> c_int,
+        ) -> c_int>,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_multi_prime_keygen(self.as_ptr(), keygen))?;
@@ -398,7 +398,7 @@ mod test {
     fn set_pub_enc() {
         let rsa_method = RsaMethod::new("TESTING METHOD", 0);
         assert!(rsa_method.is_ok());
-        assert!(rsa_method.unwrap().set_pub_enc(test_pub_enc).is_ok());
+        assert!(rsa_method.unwrap().set_pub_enc(Some(test_pub_enc)).is_ok());
     }
 
     #[no_mangle]
@@ -416,7 +416,7 @@ mod test {
     fn set_pub_dec() {
         let rsa_method = RsaMethod::new("TESTING METHOD", 0);
         assert!(rsa_method.is_ok());
-        assert!(rsa_method.unwrap().set_pub_dec(test_pub_dec).is_ok());
+        assert!(rsa_method.unwrap().set_pub_dec(Some(test_pub_dec)).is_ok());
     }
 
     #[no_mangle]
@@ -434,7 +434,7 @@ mod test {
     fn set_priv_enc() {
         let rsa_method = RsaMethod::new("TESTING METHOD", 0);
         assert!(rsa_method.is_ok());
-        assert!(rsa_method.unwrap().set_priv_enc(test_priv_enc).is_ok());
+        assert!(rsa_method.unwrap().set_priv_enc(Some(test_priv_enc)).is_ok());
     }
 
     #[no_mangle]
@@ -452,7 +452,7 @@ mod test {
     fn set_priv_dec() {
         let rsa_method = RsaMethod::new("TESTING METHOD", 0);
         assert!(rsa_method.is_ok());
-        assert!(rsa_method.unwrap().set_priv_dec(test_priv_dec).is_ok());
+        assert!(rsa_method.unwrap().set_priv_dec(Some(test_priv_dec)).is_ok());
     }
 
     #[no_mangle]
@@ -469,7 +469,7 @@ mod test {
     fn set_mod_exp() {
         let rsa_method = RsaMethod::new("TESTING METHOD", 0);
         assert!(rsa_method.is_ok());
-        assert!(rsa_method.unwrap().set_mod_exp(test_mod_exp).is_ok());
+        assert!(rsa_method.unwrap().set_mod_exp(Some(test_mod_exp)).is_ok());
     }
 
     #[no_mangle]
@@ -488,7 +488,7 @@ mod test {
     fn set_bn_mod_exp() {
         let rsa_method = RsaMethod::new("TESTING METHOD", 0);
         assert!(rsa_method.is_ok());
-        assert!(rsa_method.unwrap().set_bn_mod_exp(test_bn_mod_exp).is_ok());
+        assert!(rsa_method.unwrap().set_bn_mod_exp(Some(test_bn_mod_exp)).is_ok());
     }
 
     #[no_mangle]
@@ -500,7 +500,7 @@ mod test {
     fn set_init() {
         let rsa_method = RsaMethod::new("TESTING METHOD", 0);
         assert!(rsa_method.is_ok());
-        assert!(rsa_method.unwrap().set_init(test_init).is_ok());
+        assert!(rsa_method.unwrap().set_init(Some(test_init)).is_ok());
     }
 
     #[no_mangle]
@@ -512,7 +512,7 @@ mod test {
     fn set_finish() {
         let rsa_method = RsaMethod::new("TESTING METHOD", 0);
         assert!(rsa_method.is_ok());
-        assert!(rsa_method.unwrap().set_finish(test_finish).is_ok());
+        assert!(rsa_method.unwrap().set_finish(Some(test_finish)).is_ok());
     }
 
     #[no_mangle]
@@ -531,7 +531,7 @@ mod test {
     fn set_sign() {
         let rsa_method = RsaMethod::new("TESTING METHOD", 0);
         assert!(rsa_method.is_ok());
-        assert!(rsa_method.unwrap().set_sign(test_sign).is_ok());
+        assert!(rsa_method.unwrap().set_sign(Some(test_sign)).is_ok());
     }
 
     #[no_mangle]
@@ -550,7 +550,7 @@ mod test {
     fn set_verify() {
         let rsa_method = RsaMethod::new("TESTING METHOD", 0);
         assert!(rsa_method.is_ok());
-        assert!(rsa_method.unwrap().set_verify(test_verify).is_ok());
+        assert!(rsa_method.unwrap().set_verify(Some(test_verify)).is_ok());
     }
 
     #[no_mangle]
@@ -567,7 +567,7 @@ mod test {
     fn set_keygen() {
         let rsa_method = RsaMethod::new("TESTING METHOD", 0);
         assert!(rsa_method.is_ok());
-        assert!(rsa_method.unwrap().set_keygen(test_keygen).is_ok());
+        assert!(rsa_method.unwrap().set_keygen(Some(test_keygen)).is_ok());
     }
 
     #[no_mangle]
@@ -589,7 +589,7 @@ mod test {
         assert!(rsa_method.is_ok());
         assert!(rsa_method
             .unwrap()
-            .set_multi_prime_keygen(test_multi_prime_keygen)
+            .set_multi_prime_keygen(Some(test_multi_prime_keygen))
             .is_ok());
     }
 }
