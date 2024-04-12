@@ -91,9 +91,7 @@ impl RsaMethod {
     #[corresponds(RSA_meth_set0_app_data)]
     #[inline]
     pub unsafe fn set_app_data(&self, app_data: *mut c_void) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::RSA_meth_set0_app_data(self.as_ptr(), app_data))?;
-        }
+        cvt(ffi::RSA_meth_set0_app_data(self.as_ptr(), app_data))?;
         Ok(())
     }
 
