@@ -9,7 +9,7 @@ use crate::error::ErrorStack;
 use crate::{cvt, cvt_p, cvt_p_const};
 use ffi::{BIGNUM, BN_CTX, BN_GENCB, BN_MONT_CTX, RSA};
 use openssl_macros::corresponds;
-use std::ffi::{c_int, c_uchar, c_uint, c_void, CStr, CString};
+use std::ffi::{c_void, CStr, CString};
 
 pub struct RsaMethod(*mut ffi::RSA_METHOD);
 
@@ -101,13 +101,15 @@ impl RsaMethod {
     #[inline]
     pub fn set_pub_enc(
         &self,
-        pub_enc: Option<unsafe extern "C" fn(
-            flen: c_int,
-            from: *const c_uchar,
-            to: *mut c_uchar,
-            rsa: *mut RSA,
-            padding: c_int,
-        ) -> c_int>,
+        pub_enc: Option<
+            unsafe extern "C" fn(
+                flen: i32,
+                from: *const u8,
+                to: *mut u8,
+                rsa: *mut RSA,
+                padding: i32,
+            ) -> i32,
+        >,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_pub_enc(self.as_ptr(), pub_enc))?;
@@ -119,13 +121,15 @@ impl RsaMethod {
     #[inline]
     pub fn set_pub_dec(
         &self,
-        pub_dec: Option<unsafe extern "C" fn(
-            flen: c_int,
-            from: *const c_uchar,
-            to: *mut c_uchar,
-            rsa: *mut RSA,
-            padding: c_int,
-        ) -> c_int>,
+        pub_dec: Option<
+            unsafe extern "C" fn(
+                flen: i32,
+                from: *const u8,
+                to: *mut u8,
+                rsa: *mut RSA,
+                padding: i32,
+            ) -> i32,
+        >,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_pub_dec(self.as_ptr(), pub_dec))?;
@@ -137,13 +141,15 @@ impl RsaMethod {
     #[inline]
     pub fn set_priv_enc(
         &self,
-        priv_enc: Option<unsafe extern "C" fn(
-            flen: c_int,
-            from: *const c_uchar,
-            to: *mut c_uchar,
-            rsa: *mut RSA,
-            padding: c_int,
-        ) -> c_int>,
+        priv_enc: Option<
+            unsafe extern "C" fn(
+                flen: i32,
+                from: *const u8,
+                to: *mut u8,
+                rsa: *mut RSA,
+                padding: i32,
+            ) -> i32,
+        >,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_priv_enc(self.as_ptr(), priv_enc))?;
@@ -155,13 +161,15 @@ impl RsaMethod {
     #[inline]
     pub fn set_priv_dec(
         &self,
-        priv_dec: Option<unsafe extern "C" fn(
-            flen: c_int,
-            from: *const c_uchar,
-            to: *mut c_uchar,
-            rsa: *mut RSA,
-            padding: c_int,
-        ) -> c_int>,
+        priv_dec: Option<
+            unsafe extern "C" fn(
+                flen: i32,
+                from: *const u8,
+                to: *mut u8,
+                rsa: *mut RSA,
+                padding: i32,
+            ) -> i32,
+        >,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_priv_dec(self.as_ptr(), priv_dec))?;
@@ -173,12 +181,14 @@ impl RsaMethod {
     #[inline]
     pub fn set_mod_exp(
         &self,
-        mod_exp: Option<unsafe extern "C" fn(
-            r0: *mut BIGNUM,
-            i: *const BIGNUM,
-            rsa: *mut RSA,
-            ctx: *mut BN_CTX,
-        ) -> c_int>,
+        mod_exp: Option<
+            unsafe extern "C" fn(
+                r0: *mut BIGNUM,
+                i: *const BIGNUM,
+                rsa: *mut RSA,
+                ctx: *mut BN_CTX,
+            ) -> i32,
+        >,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_mod_exp(self.as_ptr(), mod_exp))?;
@@ -190,14 +200,16 @@ impl RsaMethod {
     #[inline]
     pub fn set_bn_mod_exp(
         &self,
-        bn_mod_exp: Option<unsafe extern "C" fn(
-            r: *mut BIGNUM,
-            a: *const BIGNUM,
-            p: *const BIGNUM,
-            m: *const BIGNUM,
-            ctx: *mut BN_CTX,
-            m_ctx: *mut BN_MONT_CTX,
-        ) -> c_int>,
+        bn_mod_exp: Option<
+            unsafe extern "C" fn(
+                r: *mut BIGNUM,
+                a: *const BIGNUM,
+                p: *const BIGNUM,
+                m: *const BIGNUM,
+                ctx: *mut BN_CTX,
+                m_ctx: *mut BN_MONT_CTX,
+            ) -> i32,
+        >,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_bn_mod_exp(self.as_ptr(), bn_mod_exp))?;
@@ -207,7 +219,10 @@ impl RsaMethod {
 
     #[corresponds(RSA_met_set_init)]
     #[inline]
-    pub fn set_init(&self, init: Option<unsafe extern "C" fn(rsa: *mut RSA) -> c_int>) -> Result<(), ErrorStack> {
+    pub fn set_init(
+        &self,
+        init: Option<unsafe extern "C" fn(rsa: *mut RSA) -> i32>,
+    ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_init(self.as_ptr(), init))?;
         }
@@ -218,7 +233,7 @@ impl RsaMethod {
     #[inline]
     pub fn set_finish(
         &self,
-        finish: Option<unsafe extern "C" fn(rsa: *mut RSA) -> c_int>,
+        finish: Option<unsafe extern "C" fn(rsa: *mut RSA) -> i32>,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_finish(self.as_ptr(), finish))?;
@@ -230,14 +245,16 @@ impl RsaMethod {
     #[inline]
     pub fn set_sign(
         &self,
-        sign: Option<unsafe extern "C" fn(
-            _type: c_int,
-            m: *const c_uchar,
-            m_length: c_uint,
-            sigret: *mut c_uchar,
-            siglen: *mut c_uint,
-            rsa: *const RSA,
-        ) -> c_int>,
+        sign: Option<
+            unsafe extern "C" fn(
+                _type: i32,
+                m: *const u8,
+                m_length: u32,
+                sigret: *mut u8,
+                siglen: *mut u32,
+                rsa: *const RSA,
+            ) -> i32,
+        >,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_sign(self.as_ptr(), sign))?;
@@ -249,14 +266,16 @@ impl RsaMethod {
     #[inline]
     pub fn set_verify(
         &self,
-        verify: Option<unsafe extern "C" fn(
-            dtype: c_int,
-            m: *const c_uchar,
-            m_length: c_uint,
-            sigbuf: *const c_uchar,
-            siglen: c_uint,
-            rsa: *const RSA,
-        ) -> c_int>,
+        verify: Option<
+            unsafe extern "C" fn(
+                dtype: i32,
+                m: *const u8,
+                m_length: u32,
+                sigbuf: *const u8,
+                siglen: u32,
+                rsa: *const RSA,
+            ) -> i32,
+        >,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_verify(self.as_ptr(), verify))?;
@@ -268,12 +287,14 @@ impl RsaMethod {
     #[inline]
     pub fn set_keygen(
         &self,
-        keygen: Option<unsafe extern "C" fn(
-            rsa: *mut RSA,
-            bits: c_int,
-            e: *mut BIGNUM,
-            cb: *mut BN_GENCB,
-        ) -> c_int>,
+        keygen: Option<
+            unsafe extern "C" fn(
+                rsa: *mut RSA,
+                bits: i32,
+                e: *mut BIGNUM,
+                cb: *mut BN_GENCB,
+            ) -> i32,
+        >,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_keygen(self.as_ptr(), keygen))?;
@@ -286,13 +307,15 @@ impl RsaMethod {
     #[cfg(ossl111)]
     pub fn set_multi_prime_keygen(
         &self,
-        keygen: Option<unsafe extern "C" fn(
-            rsa: *mut RSA,
-            bits: c_int,
-            primes: c_int,
-            e: *mut BIGNUM,
-            cb: *mut BN_GENCB,
-        ) -> c_int>,
+        keygen: Option<
+            unsafe extern "C" fn(
+                rsa: *mut RSA,
+                bits: i32,
+                primes: i32,
+                e: *mut BIGNUM,
+                cb: *mut BN_GENCB,
+            ) -> i32,
+        >,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::RSA_meth_set_multi_prime_keygen(self.as_ptr(), keygen))?;
@@ -385,12 +408,12 @@ mod test {
 
     #[no_mangle]
     unsafe extern "C" fn test_pub_enc(
-        _flen: c_int,
-        _from: *const c_uchar,
-        _to: *mut c_uchar,
+        _flen: i32,
+        _from: *const u8,
+        _to: *mut u8,
         _rsa: *mut RSA,
-        _padding: c_int,
-    ) -> c_int {
+        _padding: i32,
+    ) -> i32 {
         0
     }
 
@@ -403,12 +426,12 @@ mod test {
 
     #[no_mangle]
     unsafe extern "C" fn test_pub_dec(
-        _flen: c_int,
-        _from: *const c_uchar,
-        _to: *mut c_uchar,
+        _flen: i32,
+        _from: *const u8,
+        _to: *mut u8,
         _rsa: *mut RSA,
-        _padding: c_int,
-    ) -> c_int {
+        _padding: i32,
+    ) -> i32 {
         0
     }
 
@@ -421,12 +444,12 @@ mod test {
 
     #[no_mangle]
     unsafe extern "C" fn test_priv_enc(
-        _flen: c_int,
-        _from: *const c_uchar,
-        _to: *mut c_uchar,
+        _flen: i32,
+        _from: *const u8,
+        _to: *mut u8,
         _rsa: *mut RSA,
-        _padding: c_int,
-    ) -> c_int {
+        _padding: i32,
+    ) -> i32 {
         0
     }
 
@@ -434,17 +457,20 @@ mod test {
     fn set_priv_enc() {
         let rsa_method = RsaMethod::new("TESTING METHOD", 0);
         assert!(rsa_method.is_ok());
-        assert!(rsa_method.unwrap().set_priv_enc(Some(test_priv_enc)).is_ok());
+        assert!(rsa_method
+            .unwrap()
+            .set_priv_enc(Some(test_priv_enc))
+            .is_ok());
     }
 
     #[no_mangle]
     unsafe extern "C" fn test_priv_dec(
-        _flen: c_int,
-        _from: *const c_uchar,
-        _to: *mut c_uchar,
+        _flen: i32,
+        _from: *const u8,
+        _to: *mut u8,
         _rsa: *mut RSA,
-        _padding: c_int,
-    ) -> c_int {
+        _padding: i32,
+    ) -> i32 {
         0
     }
 
@@ -452,7 +478,10 @@ mod test {
     fn set_priv_dec() {
         let rsa_method = RsaMethod::new("TESTING METHOD", 0);
         assert!(rsa_method.is_ok());
-        assert!(rsa_method.unwrap().set_priv_dec(Some(test_priv_dec)).is_ok());
+        assert!(rsa_method
+            .unwrap()
+            .set_priv_dec(Some(test_priv_dec))
+            .is_ok());
     }
 
     #[no_mangle]
@@ -461,7 +490,7 @@ mod test {
         _i: *const BIGNUM,
         _rsa: *mut RSA,
         _ctx: *mut BN_CTX,
-    ) -> c_int {
+    ) -> i32 {
         0
     }
 
@@ -480,7 +509,7 @@ mod test {
         _m: *const BIGNUM,
         _ctx: *mut BN_CTX,
         _m_ctx: *mut BN_MONT_CTX,
-    ) -> c_int {
+    ) -> i32 {
         0
     }
 
@@ -488,11 +517,14 @@ mod test {
     fn set_bn_mod_exp() {
         let rsa_method = RsaMethod::new("TESTING METHOD", 0);
         assert!(rsa_method.is_ok());
-        assert!(rsa_method.unwrap().set_bn_mod_exp(Some(test_bn_mod_exp)).is_ok());
+        assert!(rsa_method
+            .unwrap()
+            .set_bn_mod_exp(Some(test_bn_mod_exp))
+            .is_ok());
     }
 
     #[no_mangle]
-    unsafe extern "C" fn test_init(_rsa: *mut RSA) -> c_int {
+    unsafe extern "C" fn test_init(_rsa: *mut RSA) -> i32 {
         0
     }
 
@@ -504,7 +536,7 @@ mod test {
     }
 
     #[no_mangle]
-    unsafe extern "C" fn test_finish(_rsa: *mut RSA) -> c_int {
+    unsafe extern "C" fn test_finish(_rsa: *mut RSA) -> i32 {
         0
     }
 
@@ -517,13 +549,13 @@ mod test {
 
     #[no_mangle]
     unsafe extern "C" fn test_sign(
-        _type: c_int,
-        _m: *const c_uchar,
-        _m_length: c_uint,
-        _sigret: *mut c_uchar,
-        _siglen: *mut c_uint,
+        _type: i32,
+        _m: *const u8,
+        _m_length: u32,
+        _sigret: *mut u8,
+        _siglen: *mut u32,
         _rsa: *const RSA,
-    ) -> c_int {
+    ) -> i32 {
         0
     }
 
@@ -536,13 +568,13 @@ mod test {
 
     #[no_mangle]
     unsafe extern "C" fn test_verify(
-        _dtype: c_int,
-        _m: *const c_uchar,
-        _m_length: c_uint,
-        _sigbuf: *const c_uchar,
-        _siglen: c_uint,
+        _dtype: i32,
+        _m: *const u8,
+        _m_length: u32,
+        _sigbuf: *const u8,
+        _siglen: u32,
         _rsa: *const RSA,
-    ) -> c_int {
+    ) -> i32 {
         0
     }
 
@@ -556,10 +588,10 @@ mod test {
     #[no_mangle]
     unsafe extern "C" fn test_keygen(
         _rsa: *mut RSA,
-        _bits: c_int,
+        _bits: i32,
         _e: *mut BIGNUM,
         _cb: *mut BN_GENCB,
-    ) -> c_int {
+    ) -> i32 {
         0
     }
 
@@ -574,11 +606,11 @@ mod test {
     #[cfg(ossl111)]
     unsafe extern "C" fn test_multi_prime_keygen(
         _rsa: *mut RSA,
-        _bits: c_int,
-        _primes: c_int,
+        _bits: i32,
+        _primes: i32,
         _e: *mut BIGNUM,
         _cb: *mut BN_GENCB,
-    ) -> c_int {
+    ) -> i32 {
         0
     }
 
