@@ -85,6 +85,38 @@ impl fmt::Display for Asn1GeneralizedTimeRef {
     }
 }
 
+impl Asn1GeneralizedTime {
+    /// Creates a new `Asn1GeneralizedTime` from an `Asn1Time`.
+    #[corresponds(ASN1_TIME_to_generalizedtime)]
+    pub fn from_time(time: &Asn1TimeRef) -> Result<Asn1GeneralizedTime, ErrorStack> {
+        ffi::init();
+
+        unsafe {
+            let handle = cvt_p(ffi::ASN1_TIME_to_generalizedtime(
+                time.as_ptr(),
+                ptr::null_mut(),
+            ))?;
+            Ok(Asn1GeneralizedTime::from_ptr(handle))
+        }
+    }
+}
+
+impl Asn1GeneralizedTimeRef {
+    /// Returns the time as an ASN.1 time string.
+    #[corresponds(ASN1_STRING_get0_data)]
+    pub fn as_str(&self) -> Option<&str> {
+        unsafe {
+            let ptr = ASN1_STRING_get0_data(self.as_ptr().cast());
+            let len = ffi::ASN1_STRING_length(self.as_ptr().cast());
+
+            #[allow(clippy::unnecessary_cast)]
+            let slice = slice::from_raw_parts(ptr as *const u8, len as usize);
+            // GeneralizedTime strings must be ASCII (in fact an even smaller subset).
+            str::from_utf8(slice).ok()
+        }
+    }
+}
+
 /// The type of an ASN.1 value.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Asn1Type(c_int);
@@ -226,6 +258,17 @@ impl Asn1TimeRef {
         }
 
         Ok(Ordering::Equal)
+    }
+
+    /// Returns the time of this `Asn1TimeRef` if it is a `Asn1GeneralizedTimeRef`.
+    pub fn as_generalized_time(&self) -> Option<&Asn1GeneralizedTimeRef> {
+        let time_type = unsafe { ffi::ASN1_STRING_type(self.as_ptr().cast()) };
+        match time_type {
+            ffi::V_ASN1_GENERALIZEDTIME => {
+                Some(unsafe { Asn1GeneralizedTimeRef::from_ptr(self.as_ptr().cast()) })
+            }
+            _ => None,
+        }
     }
 }
 
@@ -855,6 +898,22 @@ mod tests {
         assert!(a_ref > c_ref);
         assert!(b_ref <= a_ref);
         assert!(c_ref < a_ref);
+    }
+
+    #[test]
+    fn generalize_time() {
+        let time = Asn1Time::from_str("991231235959Z").unwrap();
+        let gtime = Asn1GeneralizedTime::from_time(&time).unwrap();
+        assert_eq!(gtime.as_str(), Some("19991231235959Z"));
+        assert!(time.as_generalized_time().is_none());
+
+        let time = Asn1Time::from_str("99991231235959Z").unwrap();
+        let gtime = Asn1GeneralizedTime::from_time(&time).unwrap();
+        assert_eq!(gtime.as_str(), Some("99991231235959Z"));
+        assert_eq!(
+            time.as_generalized_time().unwrap().as_str(),
+            Some("99991231235959Z")
+        );
     }
 
     #[test]
