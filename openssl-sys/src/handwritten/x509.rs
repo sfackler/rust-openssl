@@ -277,6 +277,9 @@ extern "C" {
 
     pub fn X509_NAME_ENTRY_free(x: *mut X509_NAME_ENTRY);
 
+    #[cfg(any(ossl110, libressl270))]
+    pub fn X509_NAME_ENTRY_set(x: *const X509_NAME_ENTRY) -> c_int;
+
     pub fn X509_NAME_new() -> *mut X509_NAME;
     pub fn X509_NAME_cmp(x: *const X509_NAME, y: *const X509_NAME) -> c_int;
     pub fn X509_NAME_free(x: *mut X509_NAME);

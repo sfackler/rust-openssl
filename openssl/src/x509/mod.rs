@@ -1360,6 +1360,17 @@ impl X509NameEntryRef {
             Asn1ObjectRef::from_ptr(object)
         }
     }
+
+    /// Returns the index of the RDN that a of an `X509NameEntry` is part of.
+    /// This function retrieves X.501 RelativeDistinguishedName (RDN) that a `X509NameEntry` is part of in the `X509Name`
+    /// object using it. The first RDN has index 0. If an RDN consists of more than one X509_NAME_ENTRY object, they all
+    /// share the same index. This is useful when working with multi-valued RDNs.
+    ///
+    /// This corresponds to `X509_NAME_ENTRY_set`.
+    #[cfg(any(ossl110, libressl270))]
+    pub fn set(&self) -> c_int {
+        unsafe { ffi::X509_NAME_ENTRY_set(self.as_ptr()) }
+    }
 }
 
 impl fmt::Debug for X509NameEntryRef {
