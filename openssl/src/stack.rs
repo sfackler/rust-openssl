@@ -14,7 +14,7 @@ use crate::util::ForeignTypeExt;
 use crate::{cvt, cvt_p, LenType};
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, boringssl))] {
         use ffi::{
             OPENSSL_sk_pop, OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_value, OPENSSL_STACK,
             OPENSSL_sk_new_null, OPENSSL_sk_push,
