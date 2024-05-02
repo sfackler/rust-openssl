@@ -277,7 +277,7 @@ jobs:
               ;;
             "i686-unknown-linux-gnu")
               OS_COMPILER=linux-elf
-              OS_FLAGS=-m32 -msse2
+              OS_FLAGS="-m32 -msse2"
               ;;
             "arm-unknown-linux-gnueabihf")
               OS_COMPILER=linux-armv4
