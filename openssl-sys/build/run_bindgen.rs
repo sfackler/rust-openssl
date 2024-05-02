@@ -205,6 +205,7 @@ pub fn run_boringssl(include_dirs: &[PathBuf]) {
         .compile("boring_static_wrapper");
 }
 
+#[cfg(feature = "bindgen")]
 #[derive(Debug)]
 struct OpensslCallbacks;
 
