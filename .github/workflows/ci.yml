@@ -152,7 +152,7 @@ jobs:
             - false
           library:
             - name: boringssl
-              version: e6489902b7fb692875341b8ab5e57f0515f47bc1
+              version: 2db0eb3f96a5756298dcd7f9319e56a98585bd10
             - name: openssl
               version: vendored
             - name: openssl
@@ -277,7 +277,7 @@ jobs:
               ;;
             "i686-unknown-linux-gnu")
               OS_COMPILER=linux-elf
-              OS_FLAGS=-m32
+              OS_FLAGS="-m32 -msse2"
               ;;
             "arm-unknown-linux-gnueabihf")
               OS_COMPILER=linux-armv4

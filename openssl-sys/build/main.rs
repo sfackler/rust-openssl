@@ -132,6 +132,34 @@ fn main() {
         println!("cargo:rustc-link-lib={}={}", kind, lib);
     }
 
+    // libssl in BoringSSL requires the C++ runtime, and static libraries do
+    // not carry dependency information. On unix-like platforms, the C++
+    // runtime and standard library are typically picked up by default via the
+    // C++ compiler, which has a platform-specific default. (See implementations
+    // of `GetDefaultCXXStdlibType` in Clang.) Builds may also choose to
+    // override this and specify their own with `-nostdinc++` and `-nostdlib++`
+    // flags. Some compilers also provide options like `-stdlib=libc++`.
+    //
+    // Typically, such information is carried all the way up the build graph,
+    // but Cargo is not an integrated cross-language build system, so it cannot
+    // safely handle any of these situations. As a result, we need to make
+    // guesses. Getting this wrong may result in symbol conflicts and memory
+    // errors, but this unsafety is inherent to driving builds with
+    // externally-built libraries using Cargo.
+    //
+    // For now, we guess that the build was made with the defaults. This too is
+    // difficult because Rust does not expose this information from Clang, but
+    // try to match the behavior for common platforms. For a more robust option,
+    // this likely needs to be deferred to the caller with an environment
+    // variable.
+    if version == Version::Boringssl && kind == "static" && env::var("CARGO_CFG_UNIX").is_ok() {
+        let cpp_lib = match env::var("CARGO_CFG_TARGET_OS").unwrap().as_ref() {
+            "macos" => "c++",
+            _ => "stdc++",
+        };
+        println!("cargo:rustc-link-lib={}", cpp_lib);
+    }
+
     // https://github.com/openssl/openssl/pull/15086
     if version == Version::Openssl3xx
         && kind == "static"
