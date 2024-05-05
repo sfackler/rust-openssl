@@ -7,6 +7,42 @@
 use std::env;
 
 fn main() {
+    println!("cargo:rustc-check-cfg=cfg(osslconf, values(\"OPENSSL_NO_OCB\", \"OPENSSL_NO_SM4\", \"OPENSSL_NO_SEED\", \"OPENSSL_NO_CHACHA\", \"OPENSSL_NO_CAST\", \"OPENSSL_NO_IDEA\", \"OPENSSL_NO_CAMELLIA\", \"OPENSSL_NO_RC4\", \"OPENSSL_NO_BF\", \"OPENSSL_NO_PSK\", \"OPENSSL_NO_DEPRECATED_3_0\", \"OPENSSL_NO_SCRYPT\", \"OPENSSL_NO_SM3\", \"OPENSSL_NO_RMD160\", \"OPENSSL_NO_EC2M\", \"OPENSSL_NO_OCSP\", \"OPENSSL_NO_CMS\"))");
+
+    println!("cargo:rustc-check-cfg=cfg(libressl)");
+    println!("cargo:rustc-check-cfg=cfg(boringssl)");
+
+    println!("cargo:rustc-check-cfg=cfg(libressl250)");
+    println!("cargo:rustc-check-cfg=cfg(libressl251)");
+    println!("cargo:rustc-check-cfg=cfg(libressl261)");
+    println!("cargo:rustc-check-cfg=cfg(libressl270)");
+    println!("cargo:rustc-check-cfg=cfg(libressl271)");
+    println!("cargo:rustc-check-cfg=cfg(libressl273)");
+    println!("cargo:rustc-check-cfg=cfg(libressl280)");
+    println!("cargo:rustc-check-cfg=cfg(libressl291)");
+    println!("cargo:rustc-check-cfg=cfg(libressl310)");
+    println!("cargo:rustc-check-cfg=cfg(libressl321)");
+    println!("cargo:rustc-check-cfg=cfg(libressl332)");
+    println!("cargo:rustc-check-cfg=cfg(libressl340)");
+    println!("cargo:rustc-check-cfg=cfg(libressl350)");
+    println!("cargo:rustc-check-cfg=cfg(libressl360)");
+    println!("cargo:rustc-check-cfg=cfg(libressl361)");
+    println!("cargo:rustc-check-cfg=cfg(libressl370)");
+    println!("cargo:rustc-check-cfg=cfg(libressl380)");
+    println!("cargo:rustc-check-cfg=cfg(libressl382)");
+    println!("cargo:rustc-check-cfg=cfg(libressl390)");
+
+    println!("cargo:rustc-check-cfg=cfg(ossl101)");
+    println!("cargo:rustc-check-cfg=cfg(ossl102)");
+    println!("cargo:rustc-check-cfg=cfg(ossl110)");
+    println!("cargo:rustc-check-cfg=cfg(ossl110g)");
+    println!("cargo:rustc-check-cfg=cfg(ossl110h)");
+    println!("cargo:rustc-check-cfg=cfg(ossl111)");
+    println!("cargo:rustc-check-cfg=cfg(ossl111d)");
+    println!("cargo:rustc-check-cfg=cfg(ossl300)");
+    println!("cargo:rustc-check-cfg=cfg(ossl310)");
+    println!("cargo:rustc-check-cfg=cfg(ossl320)");
+
     if env::var("DEP_OPENSSL_LIBRESSL").is_ok() {
         println!("cargo:rustc-cfg=libressl");
     }
@@ -103,6 +139,9 @@ fn main() {
         }
         if version >= 0x1_01_01_00_0 {
             println!("cargo:rustc-cfg=ossl111");
+        }
+        if version >= 0x1_01_01_04_0 {
+            println!("cargo:rustc-cfg=ossl111d");
         }
         if version >= 0x3_00_00_00_0 {
             println!("cargo:rustc-cfg=ossl300");
