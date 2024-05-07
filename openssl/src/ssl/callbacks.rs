@@ -11,7 +11,7 @@ use std::ffi::CStr;
 use std::mem;
 use std::ptr;
 use std::slice;
-#[cfg(ossl111)]
+#[cfg(any(ossl111, boringssl))]
 use std::str;
 use std::sync::Arc;
 
@@ -28,7 +28,7 @@ use crate::ssl::{
 };
 #[cfg(ossl111)]
 use crate::ssl::{ClientHelloResponse, ExtensionContext};
-#[cfg(ossl111)]
+#[cfg(any(ossl111, boringssl))]
 use crate::util::ForeignTypeRefExt;
 #[cfg(ossl111)]
 use crate::x509::X509Ref;
@@ -429,7 +429,7 @@ where
     }
 }
 
-#[cfg(ossl111)]
+#[cfg(any(ossl111, boringssl))]
 pub unsafe extern "C" fn raw_keylog<F>(ssl: *const ffi::SSL, line: *const c_char)
 where
     F: Fn(&SslRef, &str) + 'static + Sync + Send,
