@@ -61,9 +61,12 @@ pub unsafe trait ExtensionType {
     type Output: ForeignType;
 }
 
+/// Flags used to print an `X509NameRef`
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct X509NamePrintFlags(c_ulong);
+
 bitflags! {
-    /// Flags used to print an `X509NameRef`
-    pub struct X509NamePrintFlags: c_ulong {
+    impl X509NamePrintFlags: c_ulong {
         // TODO: by OpenSSL version?
         const COMPAT = ffi::XN_FLAG_COMPAT;
         const SEP_COMMA_PLUS = ffi::XN_FLAG_SEP_COMMA_PLUS;
