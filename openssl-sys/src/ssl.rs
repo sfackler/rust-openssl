@@ -349,6 +349,8 @@ pub const SSL_CTRL_SET_ECDH_AUTO: c_int = 94;
 pub const SSL_CTRL_SET_SIGALGS_LIST: c_int = 98;
 #[cfg(ossl102)]
 pub const SSL_CTRL_SET_VERIFY_CERT_STORE: c_int = 106;
+#[cfg(ossl102)]
+pub const SSL_CTRL_GET_PEER_SIGNATURE_NID: c_int = 108;
 #[cfg(ossl300)]
 pub const SSL_CTRL_GET_PEER_TMP_KEY: c_int = 109;
 #[cfg(ossl110)]
@@ -361,6 +363,8 @@ pub const SSL_CTRL_SET_MAX_PROTO_VERSION: c_int = 124;
 pub const SSL_CTRL_GET_MIN_PROTO_VERSION: c_int = 130;
 #[cfg(any(ossl110g, libressl270))]
 pub const SSL_CTRL_GET_MAX_PROTO_VERSION: c_int = 131;
+#[cfg(ossl111)]
+pub const SSL_CTRL_GET_SIGNATURE_NID: c_int = 132;
 #[cfg(ossl300)]
 pub const SSL_CTRL_GET_TMP_KEY: c_int = 133;
 
@@ -520,6 +524,21 @@ cfg_if! {
             SSL_ctrl(ssl, SSL_CTRL_GET_TMP_KEY, 0, key as *mut c_void)
         }
     }
+}
+
+#[cfg(ossl102)]
+pub unsafe fn SSL_get_peer_signature_nid(ssl: *mut SSL, psig_nid: *mut c_int) -> c_int {
+    SSL_ctrl(
+        ssl,
+        SSL_CTRL_GET_PEER_SIGNATURE_NID,
+        0,
+        psig_nid as *mut c_void,
+    ) as c_int
+}
+
+#[cfg(ossl111)]
+pub unsafe fn SSL_get_signature_nid(ssl: *mut SSL, psig_nid: *mut c_int) -> c_int {
+    SSL_ctrl(ssl, SSL_CTRL_GET_SIGNATURE_NID, 0, psig_nid as *mut c_void) as c_int
 }
 
 #[cfg(ossl111)]

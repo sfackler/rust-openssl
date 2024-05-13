@@ -67,7 +67,7 @@ use crate::error::ErrorStack;
 use crate::ex_data::Index;
 #[cfg(ossl111)]
 use crate::hash::MessageDigest;
-#[cfg(any(ossl110, libressl270))]
+#[cfg(any(ossl102, libressl270))]
 use crate::nid::Nid;
 use crate::pkey::{HasPrivate, PKeyRef, Params, Private};
 #[cfg(ossl300)]
@@ -3480,6 +3480,69 @@ impl SslRef {
             let mut key = ptr::null_mut();
             match cvt_long(ffi::SSL_get_tmp_key(self.as_ptr(), &mut key)) {
                 Ok(_) => Ok(PKey::<Private>::from_ptr(key)),
+                Err(e) => Err(e),
+            }
+        }
+    }
+
+    /// Returns the hash of the signature scheme. For example, if the connection
+    /// negotiated rsa_pss_pss_sha384, this method will return the NID for SHA384.
+    #[corresponds(SSL_get_signature_nid)]
+    #[cfg(ossl111)]
+    pub fn signature_nid(&self) -> Result<Nid, ErrorStack> {
+        unsafe {
+            let mut pnid: c_int = 0;
+            match cvt(ffi::SSL_get_signature_nid(self.as_ptr(), &mut pnid)) {
+                Ok(_) => Ok(Nid::from_raw(pnid)),
+                Err(e) => Err(e),
+            }
+        }
+    }
+
+    /// Returns the hash of the signature scheme. For example, if the connection
+    /// negotiated rsa_pss_pss_sha384, this method will return the NID for SHA384.
+    #[corresponds(SSL_get_peer_signature_nid)]
+    #[cfg(ossl102)]
+    pub fn peer_signature_nid(&self) -> Result<Nid, ErrorStack> {
+        unsafe {
+            let mut pnid: c_int = 0;
+            match cvt(ffi::SSL_get_peer_signature_nid(self.as_ptr(), &mut pnid)) {
+                Ok(_) => Ok(Nid::from_raw(pnid)),
+                Err(e) => Err(e),
+            }
+        }
+    }
+
+    /// Returns the signature algorithm of the signature scheme. For example, if
+    /// the connection negotiated rsa_pss_pss_sha384, this method will return the
+    /// NID for rsa_pss.  
+    #[corresponds(SSL_get_signature_type_nid)]
+    #[cfg(ossl111)]
+    pub fn signature_type_nid(&self) -> Result<Nid, ErrorStack> {
+        unsafe {
+            let mut pnid: c_int = 0;
+
+            match cvt(ffi::SSL_get_signature_type_nid(self.as_ptr(), &mut pnid)) {
+                Ok(_) => Ok(Nid::from_raw(pnid)),
+                Err(e) => Err(e),
+            }
+        }
+    }
+
+    /// Returns the signature algorithm of the signature scheme. For example, if
+    /// the connection negotiated rsa_pss_pss_sha384, this method will return the
+    /// NID for rsa_pss.  
+    #[corresponds(SSL_get_peer_signature_type_nid)]
+    #[cfg(ossl111)]
+    pub fn peer_signature_type_nid(&self) -> Result<Nid, ErrorStack> {
+        unsafe {
+            let mut pnid: c_int = 0;
+
+            match cvt(ffi::SSL_get_peer_signature_type_nid(
+                self.as_ptr(),
+                &mut pnid,
+            )) {
+                Ok(_) => Ok(Nid::from_raw(pnid)),
                 Err(e) => Err(e),
             }
         }
