@@ -207,11 +207,13 @@ fn main() {
     }
 
     // https://github.com/openssl/openssl/pull/15086
+    // Given that the armv7a architecture of openharmony doesn't support atomic, we should disregard this configuration.
     if version == Version::Openssl3xx
         && kind == "static"
         && (env::var("CARGO_CFG_TARGET_OS").unwrap() == "linux"
             || env::var("CARGO_CFG_TARGET_OS").unwrap() == "android")
         && env::var("CARGO_CFG_TARGET_POINTER_WIDTH").unwrap() == "32"
+        && !target.contains("ohos")
     {
         println!("cargo:rustc-link-lib=atomic");
     }
