@@ -28,12 +28,12 @@ use crate::x509::{
     CrlStatus, X509Crl, X509Extension, X509Name, X509Req, X509StoreContext, X509VerifyResult, X509,
 };
 
+use crate::error::X509D2iError;
 #[cfg(ossl110)]
 use foreign_types::ForeignType;
 use hex::{self, FromHex};
 #[cfg(any(ossl102, boringssl, libressl261))]
 use libc::time_t;
-use crate::error::X509D2iError;
 
 use super::{AuthorityInformationAccess, CertificateIssuer, ReasonCode};
 
@@ -283,8 +283,8 @@ fn test_aia_ca_issuer() {
     let cert = X509::from_pem(cert).unwrap();
     match cert.authority_info() {
         Ok(_) => assert!(false, "Should not find dist point"),
-        Err(X509D2iError::ExtensionNotFoundError) => {/* ok */},
-        Err(e) => assert!(false, "Wrong error: {}", e)
+        Err(X509D2iError::ExtensionNotFoundError) => { /* ok */ }
+        Err(e) => assert!(false, "Wrong error: {}", e),
     }
 }
 
@@ -706,9 +706,7 @@ fn test_crl_entry_extensions() {
     let crl = include_bytes!("../../test/entry_extensions.crl");
     let crl = X509Crl::from_pem(crl).unwrap();
 
-    let (critical, access_info) = crl
-        .extension::<AuthorityInformationAccess>()
-        .unwrap();
+    let (critical, access_info) = crl.extension::<AuthorityInformationAccess>().unwrap();
     assert!(
         !critical,
         "Authority Information Access extension is not critical"
@@ -1179,8 +1177,8 @@ fn test_dist_point_null() {
     let cert = X509::from_pem(cert).unwrap();
     match cert.crl_distribution_points() {
         Ok(_) => assert!(false, "Should not find dist point"),
-        Err(X509D2iError::ExtensionNotFoundError) => {/* ok */},
-        Err(e) => assert!(false, "Wrong error: {}", e)
+        Err(X509D2iError::ExtensionNotFoundError) => { /* ok */ }
+        Err(e) => assert!(false, "Wrong error: {}", e),
     }
 }
 

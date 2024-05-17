@@ -839,10 +839,10 @@ impl fmt::Debug for X509 {
         match &self.subject_alt_names() {
             Ok(subject_alt_names) => {
                 debug_struct.field("subject_alt_names", subject_alt_names);
-            },
+            }
             Err(X509D2iError::ExtensionNotFoundError) => {
                 // found nothing, but this is ok
-            },
+            }
             Err(e) => panic!("{}", e),
         };
         debug_struct.field("not_before", &self.not_before());
