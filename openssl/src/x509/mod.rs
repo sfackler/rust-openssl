@@ -29,7 +29,7 @@ use crate::asn1::{
 };
 use crate::bio::MemBioSlice;
 use crate::conf::ConfRef;
-use crate::error::ErrorStack;
+use crate::error::{ErrorStack, X509D2iError};
 use crate::ex_data::Index;
 use crate::hash::{DigestBytes, MessageDigest};
 use crate::nid::Nid;
@@ -419,63 +419,85 @@ impl X509Ref {
             ffi::X509_issuer_name_hash(self.as_ptr()) as u32
         }
     }
+    fn create_d2i_result<T>(critical: i32, out: Option<T>) -> Result<T, X509D2iError> {
+        match (critical, out) {
+            (0 | 1, Some(out)) => Ok(out),
+            // -1 means the extension wasn't found, -2 means multiple were found.
+            (-1, _) => Err(X509D2iError::extension_not_found_error()),
+            (-2, _) => Err(X509D2iError::extension_unambiguous_error()),
+            // A critical value of 0 or 1 suggests success, but a null pointer
+            // was returned so something went wrong.
+            (0 | 1, None) => Err(X509D2iError::internal_openssl_error(ErrorStack::get())),
+            (c_int::MIN..=-2 | 2.., _) => panic!("OpenSSL should only return -2, -1, 0, or 1 for an extension's criticality but it returned {}", critical),
+        }
+    }
 
     /// Returns this certificate's subject alternative name entries, if they exist.
     #[corresponds(X509_get_ext_d2i)]
-    pub fn subject_alt_names(&self) -> Option<Stack<GeneralName>> {
-        unsafe {
+    pub fn subject_alt_names(&self) -> Result<Stack<GeneralName>, X509D2iError> {
+        let mut critical = -1;
+        let out = unsafe {
             let stack = ffi::X509_get_ext_d2i(
                 self.as_ptr(),
                 ffi::NID_subject_alt_name,
-                ptr::null_mut(),
+                &mut critical as *mut _,
                 ptr::null_mut(),
             );
             Stack::from_ptr_opt(stack as *mut _)
-        }
+        };
+
+        Self::create_d2i_result(critical, out)
     }
 
     /// Returns this certificate's CRL distribution points, if they exist.
     #[corresponds(X509_get_ext_d2i)]
-    pub fn crl_distribution_points(&self) -> Option<Stack<DistPoint>> {
-        unsafe {
+    pub fn crl_distribution_points(&self) -> Result<Stack<DistPoint>, X509D2iError> {
+        let mut critical = -1;
+        let out = unsafe {
             let stack = ffi::X509_get_ext_d2i(
                 self.as_ptr(),
                 ffi::NID_crl_distribution_points,
-                ptr::null_mut(),
+                &mut critical as *mut _,
                 ptr::null_mut(),
             );
             Stack::from_ptr_opt(stack as *mut _)
-        }
+        };
+
+        Self::create_d2i_result(critical, out)
     }
 
     /// Returns this certificate's issuer alternative name entries, if they exist.
     #[corresponds(X509_get_ext_d2i)]
-    pub fn issuer_alt_names(&self) -> Option<Stack<GeneralName>> {
-        unsafe {
+    pub fn issuer_alt_names(&self) -> Result<Stack<GeneralName>, X509D2iError> {
+        let mut critical = -1;
+        let out = unsafe {
             let stack = ffi::X509_get_ext_d2i(
                 self.as_ptr(),
                 ffi::NID_issuer_alt_name,
-                ptr::null_mut(),
+                &mut critical as *mut _,
                 ptr::null_mut(),
             );
             Stack::from_ptr_opt(stack as *mut _)
-        }
+        };
+        Self::create_d2i_result(critical, out)
     }
 
     /// Returns this certificate's [`authority information access`] entries, if they exist.
     ///
     /// [`authority information access`]: https://tools.ietf.org/html/rfc5280#section-4.2.2.1
     #[corresponds(X509_get_ext_d2i)]
-    pub fn authority_info(&self) -> Option<Stack<AccessDescription>> {
-        unsafe {
+    pub fn authority_info(&self) -> Result<Stack<AccessDescription>, X509D2iError> {
+        let mut critical = -1;
+        let out = unsafe {
             let stack = ffi::X509_get_ext_d2i(
                 self.as_ptr(),
                 ffi::NID_info_access,
-                ptr::null_mut(),
+                &mut critical as *mut _,
                 ptr::null_mut(),
             );
             Stack::from_ptr_opt(stack as *mut _)
-        }
+        };
+        Self::create_d2i_result(critical, out)
     }
 
     /// Retrieves the path length extension from a certificate, if it exists.
@@ -814,9 +836,15 @@ impl fmt::Debug for X509 {
         debug_struct.field("signature_algorithm", &self.signature_algorithm().object());
         debug_struct.field("issuer", &self.issuer_name());
         debug_struct.field("subject", &self.subject_name());
-        if let Some(subject_alt_names) = &self.subject_alt_names() {
-            debug_struct.field("subject_alt_names", subject_alt_names);
-        }
+        match &self.subject_alt_names() {
+            Ok(subject_alt_names) => {
+                debug_struct.field("subject_alt_names", subject_alt_names);
+            },
+            Err(X509D2iError::ExtensionNotFoundError) => {
+                // found nothing, but this is ok
+            },
+            Err(e) => panic!("{}", e),
+        };
         debug_struct.field("not_before", &self.not_before());
         debug_struct.field("not_after", &self.not_after());
 
@@ -1711,7 +1739,7 @@ impl X509RevokedRef {
     ///
     /// This returns None if the extension is not present or occurs multiple times.
     #[corresponds(X509_REVOKED_get_ext_d2i)]
-    pub fn extension<T: ExtensionType>(&self) -> Result<Option<(bool, T::Output)>, ErrorStack> {
+    pub fn extension<T: ExtensionType>(&self) -> Result<(bool, T::Output), X509D2iError> {
         let mut critical = -1;
         let out = unsafe {
             // SAFETY: self.as_ptr() is a valid pointer to an X509_REVOKED.
@@ -1726,13 +1754,14 @@ impl X509RevokedRef {
             T::Output::from_ptr_opt(ext as *mut _)
         };
         match (critical, out) {
-            (0, Some(out)) => Ok(Some((false, out))),
-            (1, Some(out)) => Ok(Some((true, out))),
+            (0, Some(out)) => Ok((false, out)),
+            (1, Some(out)) => Ok((true, out)),
             // -1 means the extension wasn't found, -2 means multiple were found.
-            (-1 | -2, _) => Ok(None),
+            (-1, _) => Err(X509D2iError::extension_not_found_error()),
+            (-2, _) => Err(X509D2iError::extension_unambiguous_error()),
             // A critical value of 0 or 1 suggests success, but a null pointer
             // was returned so something went wrong.
-            (0 | 1, None) => Err(ErrorStack::get()),
+            (0 | 1, None) => Err(X509D2iError::internal_openssl_error(ErrorStack::get())),
             (c_int::MIN..=-2 | 2.., _) => panic!("OpenSSL should only return -2, -1, 0, or 1 for an extension's criticality but it returned {}", critical),
         }
     }
@@ -1947,7 +1976,7 @@ impl X509CrlRef {
     ///
     /// This returns None if the extension is not present or occurs multiple times.
     #[corresponds(X509_CRL_get_ext_d2i)]
-    pub fn extension<T: ExtensionType>(&self) -> Result<Option<(bool, T::Output)>, ErrorStack> {
+    pub fn extension<T: ExtensionType>(&self) -> Result<(bool, T::Output), X509D2iError> {
         let mut critical = -1;
         let out = unsafe {
             // SAFETY: self.as_ptr() is a valid pointer to an X509_CRL.
@@ -1962,13 +1991,14 @@ impl X509CrlRef {
             T::Output::from_ptr_opt(ext as *mut _)
         };
         match (critical, out) {
-            (0, Some(out)) => Ok(Some((false, out))),
-            (1, Some(out)) => Ok(Some((true, out))),
+            (0, Some(out)) => Ok((false, out)),
+            (1, Some(out)) => Ok((true, out)),
             // -1 means the extension wasn't found, -2 means multiple were found.
-            (-1 | -2, _) => Ok(None),
+            (-1, _) => Err(X509D2iError::extension_not_found_error()),
+            (-2, _) => Err(X509D2iError::extension_unambiguous_error()),
             // A critical value of 0 or 1 suggests success, but a null pointer
             // was returned so something went wrong.
-            (0 | 1, None) => Err(ErrorStack::get()),
+            (0 | 1, None) => Err(X509D2iError::internal_openssl_error(ErrorStack::get())),
             (c_int::MIN..=-2 | 2.., _) => panic!("OpenSSL should only return -2, -1, 0, or 1 for an extension's criticality but it returned {}", critical),
         }
     }

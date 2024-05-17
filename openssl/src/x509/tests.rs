@@ -33,6 +33,7 @@ use foreign_types::ForeignType;
 use hex::{self, FromHex};
 #[cfg(any(ossl102, boringssl, libressl261))]
 use libc::time_t;
+use crate::error::X509D2iError;
 
 use super::{AuthorityInformationAccess, CertificateIssuer, ReasonCode};
 
@@ -280,7 +281,11 @@ fn test_aia_ca_issuer() {
     // Without AIA
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
-    assert!(cert.authority_info().is_none());
+    match cert.authority_info() {
+        Ok(_) => assert!(false, "Should not find dist point"),
+        Err(X509D2iError::ExtensionNotFoundError) => {/* ok */},
+        Err(e) => assert!(false, "Wrong error: {}", e)
+    }
 }
 
 #[test]
@@ -703,8 +708,7 @@ fn test_crl_entry_extensions() {
 
     let (critical, access_info) = crl
         .extension::<AuthorityInformationAccess>()
-        .unwrap()
-        .expect("Authority Information Access extension should be present");
+        .unwrap();
     assert!(
         !critical,
         "Authority Information Access extension is not critical"
@@ -724,7 +728,6 @@ fn test_crl_entry_extensions() {
 
     let (critical, issuer) = entry
         .extension::<CertificateIssuer>()
-        .unwrap()
         .expect("Certificate issuer extension should be present");
     assert!(critical, "Certificate issuer extension is critical");
     assert_eq!(issuer.len(), 1, "Certificate issuer should have one entry");
@@ -740,7 +743,6 @@ fn test_crl_entry_extensions() {
     #[allow(unused_variables)]
     let (critical, reason_code) = entry
         .extension::<ReasonCode>()
-        .unwrap()
         .expect("Reason code extension should be present");
     assert!(!critical, "Reason code extension is not critical");
     #[cfg(ossl110)]
@@ -1175,7 +1177,11 @@ fn test_dist_point() {
 fn test_dist_point_null() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
-    assert!(cert.crl_distribution_points().is_none());
+    match cert.crl_distribution_points() {
+        Ok(_) => assert!(false, "Should not find dist point"),
+        Err(X509D2iError::ExtensionNotFoundError) => {/* ok */},
+        Err(e) => assert!(false, "Wrong error: {}", e)
+    }
 }
 
 #[test]
