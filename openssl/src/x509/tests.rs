@@ -282,9 +282,9 @@ fn test_aia_ca_issuer() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
     match cert.authority_info() {
-        Ok(_) => assert!(false, "Should not find dist point"),
+        Ok(_) => panic!("Should not find dist point"),
         Err(X509D2iError::ExtensionNotFoundError) => { /* ok */ }
-        Err(e) => assert!(false, "Wrong error: {}", e),
+        Err(e) => panic!("Wrong error: {}", e),
     }
 }
 
@@ -1176,9 +1176,9 @@ fn test_dist_point_null() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
     match cert.crl_distribution_points() {
-        Ok(_) => assert!(false, "Should not find dist point"),
+        Ok(_) => panic!("Should not find dist point"),
         Err(X509D2iError::ExtensionNotFoundError) => { /* ok */ }
-        Err(e) => assert!(false, "Wrong error: {}", e),
+        Err(e) => panic!("Wrong error: {}", e),
     }
 }
 
