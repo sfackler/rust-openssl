@@ -6,6 +6,8 @@ use crate::dh::Dh;
 use crate::error::ErrorStack;
 #[cfg(any(ossl111, libressl340))]
 use crate::ssl::SslVersion;
+#[cfg(any(ossl111, libressl340))]
+use crate::error::X509D2iError;
 use crate::ssl::{
     HandshakeError, Ssl, SslContext, SslContextBuilder, SslContextRef, SslMethod, SslMode,
     SslOptions, SslRef, SslStream, SslVerifyMode,
