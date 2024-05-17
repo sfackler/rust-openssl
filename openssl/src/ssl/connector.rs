@@ -460,8 +460,9 @@ cfg_if! {
 
             fn verify_hostname(domain: &str, cert: &X509Ref) -> bool {
                 match cert.subject_alt_names() {
-                    Some(names) => verify_subject_alt_names(domain, names),
-                    None => verify_subject_name(domain, &cert.subject_name()),
+                    Ok(names) => verify_subject_alt_names(domain, names),
+                    Err(X509D2iError::extension_not_found_error) => verify_subject_name(domain, &cert.subject_name()),
+                    Err(e) => panic!("Error when fetching alt names from certificate: {}", e),
                 }
             }
 
