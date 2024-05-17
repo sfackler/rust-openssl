@@ -78,4 +78,20 @@ impl Provider {
             .map(|_| ())
         }
     }
+    #[corresponds(OSSL_PROVIDER_add_builtin)]
+    pub fn add_builtin(
+        ctx: Option<&LibCtxRef>,
+        provider: &str,
+        init_func: unsafe extern "C" fn(),
+    ) -> Result<(), ErrorStack> {
+        let provider_name = CString::new(provider).unwrap();
+        unsafe {
+            cvt(ffi::OSSL_PROVIDER_add_builtin(
+                ctx.map_or(ptr::null_mut(), ForeignTypeRef::as_ptr),
+                provider_name.as_ptr(),
+                init_func,
+            ))
+            .map(|_| ())
+        }
+    }
 }
