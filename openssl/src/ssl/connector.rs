@@ -4,9 +4,6 @@ use std::ops::{Deref, DerefMut};
 
 use crate::dh::Dh;
 use crate::error::ErrorStack;
-#[cfg(not(ossl102))]
-#[cfg(not(libressl261))]
-use crate::error::X509D2iError;
 #[cfg(any(ossl111, libressl340))]
 use crate::ssl::SslVersion;
 use crate::ssl::{
@@ -420,7 +417,7 @@ cfg_if! {
             use std::str;
             use once_cell::sync::OnceCell;
 
-            use crate::error::ErrorStack;
+            use crate::error::{ErrorStack, X509D2iError};
             use crate::ex_data::Index;
             use crate::nid::Nid;
             use crate::ssl::Ssl;
@@ -464,7 +461,7 @@ cfg_if! {
             fn verify_hostname(domain: &str, cert: &X509Ref) -> bool {
                 match cert.subject_alt_names() {
                     Ok(names) => verify_subject_alt_names(domain, names),
-                    Err(X509D2iError::extension_not_found_error) => verify_subject_name(domain, &cert.subject_name()),
+                    Err(X509D2iError::ExtensionNotFoundError) => verify_subject_name(domain, &cert.subject_name()),
                     Err(e) => panic!("Error when fetching alt names from certificate: {}", e),
                 }
             }
