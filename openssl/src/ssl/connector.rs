@@ -4,8 +4,8 @@ use std::ops::{Deref, DerefMut};
 
 use crate::dh::Dh;
 use crate::error::ErrorStack;
-#[cfg(not(ossl111))]
-#[cfg(not(libressl340))]
+#[cfg(not(ossl102))]
+#[cfg(not(libressl261))]
 use crate::error::X509D2iError;
 #[cfg(any(ossl111, libressl340))]
 use crate::ssl::SslVersion;
