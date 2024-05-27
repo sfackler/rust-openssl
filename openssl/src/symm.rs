@@ -627,7 +627,12 @@ impl Crypter {
         ctx.set_key_length(key.len())?;
 
         if let (Some(iv), Some(iv_len)) = (iv, t.iv_len()) {
-            if iv.len() != iv_len {
+            if iv.len() != iv_len
+                || matches!(
+                    t.nid(),
+                    Nid::AES_128_CCM | Nid::AES_192_CCM | Nid::AES_256_CCM
+                )
+            {
                 ctx.set_iv_length(iv.len())?;
             }
         }
