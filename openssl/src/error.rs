@@ -403,7 +403,7 @@ cfg_if! {
 pub enum X509D2iError {
     InternalOpenSSLError(ErrorStack),
     ExtensionNotFoundError,
-    ExtensionUnambiguousError,
+    ExtensionAmbiguousError,
 }
 
 impl X509D2iError {
@@ -415,7 +415,7 @@ impl X509D2iError {
         Self::ExtensionNotFoundError
     }
 
-    pub fn extension_unambiguous_error() -> Self {
+    pub fn extension_ambiguous_error() -> Self {
         Self::ExtensionUnambiguousError
     }
 
@@ -426,7 +426,7 @@ impl X509D2iError {
             Self::ExtensionNotFoundError =>
                 write!(fmt, "Error: Could not get X509 extension; Reason: Could not find any matching extension."),
             Self::ExtensionUnambiguousError =>
-                write!(fmt, "Error: Could not get X509 extension; Reason: Tried to read on extension, but found multiple."),
+                write!(fmt, "Error: Could not get X509 extension; Reason: Tried to read an extension, but found multiple."),
         }
     }
 }
