@@ -416,7 +416,7 @@ impl X509D2iError {
     }
 
     pub fn extension_ambiguous_error() -> Self {
-        Self::ExtensionUnambiguousError
+        Self::ExtensionAmbiguousError
     }
 
     fn format(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
@@ -425,7 +425,7 @@ impl X509D2iError {
                 write!(fmt, "Error: Could not get X509 extension; {}", stack),
             Self::ExtensionNotFoundError =>
                 write!(fmt, "Error: Could not get X509 extension; Reason: Could not find any matching extension."),
-            Self::ExtensionUnambiguousError =>
+            Self::ExtensionAmbiguousError =>
                 write!(fmt, "Error: Could not get X509 extension; Reason: Tried to read an extension, but found multiple."),
         }
     }

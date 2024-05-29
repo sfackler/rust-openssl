@@ -424,7 +424,7 @@ impl X509Ref {
             (0 | 1, Some(out)) => Ok(out),
             // -1 means the extension wasn't found, -2 means multiple were found.
             (-1, _) => Err(X509D2iError::extension_not_found_error()),
-            (-2, _) => Err(X509D2iError::extension_unambiguous_error()),
+            (-2, _) => Err(X509D2iError::extension_ambiguous_error()),
             // A critical value of 0 or 1 suggests success, but a null pointer
             // was returned so something went wrong.
             (0 | 1, None) => Err(X509D2iError::internal_openssl_error(ErrorStack::get())),
@@ -1758,7 +1758,7 @@ impl X509RevokedRef {
             (1, Some(out)) => Ok((true, out)),
             // -1 means the extension wasn't found, -2 means multiple were found.
             (-1, _) => Err(X509D2iError::extension_not_found_error()),
-            (-2, _) => Err(X509D2iError::extension_unambiguous_error()),
+            (-2, _) => Err(X509D2iError::extension_ambiguous_error()),
             // A critical value of 0 or 1 suggests success, but a null pointer
             // was returned so something went wrong.
             (0 | 1, None) => Err(X509D2iError::internal_openssl_error(ErrorStack::get())),
@@ -1995,7 +1995,7 @@ impl X509CrlRef {
             (1, Some(out)) => Ok((true, out)),
             // -1 means the extension wasn't found, -2 means multiple were found.
             (-1, _) => Err(X509D2iError::extension_not_found_error()),
-            (-2, _) => Err(X509D2iError::extension_unambiguous_error()),
+            (-2, _) => Err(X509D2iError::extension_ambiguous_error()),
             // A critical value of 0 or 1 suggests success, but a null pointer
             // was returned so something went wrong.
             (0 | 1, None) => Err(X509D2iError::internal_openssl_error(ErrorStack::get())),
