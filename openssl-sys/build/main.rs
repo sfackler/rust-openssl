@@ -271,13 +271,13 @@ pointing to your OpenSSL installation or installing OpenSSL headers package
 specific to your distribution:
 
     # On Ubuntu
-    sudo apt-get install libssl-dev
+    sudo apt-get install pkg-config libssl-dev
     # On Arch Linux
-    sudo pacman -S openssl
+    sudo pacman -S pkgconf openssl
     # On Fedora
-    sudo dnf install openssl-devel
+    sudo dnf install pkgconf perl-FindBin perl-IPC-Cmd openssl-devel
     # On Alpine Linux
-    apk add openssl-dev
+    apk add pkgconf openssl-dev
 
 See rust-openssl documentation for more information:
 
