@@ -215,28 +215,4 @@ impl ParseCallbacks for OpensslCallbacks {
     fn will_parse_macro(&self, _name: &str) -> MacroParsingBehavior {
         MacroParsingBehavior::Ignore
     }
-
-    fn item_name(&self, original_item_name: &str) -> Option<String> {
-        match original_item_name {
-            // Our original definitions of these are wrong, so rename to avoid breakage
-            "CRYPTO_EX_new"
-            | "CRYPTO_EX_dup"
-            | "CRYPTO_EX_free"
-            | "BIO_meth_set_write"
-            | "BIO_meth_set_read"
-            | "BIO_meth_set_puts"
-            | "BIO_meth_set_ctrl"
-            | "BIO_meth_set_create"
-            | "BIO_meth_set_destroy"
-            | "CRYPTO_set_locking_callback"
-            | "CRYPTO_set_id_callback"
-            | "SSL_CTX_set_tmp_dh_callback"
-            | "SSL_set_tmp_dh_callback"
-            | "SSL_CTX_set_tmp_ecdh_callback"
-            | "SSL_set_tmp_ecdh_callback"
-            | "SSL_CTX_callback_ctrl"
-            | "SSL_CTX_set_alpn_select_cb" => Some(format!("{}__fixed_rust", original_item_name)),
-            _ => None,
-        }
-    }
 }

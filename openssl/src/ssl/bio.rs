@@ -205,12 +205,12 @@ cfg_if! {
                 unsafe {
                     let ptr = cvt_p(ffi::BIO_meth_new(ffi::BIO_TYPE_NONE, b"rust\0".as_ptr() as *const _))?;
                     let method = BIO_METHOD(ptr);
-                    cvt(ffi::BIO_meth_set_write__fixed_rust(method.0, Some(bwrite::<S>)))?;
-                    cvt(ffi::BIO_meth_set_read__fixed_rust(method.0, Some(bread::<S>)))?;
-                    cvt(ffi::BIO_meth_set_puts__fixed_rust(method.0, Some(bputs::<S>)))?;
-                    cvt(ffi::BIO_meth_set_ctrl__fixed_rust(method.0, Some(ctrl::<S>)))?;
-                    cvt(ffi::BIO_meth_set_create__fixed_rust(method.0, Some(create)))?;
-                    cvt(ffi::BIO_meth_set_destroy__fixed_rust(method.0, Some(destroy::<S>)))?;
+                    cvt(ffi::BIO_meth_set_write(method.0, Some(bwrite::<S>)))?;
+                    cvt(ffi::BIO_meth_set_read(method.0, Some(bread::<S>)))?;
+                    cvt(ffi::BIO_meth_set_puts(method.0, Some(bputs::<S>)))?;
+                    cvt(ffi::BIO_meth_set_ctrl(method.0, Some(ctrl::<S>)))?;
+                    cvt(ffi::BIO_meth_set_create(method.0, Some(create)))?;
+                    cvt(ffi::BIO_meth_set_destroy(method.0, Some(destroy::<S>)))?;
                     Ok(method)
                 }
             }

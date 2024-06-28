@@ -344,8 +344,7 @@ extern "C" {
     #[cfg(any(ossl102, libressl261))]
     pub fn SSL_set_alpn_protos(s: *mut SSL, data: *const c_uchar, len: c_uint) -> c_int;
     #[cfg(any(ossl102, libressl261))]
-    #[link_name = "SSL_CTX_set_alpn_select_cb"]
-    pub fn SSL_CTX_set_alpn_select_cb__fixed_rust(
+    pub fn SSL_CTX_set_alpn_select_cb(
         ssl: *mut SSL_CTX,
         cb: Option<
             unsafe extern "C" fn(
@@ -683,8 +682,7 @@ extern "C" {
     ) -> c_int;
     pub fn SSL_ctrl(ssl: *mut SSL, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
     pub fn SSL_CTX_ctrl(ctx: *mut SSL_CTX, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
-    #[link_name = "SSL_CTX_callback_ctrl"]
-    pub fn SSL_CTX_callback_ctrl__fixed_rust(
+    pub fn SSL_CTX_callback_ctrl(
         ctx: *mut SSL_CTX,
         cmd: c_int,
         fp: Option<unsafe extern "C" fn()>,
@@ -831,31 +829,27 @@ extern "C" {
 }
 
 extern "C" {
-    #[link_name = "SSL_CTX_set_tmp_dh_callback"]
-    pub fn SSL_CTX_set_tmp_dh_callback__fixed_rust(
+    pub fn SSL_CTX_set_tmp_dh_callback(
         ctx: *mut SSL_CTX,
         dh: Option<
             unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int) -> *mut DH,
         >,
     );
-    #[link_name = "SSL_set_tmp_dh_callback"]
-    pub fn SSL_set_tmp_dh_callback__fixed_rust(
+    pub fn SSL_set_tmp_dh_callback(
         ctx: *mut SSL,
         dh: Option<
             unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int) -> *mut DH,
         >,
     );
     #[cfg(not(ossl110))]
-    #[link_name = "SSL_CTX_set_tmp_ecdh_callback"]
-    pub fn SSL_CTX_set_tmp_ecdh_callback__fixed_rust(
+    pub fn SSL_CTX_set_tmp_ecdh_callback(
         ctx: *mut SSL_CTX,
         ecdh: Option<
             unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int) -> *mut EC_KEY,
         >,
     );
     #[cfg(not(ossl110))]
-    #[link_name = "SSL_set_tmp_ecdh_callback"]
-    pub fn SSL_set_tmp_ecdh_callback__fixed_rust(
+    pub fn SSL_set_tmp_ecdh_callback(
         ssl: *mut SSL,
         ecdh: Option<
             unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int) -> *mut EC_KEY,

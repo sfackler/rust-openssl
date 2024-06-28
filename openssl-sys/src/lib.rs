@@ -164,7 +164,7 @@ mod openssl {
                     }
 
                     unsafe {
-                        CRYPTO_set_id_callback__fixed_rust(Some(thread_id));
+                        CRYPTO_set_id_callback(Some(thread_id));
                     }
                 }
             } else {
@@ -187,7 +187,7 @@ mod openssl {
                 Box::new((0..num_locks).map(|_| None).collect());
             GUARDS = mem::transmute(guards);
 
-            CRYPTO_set_locking_callback__fixed_rust(Some(locking_function));
+            CRYPTO_set_locking_callback(Some(locking_function));
             set_id_callback();
         })
     }

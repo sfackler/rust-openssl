@@ -70,38 +70,32 @@ extern "C" {
 #[allow(clashing_extern_declarations)]
 extern "C" {
     #[cfg(any(ossl110, libressl273))]
-    #[link_name = "BIO_meth_set_write"]
-    pub fn BIO_meth_set_write__fixed_rust(
+    pub fn BIO_meth_set_write(
         biom: *mut BIO_METHOD,
         write: Option<unsafe extern "C" fn(*mut BIO, *const c_char, c_int) -> c_int>,
     ) -> c_int;
     #[cfg(any(ossl110, libressl273))]
-    #[link_name = "BIO_meth_set_read"]
-    pub fn BIO_meth_set_read__fixed_rust(
+    pub fn BIO_meth_set_read(
         biom: *mut BIO_METHOD,
         read: Option<unsafe extern "C" fn(*mut BIO, *mut c_char, c_int) -> c_int>,
     ) -> c_int;
     #[cfg(any(ossl110, libressl273))]
-    #[link_name = "BIO_meth_set_puts"]
-    pub fn BIO_meth_set_puts__fixed_rust(
+    pub fn BIO_meth_set_puts(
         biom: *mut BIO_METHOD,
         read: Option<unsafe extern "C" fn(*mut BIO, *const c_char) -> c_int>,
     ) -> c_int;
     #[cfg(any(ossl110, libressl273))]
-    #[link_name = "BIO_meth_set_ctrl"]
-    pub fn BIO_meth_set_ctrl__fixed_rust(
+    pub fn BIO_meth_set_ctrl(
         biom: *mut BIO_METHOD,
         read: Option<unsafe extern "C" fn(*mut BIO, c_int, c_long, *mut c_void) -> c_long>,
     ) -> c_int;
     #[cfg(any(ossl110, libressl273))]
-    #[link_name = "BIO_meth_set_create"]
-    pub fn BIO_meth_set_create__fixed_rust(
+    pub fn BIO_meth_set_create(
         biom: *mut BIO_METHOD,
         create: Option<unsafe extern "C" fn(*mut BIO) -> c_int>,
     ) -> c_int;
     #[cfg(any(ossl110, libressl273))]
-    #[link_name = "BIO_meth_set_destroy"]
-    pub fn BIO_meth_set_destroy__fixed_rust(
+    pub fn BIO_meth_set_destroy(
         biom: *mut BIO_METHOD,
         destroy: Option<unsafe extern "C" fn(*mut BIO) -> c_int>,
     ) -> c_int;
