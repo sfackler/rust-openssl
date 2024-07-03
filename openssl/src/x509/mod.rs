@@ -1093,7 +1093,7 @@ impl X509NameBuilder {
     pub fn append_entry_by_text(&mut self, field: &str, value: &str) -> Result<(), ErrorStack> {
         unsafe {
             let field = CString::new(field).unwrap();
-            assert!(value.len() <= crate::SLenType::max_value() as usize);
+            assert!(value.len() <= crate::SLenType::MAX as usize);
             cvt(ffi::X509_NAME_add_entry_by_txt(
                 self.0.as_ptr(),
                 field.as_ptr() as *mut _,
@@ -1120,7 +1120,7 @@ impl X509NameBuilder {
     ) -> Result<(), ErrorStack> {
         unsafe {
             let field = CString::new(field).unwrap();
-            assert!(value.len() <= crate::SLenType::max_value() as usize);
+            assert!(value.len() <= crate::SLenType::MAX as usize);
             cvt(ffi::X509_NAME_add_entry_by_txt(
                 self.0.as_ptr(),
                 field.as_ptr() as *mut _,
@@ -1141,7 +1141,7 @@ impl X509NameBuilder {
     /// [`X509_NAME_add_entry_by_NID`]: https://www.openssl.org/docs/manmaster/crypto/X509_NAME_add_entry_by_NID.html
     pub fn append_entry_by_nid(&mut self, field: Nid, value: &str) -> Result<(), ErrorStack> {
         unsafe {
-            assert!(value.len() <= crate::SLenType::max_value() as usize);
+            assert!(value.len() <= crate::SLenType::MAX as usize);
             cvt(ffi::X509_NAME_add_entry_by_NID(
                 self.0.as_ptr(),
                 field.as_raw(),
@@ -1167,7 +1167,7 @@ impl X509NameBuilder {
         ty: Asn1Type,
     ) -> Result<(), ErrorStack> {
         unsafe {
-            assert!(value.len() <= crate::SLenType::max_value() as usize);
+            assert!(value.len() <= crate::SLenType::MAX as usize);
             cvt(ffi::X509_NAME_add_entry_by_NID(
                 self.0.as_ptr(),
                 field.as_raw(),

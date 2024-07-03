@@ -691,7 +691,7 @@ impl Crypter {
     /// Panics for block ciphers if `output.len() < input.len() + block_size`,
     /// where `block_size` is the block size of the cipher (see `Cipher::block_size`).
     ///
-    /// Panics if `output.len() > c_int::max_value()`.
+    /// Panics if `output.len() > c_int::MAX`.
     pub fn update(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, ErrorStack> {
         self.ctx.cipher_update(input, Some(output))
     }
