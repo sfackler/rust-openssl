@@ -95,7 +95,7 @@ impl AesKey {
     #[corresponds(AES_set_encrypt_key)]
     pub fn new_encrypt(key: &[u8]) -> Result<AesKey, KeyError> {
         unsafe {
-            assert!(key.len() <= c_int::max_value() as usize / 8);
+            assert!(key.len() <= c_int::MAX as usize / 8);
 
             let mut aes_key = MaybeUninit::uninit();
             let r = ffi::AES_set_encrypt_key(
@@ -119,7 +119,7 @@ impl AesKey {
     #[corresponds(AES_set_decrypt_key)]
     pub fn new_decrypt(key: &[u8]) -> Result<AesKey, KeyError> {
         unsafe {
-            assert!(key.len() <= c_int::max_value() as usize / 8);
+            assert!(key.len() <= c_int::MAX as usize / 8);
 
             let mut aes_key = MaybeUninit::uninit();
             let r = ffi::AES_set_decrypt_key(

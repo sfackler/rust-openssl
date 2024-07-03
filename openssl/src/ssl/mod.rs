@@ -965,7 +965,7 @@ impl SslContextBuilder {
     #[corresponds(SSL_CTX_set_session_id_context)]
     pub fn set_session_id_context(&mut self, sid_ctx: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            assert!(sid_ctx.len() <= c_uint::max_value() as usize);
+            assert!(sid_ctx.len() <= c_uint::MAX as usize);
             cvt(ffi::SSL_CTX_set_session_id_context(
                 self.as_ptr(),
                 sid_ctx.as_ptr(),
@@ -1228,7 +1228,7 @@ impl SslContextBuilder {
     #[cfg(any(ossl102, libressl261, boringssl))]
     pub fn set_alpn_protos(&mut self, protocols: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            assert!(protocols.len() <= c_uint::max_value() as usize);
+            assert!(protocols.len() <= c_uint::MAX as usize);
             let r = ffi::SSL_CTX_set_alpn_protos(
                 self.as_ptr(),
                 protocols.as_ptr(),
@@ -2487,7 +2487,7 @@ impl SslRef {
     #[cfg(any(ossl102, libressl261, boringssl))]
     pub fn set_alpn_protos(&mut self, protocols: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            assert!(protocols.len() <= c_uint::max_value() as usize);
+            assert!(protocols.len() <= c_uint::MAX as usize);
             let r =
                 ffi::SSL_set_alpn_protos(self.as_ptr(), protocols.as_ptr(), protocols.len() as _);
             // fun fact, SSL_set_alpn_protos has a reversed return code D:
@@ -2938,7 +2938,7 @@ impl SslRef {
     #[cfg(not(boringssl))]
     pub fn set_ocsp_status(&mut self, response: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            assert!(response.len() <= c_int::max_value() as usize);
+            assert!(response.len() <= c_int::MAX as usize);
             let p = cvt_p(ffi::OPENSSL_malloc(response.len() as _))?;
             ptr::copy_nonoverlapping(response.as_ptr(), p as *mut u8, response.len());
             cvt(ffi::SSL_set_tlsext_status_ocsp_resp(
@@ -3801,7 +3801,7 @@ impl<S: Read + Write> SslStream<S> {
                     return Ok(0);
                 }
 
-                let len = usize::min(c_int::max_value() as usize, buf.len()) as c_int;
+                let len = usize::min(c_int::MAX as usize, buf.len()) as c_int;
                 let ret = unsafe {
                     ffi::SSL_read(self.ssl().as_ptr(), buf.as_mut_ptr().cast(), len)
                 };
@@ -3842,7 +3842,7 @@ impl<S: Read + Write> SslStream<S> {
                     return Ok(0);
                 }
 
-                let len = usize::min(c_int::max_value() as usize, buf.len()) as c_int;
+                let len = usize::min(c_int::MAX as usize, buf.len()) as c_int;
                 let ret = unsafe {
                     ffi::SSL_write(self.ssl().as_ptr(), buf.as_ptr().cast(), len)
                 };
@@ -3880,7 +3880,7 @@ impl<S: Read + Write> SslStream<S> {
                     return Ok(0);
                 }
 
-                let len = usize::min(c_int::max_value() as usize, buf.len()) as c_int;
+                let len = usize::min(c_int::MAX as usize, buf.len()) as c_int;
                 let ret = unsafe {
                     ffi::SSL_peek(self.ssl().as_ptr(), buf.as_mut_ptr().cast(), len)
                 };

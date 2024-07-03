@@ -129,7 +129,7 @@ where
         to: &mut [u8],
         padding: Padding,
     ) -> Result<usize, ErrorStack> {
-        assert!(from.len() <= i32::max_value() as usize);
+        assert!(from.len() <= i32::MAX as usize);
         assert!(to.len() >= self.size() as usize);
 
         unsafe {
@@ -157,7 +157,7 @@ where
         to: &mut [u8],
         padding: Padding,
     ) -> Result<usize, ErrorStack> {
-        assert!(from.len() <= i32::max_value() as usize);
+        assert!(from.len() <= i32::MAX as usize);
         assert!(to.len() >= self.size() as usize);
 
         unsafe {
@@ -301,7 +301,7 @@ where
         to: &mut [u8],
         padding: Padding,
     ) -> Result<usize, ErrorStack> {
-        assert!(from.len() <= i32::max_value() as usize);
+        assert!(from.len() <= i32::MAX as usize);
         assert!(to.len() >= self.size() as usize);
 
         unsafe {
@@ -328,7 +328,7 @@ where
         to: &mut [u8],
         padding: Padding,
     ) -> Result<usize, ErrorStack> {
-        assert!(from.len() <= i32::max_value() as usize);
+        assert!(from.len() <= i32::MAX as usize);
         assert!(to.len() >= self.size() as usize);
 
         unsafe {

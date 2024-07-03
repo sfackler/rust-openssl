@@ -74,7 +74,16 @@ pub unsafe fn SSL_CTX_set_tlsext_servername_callback__fixed_rust(
     ctx: *mut SSL_CTX,
     cb: Option<unsafe extern "C" fn(*mut SSL, *mut c_int, *mut c_void) -> c_int>,
 ) -> c_long {
-    SSL_CTX_callback_ctrl__fixed_rust(ctx, SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, mem::transmute(cb))
+    SSL_CTX_callback_ctrl__fixed_rust(
+        ctx,
+        SSL_CTRL_SET_TLSEXT_SERVERNAME_CB,
+        mem::transmute::<
+            std::option::Option<
+                unsafe extern "C" fn(*mut SSL, *mut c_int, *mut libc::c_void) -> i32,
+            >,
+            std::option::Option<unsafe extern "C" fn()>,
+        >(cb),
+    )
 }
 
 pub const SSL_TLSEXT_ERR_OK: c_int = 0;
@@ -90,7 +99,14 @@ pub unsafe fn SSL_CTX_set_tlsext_status_cb(
     ctx: *mut SSL_CTX,
     cb: Option<unsafe extern "C" fn(*mut SSL, *mut c_void) -> c_int>,
 ) -> c_long {
-    SSL_CTX_callback_ctrl__fixed_rust(ctx, SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB, mem::transmute(cb))
+    SSL_CTX_callback_ctrl__fixed_rust(
+        ctx,
+        SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB,
+        mem::transmute::<
+            std::option::Option<unsafe extern "C" fn(*mut SSL, *mut c_void) -> i32>,
+            std::option::Option<unsafe extern "C" fn()>,
+        >(cb),
+    )
 }
 
 pub unsafe fn SSL_CTX_set_tlsext_status_arg(ctx: *mut SSL_CTX, arg: *mut c_void) -> c_long {

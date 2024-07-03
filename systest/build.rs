@@ -103,7 +103,7 @@ fn main() {
             && s.chars().next().unwrap().is_lowercase()
         {
             format!("struct {}", s)
-        } else if s.starts_with("stack_st_") {
+        } else if s.starts_with("stack_st_") || s == "timeval" {
             format!("struct {}", s)
         } else {
             s.to_string()

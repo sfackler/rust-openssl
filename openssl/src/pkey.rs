@@ -482,7 +482,7 @@ impl PKey<Private> {
     #[cfg(not(boringssl))]
     pub fn hmac(key: &[u8]) -> Result<PKey<Private>, ErrorStack> {
         unsafe {
-            assert!(key.len() <= c_int::max_value() as usize);
+            assert!(key.len() <= c_int::MAX as usize);
             let key = cvt_p(ffi::EVP_PKEY_new_mac_key(
                 ffi::EVP_PKEY_HMAC,
                 ptr::null_mut(),
@@ -676,7 +676,7 @@ impl PKey<Private> {
     pub fn private_key_from_pkcs8(der: &[u8]) -> Result<PKey<Private>, ErrorStack> {
         unsafe {
             ffi::init();
-            let len = der.len().min(c_long::max_value() as usize) as c_long;
+            let len = der.len().min(c_long::MAX as usize) as c_long;
             let p8inf = cvt_p(ffi::d2i_PKCS8_PRIV_KEY_INFO(
                 ptr::null_mut(),
                 &mut der.as_ptr(),
