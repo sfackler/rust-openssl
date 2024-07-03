@@ -89,7 +89,7 @@ cfg_if! {
             BIO_ctrl(bio, BIO_CTRL_DGRAM_GET_NO_TRUNC, 0, ptr::null_mut()) as c_int
         }
         pub unsafe fn BIO_dgram_set_no_trunc(bio: *mut BIO, enable: c_int) -> c_int {
-            BIO_ctrl(bio, BIO_CTRL_DGRAM_SET_NO_TRUNC, enable, ptr::null_mut()) as c_int
+            BIO_ctrl(bio, BIO_CTRL_DGRAM_SET_NO_TRUNC, enable as c_long, ptr::null_mut()) as c_int
         }
         pub unsafe fn BIO_dgram_get_cap(bio: *mut BIO) -> u32 {
             BIO_ctrl(bio, BIO_CTRL_DGRAM_GET_CAPS, 0, ptr::null_mut()) as u32
