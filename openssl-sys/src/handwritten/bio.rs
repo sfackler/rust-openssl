@@ -106,3 +106,60 @@ extern "C" {
         destroy: Option<unsafe extern "C" fn(*mut BIO) -> c_int>,
     ) -> c_int;
 }
+
+#[cfg(ossl320)]
+extern "C" {
+    pub fn BIO_meth_set_sendmmsg(
+        biom: *mut BIO_METHOD,
+        f: Option<
+            unsafe extern "C" fn(
+                arg1: *mut BIO,
+                arg2: *mut BIO_MSG,
+                arg3: usize,
+                arg4: usize,
+                arg5: u64,
+                arg6: *mut usize,
+            ) -> c_int,
+        >,
+    ) -> c_int;
+    pub fn BIO_meth_set_recvmmsg(
+        biom: *mut BIO_METHOD,
+        f: Option<
+            unsafe extern "C" fn(
+                arg1: *mut BIO,
+                arg2: *mut BIO_MSG,
+                arg3: usize,
+                arg4: usize,
+                arg5: u64,
+                arg6: *mut usize,
+            ) -> c_int,
+        >,
+    ) -> c_int;
+    pub fn BIO_new_bio_dgram_pair(
+        bio1: *mut *mut BIO,
+        writebuf1: usize,
+        bio2: *mut *mut BIO,
+        writebuf2: usize,
+    ) -> c_int;
+    pub fn BIO_s_dgram_pair() -> *const BIO_METHOD;
+    pub fn BIO_s_datagram() -> *const BIO_METHOD;
+    pub fn BIO_get_rpoll_descriptor(b: *mut BIO, desc: *mut BIO_POLL_DESCRIPTOR) -> c_int;
+    pub fn BIO_get_wpoll_descriptor(b: *mut BIO, desc: *mut BIO_POLL_DESCRIPTOR) -> c_int;
+    pub fn BIO_sendmmsg(
+        b: *mut BIO,
+        msg: *mut BIO_MSG,
+        stride: usize,
+        num_msg: usize,
+        flags: u64,
+        msgs_processed: *mut usize,
+    ) -> c_int;
+    pub fn BIO_recvmmsg(
+        b: *mut BIO,
+        msg: *mut BIO_MSG,
+        stride: usize,
+        num_msg: usize,
+        flags: u64,
+        msgs_processed: *mut usize,
+    ) -> c_int;
+    pub fn BIO_err_is_non_fatal(errcode: c_uint) -> c_int;
+}

@@ -951,3 +951,59 @@ extern "C" {
     #[cfg(any(ossl110, libressl360))]
     pub fn SSL_get_security_level(s: *const SSL) -> c_int;
 }
+
+#[cfg(ossl320)]
+extern "C" {
+    pub fn OSSL_QUIC_client_method() -> *const SSL_METHOD;
+    pub fn OSSL_QUIC_client_thread_method() -> *const SSL_METHOD;
+    pub fn SSL_get_event_timeout(s: *mut SSL, tv: *mut timeval, is_infinite: *mut c_int) -> c_int;
+    pub fn SSL_handle_events(s: *mut SSL) -> c_int;
+    pub fn SSL_get_blocking_mode(s: *mut SSL) -> c_int;
+    pub fn SSL_set_blocking_mode(s: *mut SSL, blocking: c_int) -> c_int;
+    pub fn SSL_get_rpoll_descriptor(s: *mut SSL, desc: *mut BIO_POLL_DESCRIPTOR) -> c_int;
+    pub fn SSL_get_wpoll_descriptor(s: *mut SSL, desc: *mut BIO_POLL_DESCRIPTOR) -> c_int;
+    pub fn SSL_net_read_desired(s: *mut SSL) -> c_int;
+    pub fn SSL_net_write_desired(s: *mut SSL) -> c_int;
+    pub fn SSL_set1_initial_peer_addr(s: *mut SSL, peer_addr: *const BIO_ADDR) -> c_int;
+    pub fn SSL_shutdown_ex(
+        ssl: *mut SSL,
+        flags: u64,
+        args: *const SSL_SHUTDOWN_EX_ARGS,
+        args_len: usize,
+    ) -> c_int;
+    pub fn SSL_stream_conclude(ssl: *mut SSL, flags: u64) -> c_int;
+    pub fn SSL_stream_reset(
+        ssl: *mut SSL,
+        args: *const SSL_STREAM_RESET_ARGS,
+        args_len: usize,
+    ) -> c_int;
+    pub fn SSL_get_stream_read_state(ssl: *mut SSL) -> c_int;
+    pub fn SSL_get_stream_write_state(ssl: *mut SSL) -> c_int;
+    pub fn SSL_get_conn_close_info(
+        ssl: *mut SSL,
+        info: *mut SSL_CONN_CLOSE_INFO,
+        info_len: usize,
+    ) -> c_int;
+    pub fn SSL_get0_connection(s: *mut SSL) -> *mut SSL;
+    pub fn SSL_is_connection(s: *mut SSL) -> c_int;
+    pub fn SSL_get_stream_type(s: *mut SSL) -> c_int;
+    pub fn SSL_get_stream_id(s: *mut SSL) -> u64;
+    pub fn SSL_new_stream(s: *mut SSL, flags: u64) -> *mut SSL;
+    pub fn SSL_accept_stream(s: *mut SSL, flags: u64) -> *mut SSL;
+    pub fn SSL_set_incoming_stream_policy(s: *mut SSL, policy: c_int, aec: u64) -> c_int;
+    pub fn SSL_get_accept_stream_queue_len(s: *mut SSL) -> usize;
+    pub fn SSL_set_default_stream_mode(s: *mut SSL, mode: u32) -> c_int;
+}
+
+#[cfg(ossl330)]
+extern "C" {
+    pub fn SSL_write_ex2(
+        s: *mut SSL,
+        buf: *const c_void,
+        num: usize,
+        flags: u64,
+        written: *mut usize,
+    ) -> c_int;
+    pub fn SSL_get_value_uint(s: *mut SSL, class_: u32, id: u32, v: *mut u64) -> c_int;
+    pub fn SSL_set_value_uint(s: *mut SSL, class_: u32, id: u32, v: u64) -> c_int;
+}
