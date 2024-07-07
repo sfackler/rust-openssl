@@ -32,6 +32,14 @@ mod boringssl {
 #[cfg(all(boringssl, not(feature = "unstable_boringssl")))]
 pub use boringssl::*;
 
+#[cfg(all(feature = "probe", feature = "vendored"))]
+#[path = "probe_vendored.rs"]
+pub mod probe;
+
+#[cfg(all(feature = "probe", not(feature = "vendored")))]
+#[path = "probe_system.rs"]
+pub mod probe;
+
 #[cfg(openssl)]
 #[path = "."]
 mod openssl {
