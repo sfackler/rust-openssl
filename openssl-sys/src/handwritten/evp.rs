@@ -470,8 +470,11 @@ extern "C" {
 
     pub fn EVP_PKEY_set1_RSA(k: *mut EVP_PKEY, r: *mut RSA) -> c_int;
     pub fn EVP_PKEY_get1_RSA(k: *mut EVP_PKEY) -> *mut RSA;
+    pub fn EVP_PKEY_set1_DSA(k: *mut EVP_PKEY, k: *mut DSA) -> c_int;
     pub fn EVP_PKEY_get1_DSA(k: *mut EVP_PKEY) -> *mut DSA;
+    pub fn EVP_PKEY_set1_DH(k: *mut EVP_PKEY, k: *mut DH) -> c_int;
     pub fn EVP_PKEY_get1_DH(k: *mut EVP_PKEY) -> *mut DH;
+    pub fn EVP_PKEY_set1_EC_KEY(k: *mut EVP_PKEY, k: *mut EC_KEY) -> c_int;
     pub fn EVP_PKEY_get1_EC_KEY(k: *mut EVP_PKEY) -> *mut EC_KEY;
 
     pub fn EVP_PKEY_new() -> *mut EVP_PKEY;
