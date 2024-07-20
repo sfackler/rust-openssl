@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [v0.9.103] - 2024-07-20
+
+### Added
+
+* Added several functions and constants for datagram `BIO`s.
+* Added `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_DH`, and `EVP_PKEY_set1_EC_KEY`.
+* Added several functions related to QUIC support.
+
 ## [v0.9.102] - 2024-03-28
 
 ### Added
@@ -599,7 +607,8 @@ Fixed builds against OpenSSL built with `no-cast`.
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.102..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.103..master
+[v0.9.103]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.102...openssl-sys-v0.9.103
 [v0.9.102]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.101...openssl-sys-v0.9.102
 [v0.9.101]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.100...openssl-sys-v0.9.101
 [v0.9.100]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.99...openssl-sys-v0.9.100
