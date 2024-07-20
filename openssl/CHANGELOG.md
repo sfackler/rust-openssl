@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [v0.10.65] - 2024-07-20
+
+### Fixed
+
+* Ensure we are initialized in `MessageDigest::from_nid`, `Md::from_nid`, `Md::fetch`
+
+### Changed
+
+* Expose `SslContextBuilder::set_keylog_callback` on BoringSSL
+
 ## [v0.10.64] - 2024-02-19
 
 ### Added
@@ -892,7 +902,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.64...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.65...master
+[v0.10.65]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.64...openssl-v0.10.65
 [v0.10.64]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.63...openssl-v0.10.64
 [v0.10.63]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.62...openssl-v0.10.63
 [v0.10.62]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.61...openssl-v0.10.62
