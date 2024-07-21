@@ -63,7 +63,11 @@ impl MemBio {
         unsafe {
             let mut ptr = ptr::null_mut();
             let len = ffi::BIO_get_mem_data(self.0, &mut ptr);
-            slice::from_raw_parts(ptr as *const _ as *const _, len as usize)
+            if len == 0 {
+                &[]
+            } else {
+                slice::from_raw_parts(ptr as *const _ as *const _, len as usize)
+            }
         }
     }
 
@@ -81,5 +85,16 @@ cfg_if! {
         unsafe fn BIO_new_mem_buf(buf: *const ::libc::c_void, len: ::libc::c_int) -> *mut ffi::BIO {
             ffi::BIO_new_mem_buf(buf as *mut _, len)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::MemBio;
+
+    #[test]
+    fn test_mem_bio_get_buf_empty() {
+        let b = MemBio::new().unwrap();
+        assert_eq!(b.get_buf(), &[]);
     }
 }
