@@ -9,10 +9,9 @@ use std::io;
 use std::io::prelude::*;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr;
-use std::slice;
 
-use crate::cvt_p;
 use crate::error::ErrorStack;
+use crate::{cvt_p, util};
 
 pub struct StreamState<S> {
     pub stream: S,
@@ -89,7 +88,7 @@ unsafe extern "C" fn bwrite<S: Write>(bio: *mut BIO, buf: *const c_char, len: c_
     BIO_clear_retry_flags(bio);
 
     let state = state::<S>(bio);
-    let buf = slice::from_raw_parts(buf as *const _, len as usize);
+    let buf = util::from_raw_parts(buf as *const _, len as usize);
 
     match catch_unwind(AssertUnwindSafe(|| state.stream.write(buf))) {
         Ok(Ok(len)) => len as c_int,
@@ -111,7 +110,7 @@ unsafe extern "C" fn bread<S: Read>(bio: *mut BIO, buf: *mut c_char, len: c_int)
     BIO_clear_retry_flags(bio);
 
     let state = state::<S>(bio);
-    let buf = slice::from_raw_parts_mut(buf as *mut _, len as usize);
+    let buf = util::from_raw_parts_mut(buf as *mut _, len as usize);
 
     match catch_unwind(AssertUnwindSafe(|| state.stream.read(buf))) {
         Ok(Ok(len)) => len as c_int,

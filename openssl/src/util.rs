@@ -1,4 +1,5 @@
 use crate::error::ErrorStack;
+use crate::util;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_char, c_int, c_void};
 use std::any::Any;
@@ -49,7 +50,7 @@ where
     let callback = &mut *(cb_state as *mut CallbackState<F>);
 
     let result = panic::catch_unwind(AssertUnwindSafe(|| {
-        let pass_slice = slice::from_raw_parts_mut(buf as *mut u8, size as usize);
+        let pass_slice = util::from_raw_parts_mut(buf as *mut u8, size as usize);
         callback.cb.take().unwrap()(pass_slice)
     }));
 
@@ -91,3 +92,27 @@ pub trait ForeignTypeRefExt: ForeignTypeRef {
     }
 }
 impl<FT: ForeignTypeRef> ForeignTypeRefExt for FT {}
+
+/// The same as `slice::from_raw_parts`, except that `data` may be `NULL` if
+/// `len` is 0.
+pub unsafe fn from_raw_parts<'a, T>(data: *const T, len: usize) -> &'a [T] {
+    if len == 0 {
+        &[]
+    } else {
+        // Using this to implement the preferred API
+        #[allow(clippy::disallowed_methods)]
+        slice::from_raw_parts(data, len)
+    }
+}
+
+/// The same as `slice::from_raw_parts_mut`, except that `data` may be `NULL`
+/// if `len` is 0.
+pub unsafe fn from_raw_parts_mut<'a, T>(data: *mut T, len: usize) -> &'a mut [T] {
+    if len == 0 {
+        &mut []
+    } else {
+        // Using this to implement the preferred API
+        #[allow(clippy::disallowed_methods)]
+        slice::from_raw_parts_mut(data, len)
+    }
+}

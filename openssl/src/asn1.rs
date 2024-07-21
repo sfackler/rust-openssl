@@ -32,7 +32,6 @@ use std::convert::TryInto;
 use std::ffi::CString;
 use std::fmt;
 use std::ptr;
-use std::slice;
 use std::str;
 
 use crate::bio::MemBio;
@@ -41,7 +40,7 @@ use crate::error::ErrorStack;
 use crate::nid::Nid;
 use crate::stack::Stackable;
 use crate::string::OpensslString;
-use crate::{cvt, cvt_p};
+use crate::{cvt, cvt_p, util};
 use openssl_macros::corresponds;
 
 foreign_type_and_impl_send_sync! {
@@ -457,7 +456,7 @@ impl Asn1StringRef {
     /// [`as_utf8`]: struct.Asn1String.html#method.as_utf8
     #[corresponds(ASN1_STRING_get0_data)]
     pub fn as_slice(&self) -> &[u8] {
-        unsafe { slice::from_raw_parts(ASN1_STRING_get0_data(self.as_ptr()), self.len()) }
+        unsafe { util::from_raw_parts(ASN1_STRING_get0_data(self.as_ptr()), self.len()) }
     }
 
     /// Returns the number of bytes in the string.
@@ -597,7 +596,7 @@ impl Asn1BitStringRef {
     /// Returns the Asn1BitString as a slice.
     #[corresponds(ASN1_STRING_get0_data)]
     pub fn as_slice(&self) -> &[u8] {
-        unsafe { slice::from_raw_parts(ASN1_STRING_get0_data(self.as_ptr() as *mut _), self.len()) }
+        unsafe { util::from_raw_parts(ASN1_STRING_get0_data(self.as_ptr() as *mut _), self.len()) }
     }
 
     /// Returns the number of bytes in the string.
@@ -637,7 +636,7 @@ impl Asn1OctetStringRef {
     /// Returns the octet string as an array of bytes.
     #[corresponds(ASN1_STRING_get0_data)]
     pub fn as_slice(&self) -> &[u8] {
-        unsafe { slice::from_raw_parts(ASN1_STRING_get0_data(self.as_ptr().cast()), self.len()) }
+        unsafe { util::from_raw_parts(ASN1_STRING_get0_data(self.as_ptr().cast()), self.len()) }
     }
 
     /// Returns the number of bytes in the octet string.
@@ -701,7 +700,7 @@ impl Asn1Object {
     pub fn as_slice(&self) -> &[u8] {
         unsafe {
             let len = ffi::OBJ_length(self.as_ptr());
-            slice::from_raw_parts(ffi::OBJ_get0_data(self.as_ptr()), len)
+            util::from_raw_parts(ffi::OBJ_get0_data(self.as_ptr()), len)
         }
     }
 }
