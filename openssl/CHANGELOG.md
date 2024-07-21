@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [v0.10.66] - 2024-07-21
+
+### Fixed
+
+- Fixed undefined behavior in `MemBio::get_buf` when the resulting buffer had a length of 0.
+
 ## [v0.10.65] - 2024-07-20
 
 ### Fixed
@@ -902,7 +908,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.65...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.66...master
+[v0.10.66]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.65...openssl-v0.10.66
 [v0.10.65]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.64...openssl-v0.10.65
 [v0.10.64]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.63...openssl-v0.10.64
 [v0.10.63]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.62...openssl-v0.10.63
