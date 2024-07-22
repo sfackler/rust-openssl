@@ -1007,3 +1007,42 @@ extern "C" {
     pub fn SSL_get_value_uint(s: *mut SSL, class_: u32, id: u32, v: *mut u64) -> c_int;
     pub fn SSL_set_value_uint(s: *mut SSL, class_: u32, id: u32, v: u64) -> c_int;
 }
+
+#[cfg(ossl110)]
+extern "C" {
+    pub fn SSL_CTX_dane_enable(ctx: *mut SSL_CTX) -> c_int;
+    pub fn SSL_CTX_dane_mtype_set(
+        ctx: *mut SSL_CTX,
+        md: *const EVP_MD,
+        mtype: u8,
+        ord: u8,
+    ) -> c_int;
+    pub fn SSL_dane_enable(s: *mut SSL, basedomain: *const c_char) -> c_int;
+    pub fn SSL_dane_tlsa_add(
+        s: *mut SSL,
+        usage: u8,
+        selector: u8,
+        mtype: u8,
+        data: *const c_uchar,
+        dlen: size_t,
+    ) -> c_int;
+    pub fn SSL_get0_dane_authority(
+        s: *mut SSL,
+        mcert: *mut *mut X509,
+        mspki: *mut *mut EVP_PKEY,
+    ) -> c_int;
+    pub fn SSL_get0_dane_tlsa(
+        s: *mut SSL,
+        usage: *mut u8,
+        selector: *mut u8,
+        mtype: *mut u8,
+        data: *mut *const c_uchar,
+        dlen: *mut size_t,
+    ) -> c_int;
+
+    pub fn SSL_CTX_dane_set_flags(ctx: *mut SSL_CTX, flags: c_ulong) -> c_ulong;
+    pub fn SSL_CTX_dane_clear_flags(ctx: *mut SSL_CTX, flags: c_ulong) -> c_ulong;
+    pub fn SSL_dane_set_flags(ssl: *mut SSL, flags: c_ulong) -> c_ulong;
+    pub fn SSL_dane_clear_flags(ssl: *mut SSL, flags: c_ulong) -> c_ulong;
+    pub fn SSL_add1_host(s: *mut SSL, hostname: *const c_char) -> c_int;
+}
