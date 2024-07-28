@@ -199,6 +199,7 @@ unsafe impl Send for MessageDigest {}
 enum State {
     Reset,
     Updated,
+    Squeeze,
     Finalized,
 }
 
@@ -265,6 +266,7 @@ impl Hasher {
             Updated => {
                 self.finish()?;
             }
+            Squeeze => (),
             Finalized => (),
         }
         unsafe {
@@ -288,6 +290,21 @@ impl Hasher {
         }
         self.state = Updated;
         Ok(())
+    }
+
+    /// Squeezes buf out of the hasher.
+    /// The output will be as long as the buf.
+    #[cfg(ossl330)]
+    pub fn squeeze_xof(&mut self, buf: &mut [u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_DigestSqueeze(
+                self.ctx,
+                buf.as_mut_ptr(),
+                buf.len(),
+            ))?;
+            self.state = Squeeze;
+            Ok(())
+        }
     }
 
     /// Returns the hash of the data written and resets the non-XOF hasher.
@@ -483,6 +500,21 @@ mod tests {
             buf.as_mut_slice(),
         )
         .unwrap();
+        assert_eq!(buf, expected);
+    }
+
+    /// Squeezes the expected length by doing two squeezes.
+    #[cfg(ossl330)]
+    fn hash_xof_squeeze_test(hashtype: MessageDigest, hashtest: &(&str, &str)) {
+        let data = Vec::from_hex(hashtest.0).unwrap();
+        let mut h = Hasher::new(hashtype).unwrap();
+        h.update(&data).unwrap();
+
+        let expected = Vec::from_hex(hashtest.1).unwrap();
+        let mut buf = vec![0; expected.len()];
+        assert!(expected.len() > 10);
+        h.squeeze_xof(&mut buf[..10]).unwrap();
+        h.squeeze_xof(&mut buf[10..]).unwrap();
         assert_eq!(buf, expected);
     }
 
@@ -715,6 +747,8 @@ mod tests {
 
         for test in tests.iter() {
             hash_xof_test(MessageDigest::shake_128(), test);
+            #[cfg(ossl330)]
+            hash_xof_squeeze_test(MessageDigest::shake_128(), test);
         }
 
         assert_eq!(MessageDigest::shake_128().block_size(), 168);
@@ -735,6 +769,8 @@ mod tests {
 
         for test in tests.iter() {
             hash_xof_test(MessageDigest::shake_256(), test);
+            #[cfg(ossl330)]
+            hash_xof_squeeze_test(MessageDigest::shake_256(), test);
         }
 
         assert_eq!(MessageDigest::shake_256().block_size(), 136);
