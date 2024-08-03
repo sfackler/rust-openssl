@@ -16,6 +16,7 @@ use crate::bio::MemBioSlice;
 use crate::error::ErrorStack;
 use crate::hash::{Hasher, MessageDigest};
 use crate::pkey::{HasPrivate, PKeyRef};
+use crate::util::ForeignTypeExt;
 use crate::x509::{X509Algorithm, X509AlgorithmRef, X509Ref};
 use crate::{cvt, cvt_p};
 
@@ -153,6 +154,15 @@ impl TsReq {
     /// This corresponds to `TS_REQ_set_msg_imprint`.
     pub fn set_msg_imprint(&mut self, imprint: &TsMsgImprintRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::TS_REQ_set_msg_imprint(self.as_ptr(), imprint.as_ptr())).map(|_| ()) }
+    }
+
+    /// Get the message imprint
+    #[corresponds(TS_REQ_get_msg_imprint)]
+    pub fn get_msg_imprint(&mut self) -> Option<TsMsgImprint> {
+        unsafe {
+            let imprint = ffi::TS_REQ_get_msg_imprint(self.as_ptr());
+            TsMsgImprint::from_ptr_opt(imprint)
+        }
     }
 
     /// Sets the OID of the policy under which we're requesting the timestamp.
