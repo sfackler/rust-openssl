@@ -315,8 +315,7 @@ impl TsRespContext {
     }
 
     /// Sets the certificate the TSA uses to sign the request.
-    ///
-    /// This corresponds to `TS_RESP_CTX_set_signer_cert`.
+    #[corresponds(TS_RESP_CTX_set_signer_cert)]
     pub fn set_signer_cert(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::TS_RESP_CTX_set_signer_cert(
@@ -330,8 +329,7 @@ impl TsRespContext {
     /// Sets the private key the TSA uses to sign the request.
     ///
     /// The private key match the X.509 certificate set by `set_signer_cert`.
-    ///
-    /// This corresponds to `TS_RESP_CTX_set_signer_key`.
+    #[corresponds(TS_RESP_CTX_set_signer_key)]
     pub fn set_signer_key<T>(&mut self, pkey: &PKeyRef<T>) -> Result<(), ErrorStack>
     where
         T: HasPrivate,
@@ -349,8 +347,8 @@ impl TsRespContext {
     ///
     ///
     /// Requires OpenSSL 1.1.0 or newer.
-    /// This corresponds to `TS_RESP_CTX_set_signer_digest`.
     #[cfg(ossl110)]
+    #[corresponds(TS_RESP_CTX_set_signer_digest)]
     pub fn set_signer_digest(&mut self, md: MessageDigest) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::TS_RESP_CTX_set_signer_digest(
@@ -364,8 +362,7 @@ impl TsRespContext {
     /// Add an accepted message digest algorithm.
     ///
     /// At least one accepted digest algorithm should be added to the context.
-    ///
-    /// This corresponds to `TS_RESP_CTX_add_md`.
+    #[corresponds(TS_RESP_CTX_add_md)]
     pub fn add_md(&mut self, md: MessageDigest) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::TS_RESP_CTX_add_md(self.as_ptr(), md.as_ptr())).map(|_| ()) }
     }
