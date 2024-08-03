@@ -4,9 +4,12 @@ use crate::{
     ASN1_INTEGER, ASN1_OBJECT, ASN1_OCTET_STRING, BIO, EVP_MD, EVP_PKEY, X509, X509_ALGOR,
 };
 
+use super::ASN1_STRING;
+
 pub enum TS_MSG_IMPRINT {}
 pub enum TS_REQ {}
 pub enum TS_RESP {}
+pub enum TS_TST_INFO {}
 pub enum TS_RESP_CTX {}
 
 cfg_if! {
@@ -107,6 +110,10 @@ extern "C" {
     pub fn TS_RESP_CTX_add_md(ctx: *mut TS_RESP_CTX, md: *const EVP_MD) -> c_int;
 
     pub fn TS_RESP_create_response(ctx: *mut TS_RESP_CTX, req_bio: *mut BIO) -> *mut TS_RESP;
+
+    pub fn TS_RESP_get_tst_info(a: *mut TS_RESP) -> *mut TS_TST_INFO;
+    pub fn TS_TST_INFO_get_time(a: *const TS_TST_INFO) -> *const ASN1_STRING;
+    pub fn TS_TST_INFO_free(a: *mut TS_TST_INFO);
 }
 
 cfg_if! {

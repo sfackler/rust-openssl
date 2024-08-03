@@ -11,12 +11,12 @@ use openssl_macros::corresponds;
 use std::convert::TryFrom;
 use std::ptr;
 
-use crate::asn1::{Asn1IntegerRef, Asn1ObjectRef, Asn1OctetString};
+use crate::asn1::{Asn1IntegerRef, Asn1ObjectRef, Asn1OctetString, Asn1StringRef};
 use crate::bio::MemBioSlice;
 use crate::error::ErrorStack;
 use crate::hash::{Hasher, MessageDigest};
 use crate::pkey::{HasPrivate, PKeyRef};
-use crate::util::ForeignTypeExt;
+use crate::util::{ForeignTypeExt, ForeignTypeRefExt};
 use crate::x509::{X509Algorithm, X509AlgorithmRef, X509Ref};
 use crate::{cvt, cvt_p};
 
@@ -243,6 +243,19 @@ impl TsRespRef {
             .map(|_| ())
         }
     }
+
+    // idk what the null-ness guarantees of this function is as it's not documented in openssl
+    #[corresponds(TS_RESP_get_tst_info)]
+    pub fn get_tst(&self) -> Option<&TsTstInfoRef> {
+        unsafe {
+            let info = ffi::TS_RESP_get_tst_info(self.as_ptr());
+            if info.is_null() {
+                None
+            } else {
+                Some(TsTstInfoRef::from_const_ptr(info))
+            }
+        }
+    }
 }
 
 bitflags! {
@@ -394,6 +407,28 @@ impl TsRespContext {
     #[corresponds(TS_RESP_CTX_add_md)]
     pub fn add_md(&mut self, md: MessageDigest) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::TS_RESP_CTX_add_md(self.as_ptr(), md.as_ptr())).map(|_| ()) }
+    }
+}
+
+foreign_type_and_impl_send_sync!{
+    type CType = ffi::TS_TST_INFO;
+    fn drop = ffi::TS_TST_INFO_free;
+    pub struct TsTstInfo;
+    pub struct TsTstInfoRef;
+}
+
+impl TsTstInfoRef {
+    // idk what the null-ness guarantees of this function is as it's not documented in openssl
+    #[corresponds(TS_TST_INFO_get_time)]
+    pub fn get_time(&self) -> Option<&Asn1StringRef> {
+        unsafe {
+            let ptr = ffi::TS_TST_INFO_get_time(self.as_ptr());
+            if ptr.is_null() {
+                None
+            } else {
+                Some(Asn1StringRef::from_const_ptr(ptr))
+            }
+        }
     }
 }
 
