@@ -50,6 +50,7 @@ fn main() {
 
     cfg.header("openssl/comp.h")
         .header("openssl/dh.h")
+        .header("openssl/engine.h")
         .header("openssl/ossl_typ.h")
         .header("openssl/stack.h")
         .header("openssl/x509.h")
