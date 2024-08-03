@@ -210,7 +210,9 @@ extern "C" {
 
     pub fn X509_to_X509_REQ(x: *mut X509, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> *mut X509_REQ;
 
+    pub fn X509_ALGOR_new() -> *mut X509_ALGOR;
     pub fn X509_ALGOR_free(x: *mut X509_ALGOR);
+    pub fn X509_ALGOR_set_md(alg: *mut X509_ALGOR, md: *const EVP_MD);
 
     pub fn X509_REVOKED_new() -> *mut X509_REVOKED;
     pub fn X509_REVOKED_free(x: *mut X509_REVOKED);

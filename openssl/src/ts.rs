@@ -6,15 +6,16 @@
 use bitflags::bitflags;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long, c_uint};
+use openssl_macros::corresponds;
 
 use std::ptr;
 
 use crate::asn1::{Asn1IntegerRef, Asn1ObjectRef};
 use crate::bio::MemBioSlice;
 use crate::error::ErrorStack;
-use crate::hash::MessageDigest;
+use crate::hash::{Hasher, MessageDigest};
 use crate::pkey::{HasPrivate, PKeyRef};
-use crate::x509::{X509Algorithm, X509Ref};
+use crate::x509::{X509Algorithm, X509AlgorithmRef, X509Ref};
 use crate::{cvt, cvt_p};
 
 foreign_type_and_impl_send_sync! {
@@ -33,31 +34,28 @@ impl TsMsgImprint {
     ///
     /// This corresponds to `TS_MSG_IMPRINT_new`.
     pub fn new() -> Result<TsMsgImprint, ErrorStack> {
+        ffi::init();
         unsafe {
-            ffi::init();
-            let imprint: *mut ffi::TS_MSG_IMPRINT = cvt_p(ffi::TS_MSG_IMPRINT_new())?;
+            let imprint = cvt_p(ffi::TS_MSG_IMPRINT_new())?;
             Ok(TsMsgImprint::from_ptr(imprint))
         }
     }
 
     /// Sets the algorithm identifier of the message digest algorithm.
-    ///
-    /// This corresponds to `TS_MSG_IMPRINT_set_algo`.
-    pub fn set_algo(&mut self, digest: &MessageDigest) -> Result<(), ErrorStack> {
+    #[corresponds(TS_MSG_IMPRINT_set_algo)]
+    pub fn set_algo(&mut self, algo: &X509AlgorithmRef) -> Result<(), ErrorStack> {
         unsafe {
-            let algorithm = X509Algorithm::from_ptr(cvt_p(ffi::X509_ALGOR_new())?);
-            ffi::X509_ALGOR_set_md(algorithm.as_ptr(), digest.as_ptr());
             cvt(ffi::TS_MSG_IMPRINT_set_algo(
                 self.as_ptr(),
-                algorithm.as_ptr(),
+                algo.as_ptr(),
             ))
             .map(|_| ())
         }
     }
 
-    /// Sets the message digest of the data to be timestamped.
-    ///
-    /// This corresponds to `TS_MSG_IMPRINT_set_msg`.
+    /// Sets the message **digest** of the data to be timestamped.
+    /// It is named this way to match the name in openssl itself
+    #[corresponds(TS_MSG_IMPRINT_set_msg)]
     pub fn set_msg(&mut self, digest: &[u8]) -> Result<(), ErrorStack> {
         let length = convert_digest_length_to_int(digest.len());
         unsafe {
@@ -68,6 +66,28 @@ impl TsMsgImprint {
             ))
             .map(|_| ())
         }
+    }
+
+    /// Creates a ready-to-use message imprint from a message and a specified hash algorithm.
+    pub fn from_message_with_algo(msg: &[u8], md: MessageDigest) -> Result<Self, ErrorStack> {
+        let mut h = Hasher::new(md)?;
+        h.update(msg)?;
+        let hash = h.finish()?;
+        Self::from_prehash_with_algo(&hash, md)
+    }
+
+    /// Creates a ready-to-use message imprint from the hash of a message and a specified hash algorithm.
+    /// 
+    /// `hash` must have originated from the hash function specified by `md`.
+    pub fn from_prehash_with_algo(hash: &[u8], md: MessageDigest) -> Result<Self, ErrorStack> {
+        let mut algo = X509Algorithm::new()?;
+        algo.set_md(md);
+
+        let mut imprint = Self::new()?;
+        imprint.set_algo(&algo)?;
+        imprint.set_msg(hash)?;
+
+        Ok(imprint)
     }
 }
 
@@ -372,14 +392,11 @@ mod tests {
     use crate::bn::BigNum;
     use crate::hash::MessageDigest;
     use crate::pkey::PKey;
-    use crate::sha::sha512;
     use crate::x509::X509;
 
     #[test]
     fn test_request() {
-        let mut imprint = TsMsgImprint::new().unwrap();
-        imprint.set_algo(&MessageDigest::sha512()).unwrap();
-        imprint.set_msg(&sha512(b"BLAHBLAHBLAH\n")).unwrap();
+        let imprint = TsMsgImprint::from_message_with_algo(b"BLAHBLAHBLAH\n", MessageDigest::sha512()).unwrap();
 
         let mut request = TsReq::new().unwrap();
         request.set_version(1).unwrap();

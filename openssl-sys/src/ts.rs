@@ -1,7 +1,6 @@
 use libc::*;
 
-#[allow(unused_imports)]
-use *;
+use crate::{ASN1_INTEGER, ASN1_OBJECT, BIO, EVP_MD, EVP_PKEY, X509, X509_ALGOR};
 
 pub enum TS_MSG_IMPRINT {}
 pub enum TS_REQ {}
