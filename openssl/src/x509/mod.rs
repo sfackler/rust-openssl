@@ -2340,10 +2340,25 @@ impl X509AlgorithmRef {
         }
     }
 
+    #[corresponds(X509_ALGOR_set_md)]
     pub fn set_md(&mut self, md: MessageDigest) {
         unsafe {
             ffi::X509_ALGOR_set_md(self.as_ptr(), md.as_ptr());
         }
+    }
+}
+
+impl PartialEq for X509AlgorithmRef {
+    fn eq(&self, other: &Self) -> bool {
+        unsafe {
+            ffi::X509_ALGOR_cmp(self.as_ptr(), other.as_ptr()) == 0
+        }
+    }
+}
+
+impl PartialEq for X509Algorithm {
+    fn eq(&self, other: &Self) -> bool {
+        X509AlgorithmRef::eq(self, other)
     }
 }
 

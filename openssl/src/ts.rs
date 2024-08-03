@@ -11,7 +11,7 @@ use openssl_macros::corresponds;
 use std::convert::TryFrom;
 use std::ptr;
 
-use crate::asn1::{Asn1IntegerRef, Asn1ObjectRef};
+use crate::asn1::{Asn1IntegerRef, Asn1ObjectRef, Asn1OctetString};
 use crate::bio::MemBioSlice;
 use crate::error::ErrorStack;
 use crate::hash::{Hasher, MessageDigest};
@@ -29,6 +29,17 @@ foreign_type_and_impl_send_sync! {
 
     /// Reference to `TsMsgImprint`.
     pub struct TsMsgImprintRef;
+}
+
+impl PartialEq for TsMsgImprintRef {
+    fn eq(&self, other: &Self) -> bool {
+        self.get_msg() == other.get_msg() && self.get_algo() == other.get_algo()
+    }
+}
+impl PartialEq for TsMsgImprint {
+    fn eq(&self, other: &Self) -> bool {
+        TsMsgImprintRef::eq(self, other)
+    }
 }
 
 impl TsMsgImprint {
@@ -88,6 +99,24 @@ impl TsMsgImprint {
         imprint.set_msg(hash)?;
 
         Ok(imprint)
+    }
+}
+
+impl TsMsgImprintRef {
+    #[corresponds(TS_MSG_IMPRINT_get_msg)]
+    pub fn get_msg(&self) -> Option<Asn1OctetString> {
+        unsafe {
+            let octet = ffi::TS_MSG_IMPRINT_get_msg(self.as_ptr());
+            Asn1OctetString::from_ptr_opt(octet)
+        }
+    }
+
+    #[corresponds(TS_MSG_IMPRINT_get_algo)]
+    pub fn get_algo(&self) -> Option<X509Algorithm> {
+        unsafe {
+            let algo = ffi::TS_MSG_IMPRINT_get_algo(self.as_ptr());
+            X509Algorithm::from_ptr_opt(algo)
+        }
     }
 }
 

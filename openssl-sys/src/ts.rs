@@ -1,6 +1,8 @@
 use libc::*;
 
-use crate::{ASN1_INTEGER, ASN1_OBJECT, BIO, EVP_MD, EVP_PKEY, X509, X509_ALGOR};
+use crate::{
+    ASN1_INTEGER, ASN1_OBJECT, ASN1_OCTET_STRING, BIO, EVP_MD, EVP_PKEY, X509, X509_ALGOR,
+};
 
 pub enum TS_MSG_IMPRINT {}
 pub enum TS_REQ {}
@@ -62,7 +64,9 @@ extern "C" {
     pub fn TS_MSG_IMPRINT_new() -> *mut TS_MSG_IMPRINT;
     pub fn TS_MSG_IMPRINT_free(a: *mut TS_MSG_IMPRINT);
     pub fn TS_MSG_IMPRINT_set_algo(a: *mut TS_MSG_IMPRINT, alg: *mut X509_ALGOR) -> c_int;
+    pub fn TS_MSG_IMPRINT_get_algo(a: *mut TS_MSG_IMPRINT) -> *mut X509_ALGOR;
     pub fn TS_MSG_IMPRINT_set_msg(a: *mut TS_MSG_IMPRINT, d: *mut c_uchar, length: c_int) -> c_int;
+    pub fn TS_MSG_IMPRINT_get_msg(a: *mut TS_MSG_IMPRINT) -> *mut ASN1_OCTET_STRING;
 
     pub fn TS_REQ_new() -> *mut TS_REQ;
     pub fn TS_REQ_free(a: *mut TS_REQ);
