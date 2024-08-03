@@ -8,6 +8,7 @@ use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long, c_uint};
 use openssl_macros::corresponds;
 
+use std::convert::TryFrom;
 use std::ptr;
 
 use crate::asn1::{Asn1IntegerRef, Asn1ObjectRef};
@@ -44,25 +45,24 @@ impl TsMsgImprint {
     /// Sets the algorithm identifier of the message digest algorithm.
     #[corresponds(TS_MSG_IMPRINT_set_algo)]
     pub fn set_algo(&mut self, algo: &X509AlgorithmRef) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::TS_MSG_IMPRINT_set_algo(
-                self.as_ptr(),
-                algo.as_ptr(),
-            ))
-            .map(|_| ())
-        }
+        unsafe { cvt(ffi::TS_MSG_IMPRINT_set_algo(self.as_ptr(), algo.as_ptr())).map(|_| ()) }
     }
 
     /// Sets the message **digest** of the data to be timestamped.
     /// It is named this way to match the name in openssl itself
     #[corresponds(TS_MSG_IMPRINT_set_msg)]
     pub fn set_msg(&mut self, digest: &[u8]) -> Result<(), ErrorStack> {
-        let length = convert_digest_length_to_int(digest.len());
+        let len = if digest.len() > c_int::MAX as usize {
+            panic!("digest length is too large");
+        } else {
+            digest.len() as c_int
+        };
+
         unsafe {
             cvt(ffi::TS_MSG_IMPRINT_set_msg(
                 self.as_ptr(),
                 digest.as_ptr() as *mut _,
-                length,
+                len,
             ))
             .map(|_| ())
         }
@@ -77,7 +77,7 @@ impl TsMsgImprint {
     }
 
     /// Creates a ready-to-use message imprint from the hash of a message and a specified hash algorithm.
-    /// 
+    ///
     /// `hash` must have originated from the hash function specified by `md`.
     pub fn from_prehash_with_algo(hash: &[u8], md: MessageDigest) -> Result<Self, ErrorStack> {
         let mut algo = X509Algorithm::new()?;
@@ -88,14 +88,6 @@ impl TsMsgImprint {
         imprint.set_msg(hash)?;
 
         Ok(imprint)
-    }
-}
-
-fn convert_digest_length_to_int(len: usize) -> c_int {
-    if len > std::i32::MAX as usize {
-        panic!("Digest length is too large");
-    } else {
-        len as i32
     }
 }
 
@@ -277,6 +269,14 @@ impl TsVerifyContext {
     }
 }
 
+impl TryFrom<&TsReqRef> for TsVerifyContext {
+    type Error = ErrorStack;
+
+    fn try_from(value: &TsReqRef) -> Result<Self, Self::Error> {
+        Self::from_req(value)
+    }
+}
+
 foreign_type_and_impl_send_sync! {
     type CType = ffi::TS_RESP_CTX;
     fn drop = ffi::TS_RESP_CTX_free;
@@ -396,7 +396,9 @@ mod tests {
 
     #[test]
     fn test_request() {
-        let imprint = TsMsgImprint::from_message_with_algo(b"BLAHBLAHBLAH\n", MessageDigest::sha512()).unwrap();
+        let imprint =
+            TsMsgImprint::from_message_with_algo(b"BLAHBLAHBLAH\n", MessageDigest::sha512())
+                .unwrap();
 
         let mut request = TsReq::new().unwrap();
         request.set_version(1).unwrap();
