@@ -33,8 +33,7 @@ foreign_type_and_impl_send_sync! {
 
 impl TsMsgImprint {
     /// Creates a new message imprint.
-    ///
-    /// This corresponds to `TS_MSG_IMPRINT_new`.
+    #[corresponds(TS_MSG_IMPRINT_new)]
     pub fn new() -> Result<TsMsgImprint, ErrorStack> {
         ffi::init();
         unsafe {
@@ -106,10 +105,7 @@ foreign_type_and_impl_send_sync! {
 impl TsReq {
     from_der! {
         /// Deserializes a DER-encoded TimeStampReq structure.
-        ///
-        /// This corresponds to [`d2i_TS_REQ`].
-        ///
-        /// [`d2i_TS_REQ`]: https://www.openssl.org/docs/man1.1.0/man3/d2i_TS_REQ.html
+        #[corresponds(d2i_TS_REQ)]
         from_der,
         TsReq,
         ffi::d2i_TS_REQ
@@ -119,10 +115,7 @@ impl TsReq {
 impl TsReqRef {
     to_der! {
         /// Serializes the timestamp request into a DER-encoded TimeStampReq structure.
-        ///
-        /// This corresponds to [`i2d_TS_REQ`].
-        ///
-        /// [`i2d_TS_REQ`]: https://www.openssl.org/docs/man1.1.0/man3/i2d_TS_REQ.html
+        #[corresponds(i2d_TS_REQ)]
         to_der,
         ffi::i2d_TS_REQ
     }
@@ -130,8 +123,7 @@ impl TsReqRef {
 
 impl TsReq {
     /// Creates a new timestamp request.
-    ///
-    /// This corresponds to `TS_REQ_new`.
+    #[corresponds(TS_REQ_new)]
     pub fn new() -> Result<TsReq, ErrorStack> {
         unsafe {
             ffi::init();
@@ -143,15 +135,13 @@ impl TsReq {
     /// Set the version of the timestamp request.
     ///
     /// RFC 3161 requires this to be 1.
-    ///
-    /// This corresponds to `TS_REQ_set_version`.
+    #[corresponds(TS_REQ_set_version)]
     pub fn set_version(&mut self, version: c_long) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::TS_REQ_set_version(self.as_ptr(), version)).map(|_| ()) }
     }
 
     /// Set the message imprint.
-    ///
-    /// This corresponds to `TS_REQ_set_msg_imprint`.
+    #[corresponds(TS_REQ_set_msg_imprint)]
     pub fn set_msg_imprint(&mut self, imprint: &TsMsgImprintRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::TS_REQ_set_msg_imprint(self.as_ptr(), imprint.as_ptr())).map(|_| ()) }
     }
@@ -166,22 +156,19 @@ impl TsReq {
     }
 
     /// Sets the OID of the policy under which we're requesting the timestamp.
-    ///
-    /// This corresponds to `TS_REQ_set_policy_id`.
+    #[corresponds(TS_REQ_set_policy_id)]
     pub fn set_policy_id(&mut self, policy: &Asn1ObjectRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::TS_REQ_set_policy_id(self.as_ptr(), policy.as_ptr())).map(|_| ()) }
     }
 
     /// Sets the nonce.
-    ///
-    /// This corresopnds to `TS_REQ_set_nonce`.
+    #[corresponds(TS_REQ_set_nonce)]
     pub fn set_nonce(&mut self, nonce: &Asn1IntegerRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::TS_REQ_set_nonce(self.as_ptr(), nonce.as_ptr())).map(|_| ()) }
     }
 
     /// Sets whether to request the public key certificate in the response.
-    ///
-    /// This corresponds to `TS_REQ_set_cert_req`.
+    #[corresponds(TS_REQ_set_cert_req)]
     pub fn set_cert_req(&mut self, cert_req: bool) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::TS_REQ_set_cert_req(self.as_ptr(), cert_req as c_int)).map(|_| ()) }
     }
@@ -201,10 +188,7 @@ foreign_type_and_impl_send_sync! {
 impl TsResp {
     from_der! {
         /// Deserializes a DER-encoded TimeStampResp structure.
-        ///
-        /// This corresponds to [`d2i_TS_RESP`].
-        ///
-        /// [`d2i_TS_RESP`]: https://www.openssl.org/docs/man1.1.0/man3/d2i_TS_RESP.html
+        #[corresponds(d2i_TS_RESP)]
         from_der,
         TsResp,
         ffi::d2i_TS_RESP
@@ -214,17 +198,13 @@ impl TsResp {
 impl TsRespRef {
     to_der! {
         /// Serializes the timestamp request into a DER-encoded TimeStampResp structure.
-        ///
-        /// This corresponds to [`i2d_TS_RESP`].
-        ///
-        /// [`i2d_TS_RESP`]: https://www.openssl.org/docs/man1.1.0/man3/i2d_TS_RESP.html
+        #[corresponds(i2d_TS_RESP)]
         to_der,
         ffi::i2d_TS_RESP
     }
 
     /// Verifies a timestamp response.
-    ///
-    /// This corresponds to `TS_RESP_verify_response`.
+    #[corresponds(TS_RESP_verify_response)]
     pub fn verify(&self, context: &TsVerifyContext) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::TS_RESP_verify_response(
@@ -300,8 +280,7 @@ foreign_type_and_impl_send_sync! {
 
 impl TsRespContextRef {
     /// Creates a signed timestamp response for the request.
-    ///
-    /// This corresponds to `TS_RESP_create_response`.
+    #[corresponds(TS_RESP_create_response)]
     pub fn create_response(&mut self, request: &TsReqRef) -> Result<TsResp, ErrorStack> {
         unsafe {
             let der = request.to_der()?;
@@ -314,8 +293,7 @@ impl TsRespContextRef {
 
 impl TsRespContext {
     /// Creates a new response context.
-    ///
-    /// This corresponds to `TS_RESP_CTX_new`.
+    #[corresponds(TS_RESP_CTX_new)]
     pub fn new() -> Result<TsRespContext, ErrorStack> {
         unsafe {
             ffi::init();
@@ -325,8 +303,7 @@ impl TsRespContext {
     }
 
     /// Sets the OID of the default policy used by the TSA.
-    ///
-    /// This corresponds to `TS_RESP_CTX_set_def_policy`.
+    #[corresponds(TS_RESP_CTX_set_def_policy)]
     pub fn set_default_policy(&mut self, policy: &Asn1ObjectRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::TS_RESP_CTX_set_def_policy(
