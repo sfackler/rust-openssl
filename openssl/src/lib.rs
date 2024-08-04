@@ -38,6 +38,12 @@
 //! # macOS (pkgsrc)
 //! $ sudo pkgin install openssl
 //!
+//! # Windows (vcpkg) for static MSVC targets, install the architecture(s) you need
+//! > vcpkg install openssl:x64-windows-static-md openssl:x86-windows-static-md openssl:arm64-windows-static-md
+//!
+//! # Windows (MSYS2) for MinGW targets
+//! $ pacman -S openssl-devel pkg-config
+//!
 //! # Arch Linux
 //! $ sudo pacman -S pkgconf openssl
 //!
