@@ -425,14 +425,14 @@ mod tests {
 
     use super::*;
 
-    const TEST_NONCE_HEX_1: &'static str = "2AE3D741A4112D3A0FD345FE89134AD1"; // nonce in test request
-    const TEST_NONCE_HEX_2: &'static str = "5E18AA1A113648F054A2F5A396F1636F";
+    const TEST_NONCE_HEX_1: &str = "2AE3D741A4112D3A0FD345FE89134AD1"; // nonce in test request
+    const TEST_NONCE_HEX_2: &str = "5E18AA1A113648F054A2F5A396F1636F";
 
     #[test]
     fn test_ocsp_create_request_with_nonce() {
         let req_der = include_bytes!("../test/ocsp_req.der");
         let req_nonce_der = include_bytes!("../test/ocsp_req_nonce.der");
-        let mut req = OcspRequest::from_der(&req_der.as_slice()).unwrap();
+        let mut req = OcspRequest::from_der(req_der.as_slice()).unwrap();
 
         assert_hex_eq(req.to_der().unwrap(), req_der);
 
@@ -446,8 +446,8 @@ mod tests {
     fn test_ocsp_check_nonce() {
         let req_der = include_bytes!("../test/ocsp_req.der");
         let resp_der = include_bytes!("../test/ocsp_resp.der");
-        let mut req = OcspRequest::from_der(&req_der.as_slice()).unwrap();
-        let mut resp = OcspResponse::from_der(&resp_der.as_slice())
+        let mut req = OcspRequest::from_der(req_der.as_slice()).unwrap();
+        let mut resp = OcspResponse::from_der(resp_der.as_slice())
             .unwrap()
             .basic()
             .unwrap();
@@ -482,8 +482,8 @@ mod tests {
     fn test_ocsp_copy_nonce() {
         let req_der = include_bytes!("../test/ocsp_req_nonce.der");
         let resp_der = include_bytes!("../test/ocsp_resp.der");
-        let req = OcspRequest::from_der(&req_der.as_slice()).unwrap();
-        let mut resp = OcspResponse::from_der(&resp_der.as_slice())
+        let req = OcspRequest::from_der(req_der.as_slice()).unwrap();
+        let mut resp = OcspResponse::from_der(resp_der.as_slice())
             .unwrap()
             .basic()
             .unwrap();
@@ -504,8 +504,8 @@ mod tests {
     fn test_ocsp_copy_no_nonce() {
         let req_der = include_bytes!("../test/ocsp_req.der");
         let resp_der = include_bytes!("../test/ocsp_resp.der");
-        let req = OcspRequest::from_der(&req_der.as_slice()).unwrap();
-        let mut resp = OcspResponse::from_der(&resp_der.as_slice())
+        let req = OcspRequest::from_der(req_der.as_slice()).unwrap();
+        let mut resp = OcspResponse::from_der(resp_der.as_slice())
             .unwrap()
             .basic()
             .unwrap();
