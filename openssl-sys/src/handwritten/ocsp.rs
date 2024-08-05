@@ -1,6 +1,5 @@
 use super::super::*;
 use libc::*;
-use std::os::raw::c_int;
 
 pub enum OCSP_CERTID {}
 
