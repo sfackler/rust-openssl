@@ -292,7 +292,7 @@ impl Hasher {
         Ok(())
     }
 
-    /// Squeezes buf out of the hasher.
+    /// Squeezes buf out of the hasher. Can be called multiple times, unlike `finish_xof`.
     /// The output will be as long as the buf.
     #[cfg(ossl330)]
     pub fn squeeze_xof(&mut self, buf: &mut [u8]) -> Result<(), ErrorStack> {
