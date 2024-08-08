@@ -280,8 +280,11 @@ impl Hasher {
 
     /// Feeds data into the hasher.
     pub fn update(&mut self, data: &[u8]) -> Result<(), ErrorStack> {
-        if self.state == Finalized {
-            self.init()?;
+        match self.state {
+            #[cfg(ossl330)]
+            Squeeze => self.init()?,
+            Finalized => self.init()?,
+            _ => {}
         }
         unsafe {
             cvt(ffi::EVP_DigestUpdate(
@@ -298,6 +301,9 @@ impl Hasher {
     /// The output will be as long as the buf.
     #[cfg(ossl330)]
     pub fn squeeze_xof(&mut self, buf: &mut [u8]) -> Result<(), ErrorStack> {
+        if self.state == Finalized {
+            self.init()?;
+        }
         unsafe {
             cvt(ffi::EVP_DigestSqueeze(
                 self.ctx,
@@ -311,8 +317,11 @@ impl Hasher {
 
     /// Returns the hash of the data written and resets the non-XOF hasher.
     pub fn finish(&mut self) -> Result<DigestBytes, ErrorStack> {
-        if self.state == Finalized {
-            self.init()?;
+        match self.state {
+            #[cfg(ossl330)]
+            Squeeze => self.init()?,
+            Finalized => self.init()?,
+            _ => {}
         }
         unsafe {
             #[cfg(not(boringssl))]
@@ -337,8 +346,11 @@ impl Hasher {
     /// The hash will be as long as the buf.
     #[cfg(ossl111)]
     pub fn finish_xof(&mut self, buf: &mut [u8]) -> Result<(), ErrorStack> {
-        if self.state == Finalized {
-            self.init()?;
+        match self.state {
+            #[cfg(ossl330)]
+            Squeeze => self.init()?,
+            Finalized => self.init()?,
+            _ => {}
         }
         unsafe {
             cvt(ffi::EVP_DigestFinalXOF(
@@ -574,6 +586,32 @@ mod tests {
         let res = h.finish().unwrap();
         let null = hash(MessageDigest::md5(), &[]).unwrap();
         assert_eq!(&*res, &*null);
+    }
+
+    #[cfg(ossl330)]
+    #[test]
+    fn test_finish_then_squeeze() {
+        let digest = MessageDigest::shake_128();
+        let mut h = Hasher::new(digest).unwrap();
+        let mut buf = vec![0; digest.size()];
+        h.finish_xof(&mut buf).unwrap();
+        h.squeeze_xof(&mut buf).unwrap();
+        let null = hash(digest, &[]).unwrap();
+        assert_eq!(&*buf, &*null);
+    }
+
+    #[cfg(ossl330)]
+    #[test]
+    fn test_squeeze_then_update() {
+        let digest = MessageDigest::shake_128();
+        let data = Vec::from_hex(MD5_TESTS[6].0).unwrap();
+        let mut h = Hasher::new(digest).unwrap();
+        let mut buf = vec![0; digest.size()];
+        h.squeeze_xof(&mut buf).unwrap();
+        h.update(&data).unwrap();
+        h.squeeze_xof(&mut buf).unwrap();
+        let null = hash(digest, &data).unwrap();
+        assert_eq!(&*buf, &*null);
     }
 
     #[test]
