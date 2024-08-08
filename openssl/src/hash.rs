@@ -199,6 +199,7 @@ unsafe impl Send for MessageDigest {}
 enum State {
     Reset,
     Updated,
+    #[cfg(ossl330)]
     Squeeze,
     Finalized,
 }
@@ -266,6 +267,7 @@ impl Hasher {
             Updated => {
                 self.finish()?;
             }
+            #[cfg(ossl330)]
             Squeeze => (),
             Finalized => (),
         }
