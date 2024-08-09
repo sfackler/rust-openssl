@@ -17,6 +17,7 @@ edition = "2018"
 [features]
 vendored = ['openssl-src']
 unstable_boringssl = ['bssl-sys']
+probe = []
 
 [dependencies]
 libc = "0.2"
