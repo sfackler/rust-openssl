@@ -207,7 +207,7 @@ fn main() {
     }
 
     // https://github.com/openssl/openssl/pull/15086
-    // Embrace the atomic capability library across various platforms. 
+    // Embrace the atomic capability library across various platforms.
     // For instance, on certain platforms, llvm has relocated the atomic of the arm32 architecture to libclang_rt.builtins.a
     // while some use libatomic.a, and others use libatomic_ops.a.
     let atomic_name = env::var("DEP_ATOMIC").unwrap_or("atomic".to_owned());
@@ -217,7 +217,7 @@ fn main() {
             || env::var("CARGO_CFG_TARGET_OS").unwrap() == "android")
         && env::var("CARGO_CFG_TARGET_POINTER_WIDTH").unwrap() == "32"
     {
-        println!("cargo:rustc-link-lib={}",atomic_name);
+        println!("cargo:rustc-link-lib={}", atomic_name);
     }
 
     if kind == "static" && target.contains("windows") {
