@@ -9,10 +9,14 @@ extern "C" {
     pub fn X509_LOOKUP_meth_free(method: *mut X509_LOOKUP_METHOD);
 }
 
+const_ptr_api! {
+    extern "C" {
+        pub fn X509_LOOKUP_hash_dir() -> #[const_ptr_if(libressl400)] X509_LOOKUP_METHOD;
+        pub fn X509_LOOKUP_file() -> #[const_ptr_if(libressl400)] X509_LOOKUP_METHOD;
+    }
+}
 extern "C" {
     pub fn X509_LOOKUP_free(ctx: *mut X509_LOOKUP);
-    pub fn X509_LOOKUP_hash_dir() -> *mut X509_LOOKUP_METHOD;
-    pub fn X509_LOOKUP_file() -> *mut X509_LOOKUP_METHOD;
     pub fn X509_LOOKUP_ctrl(
         ctx: *mut X509_LOOKUP,
         cmd: c_int,
@@ -41,11 +45,6 @@ extern "C" {
 
     pub fn X509_STORE_add_cert(store: *mut X509_STORE, x: *mut X509) -> c_int;
 
-    pub fn X509_STORE_add_lookup(
-        store: *mut X509_STORE,
-        meth: *mut X509_LOOKUP_METHOD,
-    ) -> *mut X509_LOOKUP;
-
     pub fn X509_STORE_set_default_paths(store: *mut X509_STORE) -> c_int;
     pub fn X509_STORE_set_flags(store: *mut X509_STORE, flags: c_ulong) -> c_int;
     pub fn X509_STORE_set_purpose(ctx: *mut X509_STORE, purpose: c_int) -> c_int;
@@ -55,6 +54,10 @@ extern "C" {
 
 const_ptr_api! {
     extern "C" {
+        pub fn X509_STORE_add_lookup(
+            store: *mut X509_STORE,
+            meth: #[const_ptr_if(libressl400)] X509_LOOKUP_METHOD,
+        ) -> *mut X509_LOOKUP;
         pub fn X509_STORE_set1_param(store: *mut X509_STORE, pm: #[const_ptr_if(ossl300)] X509_VERIFY_PARAM) -> c_int;
     }
 }
