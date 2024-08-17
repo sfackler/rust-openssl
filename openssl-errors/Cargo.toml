@@ -2,7 +2,7 @@
 name = "openssl-errors"
 version = "0.2.0"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Custom error library support for the openssl crate."
 repository = "https://github.com/sfackler/rust-openssl"
