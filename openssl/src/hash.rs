@@ -41,6 +41,7 @@ use std::ptr;
 use crate::error::ErrorStack;
 use crate::nid::Nid;
 use crate::{cvt, cvt_p};
+use openssl_macros::corresponds;
 
 cfg_if! {
     if #[cfg(any(ossl110, boringssl, libressl382))] {
@@ -65,10 +66,7 @@ impl MessageDigest {
     }
 
     /// Returns the `MessageDigest` corresponding to an `Nid`.
-    ///
-    /// This corresponds to [`EVP_get_digestbynid`].
-    ///
-    /// [`EVP_get_digestbynid`]: https://www.openssl.org/docs/manmaster/crypto/EVP_DigestInit.html
+    #[corresponds(EVP_get_digestbynid)]
     pub fn from_nid(type_: Nid) -> Option<MessageDigest> {
         ffi::init();
         unsafe {
@@ -82,10 +80,7 @@ impl MessageDigest {
     }
 
     /// Returns the `MessageDigest` corresponding to an algorithm name.
-    ///
-    /// This corresponds to [`EVP_get_digestbyname`].
-    ///
-    /// [`EVP_get_digestbyname`]: https://www.openssl.org/docs/manmaster/crypto/EVP_DigestInit.html
+    #[corresponds(EVP_get_digestbyname)]
     pub fn from_name(name: &str) -> Option<MessageDigest> {
         ffi::init();
         let name = CString::new(name).ok()?;
