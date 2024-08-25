@@ -79,8 +79,6 @@ impl Nid {
     }
 
     /// Returns the `Nid`s of the digest and public key algorithms associated with a signature ID.
-    ///
-    /// This corresponds to `OBJ_find_sigid_algs`.
     #[corresponds(OBJ_find_sigid_algs)]
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn signature_algorithms(&self) -> Option<SignatureAlgorithms> {

@@ -57,6 +57,7 @@ use crate::error::ErrorStack;
 use crate::nid::Nid;
 use cfg_if::cfg_if;
 use foreign_types::ForeignTypeRef;
+use openssl_macros::corresponds;
 
 #[derive(Copy, Clone)]
 pub enum Mode {
@@ -74,10 +75,7 @@ pub struct Cipher(*const ffi::EVP_CIPHER);
 
 impl Cipher {
     /// Looks up the cipher for a certain nid.
-    ///
-    /// This corresponds to [`EVP_get_cipherbynid`]
-    ///
-    /// [`EVP_get_cipherbynid`]: https://www.openssl.org/docs/manmaster/crypto/EVP_get_cipherbyname.html
+    #[corresponds(EVP_get_cipherbynid)]
     pub fn from_nid(nid: Nid) -> Option<Cipher> {
         let ptr = unsafe { ffi::EVP_get_cipherbyname(ffi::OBJ_nid2sn(nid.as_raw())) };
         if ptr.is_null() {
@@ -88,10 +86,7 @@ impl Cipher {
     }
 
     /// Returns the cipher's Nid.
-    ///
-    /// This corresponds to [`EVP_CIPHER_nid`]
-    ///
-    /// [`EVP_CIPHER_nid`]: https://www.openssl.org/docs/manmaster/crypto/EVP_CIPHER_nid.html
+    #[corresponds(EVP_CIPHER_nid)]
     pub fn nid(&self) -> Nid {
         let nid = unsafe { ffi::EVP_CIPHER_nid(self.0) };
         Nid::from_raw(nid)
