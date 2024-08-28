@@ -187,7 +187,8 @@ https://github.com/sfackler/rust-openssl#windows
         );
     }
 
-    panic!("{}", msg);
+    eprintln!("{}", msg);
+    std::process::exit(101); // same as panic previously
 }
 
 /// Attempt to find OpenSSL through pkg-config.
