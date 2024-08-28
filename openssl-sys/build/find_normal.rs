@@ -213,7 +213,7 @@ fn try_pkg_config() {
     {
         Ok(lib) => lib,
         Err(e) => {
-            println!("run pkg_config fail: {:?}", e);
+            println!("\n\nCould not find openssl via pkg-config:\n{}\n", e);
             return;
         }
     };
