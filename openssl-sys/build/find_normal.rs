@@ -102,13 +102,21 @@ fn find_openssl_dir(target: &str) -> OsString {
         return OsString::from("/usr/local");
     }
 
+    let msg_header =
+        "Could not find directory of OpenSSL installation, and this `-sys` crate cannot
+proceed without this knowledge. If OpenSSL is installed and this crate had
+trouble finding it,  you can set the `OPENSSL_DIR` environment variable for the
+compilation process.";
+
+    println!(
+        "cargo:warning={} See stderr section below for further information.",
+        msg_header.replace('\n', " ")
+    );
+
     let mut msg = format!(
         "
 
-Could not find directory of OpenSSL installation, and this `-sys` crate cannot
-proceed without this knowledge. If OpenSSL is installed and this crate had
-trouble finding it,  you can set the `OPENSSL_DIR` environment variable for the
-compilation process.
+{}
 
 Make sure you also have the development packages of openssl installed.
 For example, `libssl-dev` on Ubuntu or `openssl-devel` on Fedora.
@@ -122,6 +130,7 @@ $TARGET = {}
 openssl-sys = {}
 
 ",
+        msg_header,
         host,
         target,
         env!("CARGO_PKG_VERSION")
