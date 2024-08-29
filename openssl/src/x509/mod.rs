@@ -2291,6 +2291,7 @@ impl X509AlgorithmRef {
         }
     }
 
+    #[cfg(ossl101)]
     #[corresponds(X509_ALGOR_set_md)]
     pub fn set_md(&mut self, md: MessageDigest) {
         unsafe {
@@ -2301,9 +2302,7 @@ impl X509AlgorithmRef {
 
 impl PartialEq for X509AlgorithmRef {
     fn eq(&self, other: &Self) -> bool {
-        unsafe {
-            ffi::X509_ALGOR_cmp(self.as_ptr(), other.as_ptr()) == 0
-        }
+        unsafe { ffi::X509_ALGOR_cmp(self.as_ptr(), other.as_ptr()) == 0 }
     }
 }
 

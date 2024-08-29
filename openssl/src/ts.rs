@@ -410,7 +410,7 @@ impl TsRespContext {
     }
 }
 
-foreign_type_and_impl_send_sync!{
+foreign_type_and_impl_send_sync! {
     type CType = ffi::TS_TST_INFO;
     fn drop = ffi::TS_TST_INFO_free;
     pub struct TsTstInfo;

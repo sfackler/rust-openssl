@@ -193,6 +193,7 @@ pub mod ssl;
 pub mod stack;
 pub mod string;
 pub mod symm;
+#[cfg(all(not(boringssl), not(libressl)))]
 pub mod ts;
 pub mod version;
 pub mod x509;

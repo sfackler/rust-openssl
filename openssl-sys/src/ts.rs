@@ -1,36 +1,13 @@
 use libc::*;
 
-use crate::{
-    ASN1_INTEGER, ASN1_OBJECT, ASN1_OCTET_STRING, BIO, EVP_MD, EVP_PKEY, X509, X509_ALGOR,
-};
-
-use super::ASN1_STRING;
+use super::*;
 
 pub enum TS_MSG_IMPRINT {}
 pub enum TS_REQ {}
 pub enum TS_RESP {}
 pub enum TS_TST_INFO {}
 pub enum TS_RESP_CTX {}
-
-cfg_if! {
-    if #[cfg(ossl110)] {
-        pub enum TS_VERIFY_CTX {}
-    } else {
-        #[repr(C)]
-        pub struct TS_VERIFY_CTX {
-            flags: c_uint,
-            store: *mut X509_STORE,
-            certs: *mut stack_st_X509,
-            policy: *mut ASN1_OBJECT,
-            md_alg: *mut X509_ALGOR,
-            imprint: *mut c_uchar,
-            imprint_len: c_uint,
-            data: *mut BIO,
-            nonce: *mut ASN1_INTEGER,
-            tsa_name: *mut GENERAL_NAME,
-        }
-    }
-}
+pub enum TS_VERIFY_CTX {}
 
 pub const TS_VFY_SIGNATURE: c_uint = 0x1;
 pub const TS_VFY_VERSION: c_uint = 0x2;
