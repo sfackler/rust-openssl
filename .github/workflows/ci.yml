@@ -62,7 +62,7 @@ jobs:
       # Remember to also update `--rust-target` in `openssl-sys/build/run_bindgen.rs`
       - uses: sfackler/actions/rustup@master
         with:
-          version: 1.56.0
+          version: 1.63.0
       - run: echo "version=$(rustc --version)" >> $GITHUB_OUTPUT
         id: rust-version
       - uses: actions/cache@v4
@@ -72,8 +72,6 @@ jobs:
           restore-keys: |
             index-${{ runner.os }}-
       - run: cargo generate-lockfile
-      - run: |
-          cargo update -p cc --precise 1.0.94
       - uses: actions/cache@v4
         with:
           path: ~/.cargo/registry/cache
