@@ -94,11 +94,15 @@ impl TsMsgImprint {
     pub fn from_prehash_with_algo(hash: &[u8], md: MessageDigest) -> Result<Self, ErrorStack> {
         let algo = X509Algorithm::new()?;
 
-        let aobj = unsafe { cvt_p(OBJ_nid2obj(EVP_MD_get_type(md.as_ptr())))? };
-        let res = unsafe { X509_ALGOR_set0(algo.as_ptr(), aobj, ffi::V_ASN1_NULL, ptr::null_mut()) };
-        cvt(res).inspect_err(|_| unsafe {
-            ASN1_OBJECT_free(aobj);
-        })?;
+        unsafe {
+            let aobj = cvt_p(OBJ_nid2obj(EVP_MD_get_type(md.as_ptr())))?;
+            let res = X509_ALGOR_set0(algo.as_ptr(), aobj, ffi::V_ASN1_NULL, ptr::null_mut());
+
+            if let Err(e) = cvt(res) {
+                ASN1_OBJECT_free(aobj);
+                return Err(e);
+            }
+        };
 
         let mut imprint = Self::new()?;
         imprint.set_algo(&algo)?;
