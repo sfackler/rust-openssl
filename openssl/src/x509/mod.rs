@@ -2290,14 +2290,6 @@ impl X509AlgorithmRef {
             Asn1ObjectRef::from_const_ptr_opt(oid).expect("algorithm oid must not be null")
         }
     }
-
-    #[cfg(ossl101)]
-    #[corresponds(X509_ALGOR_set_md)]
-    pub fn set_md(&mut self, md: MessageDigest) {
-        unsafe {
-            ffi::X509_ALGOR_set_md(self.as_ptr(), md.as_ptr());
-        }
-    }
 }
 
 impl PartialEq for X509AlgorithmRef {

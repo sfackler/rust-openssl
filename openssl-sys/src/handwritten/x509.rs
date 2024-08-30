@@ -213,8 +213,7 @@ extern "C" {
     pub fn X509_ALGOR_new() -> *mut X509_ALGOR;
     pub fn X509_ALGOR_free(x: *mut X509_ALGOR);
 
-    #[cfg(ossl101)]
-    pub fn X509_ALGOR_set_md(alg: *mut X509_ALGOR, md: *const EVP_MD);
+    pub fn X509_ALGOR_set0(alg: *mut X509_ALGOR, aobj: *mut ASN1_OBJECT, ptype: c_int, pval: *mut c_void) -> c_int;
 
     pub fn X509_ALGOR_cmp(alg0: *const X509_ALGOR, alg1: *const X509_ALGOR) -> c_int;
 
