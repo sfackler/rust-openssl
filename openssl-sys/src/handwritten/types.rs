@@ -472,6 +472,7 @@ pub struct X509V3_CTX {
     subject_cert: *mut c_void,
     subject_req: *mut c_void,
     crl: *mut c_void,
+    #[cfg(not(libressl400))]
     db_meth: *mut c_void,
     db: *mut c_void,
     #[cfg(ossl300)]
