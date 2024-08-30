@@ -4,7 +4,7 @@
 //! The aim is to provide enough functionality for a client to request and
 //! verify timestamps returned by a Time Stamp Authority.
 use bitflags::bitflags;
-use ffi::{ASN1_OBJECT_free, EVP_MD_get_type, OBJ_nid2obj, X509_ALGOR_set0};
+use ffi::{ASN1_OBJECT_free, EVP_MD_type, OBJ_nid2obj, X509_ALGOR_set0};
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long, c_uint};
 use openssl_macros::corresponds;
@@ -95,7 +95,7 @@ impl TsMsgImprint {
         let algo = X509Algorithm::new()?;
 
         unsafe {
-            let aobj = cvt_p(OBJ_nid2obj(EVP_MD_get_type(md.as_ptr())))?;
+            let aobj = cvt_p(OBJ_nid2obj(EVP_MD_type(md.as_ptr())))?;
             let res = X509_ALGOR_set0(algo.as_ptr(), aobj, ffi::V_ASN1_NULL, ptr::null_mut());
 
             if let Err(e) = cvt(res) {
