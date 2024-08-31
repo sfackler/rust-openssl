@@ -1139,3 +1139,8 @@ pub struct OSSL_PARAM {
     data_size: size_t,
     return_size: size_t,
 }
+
+#[cfg(ossl300)]
+pub enum EVP_KDF {}
+#[cfg(ossl300)]
+pub enum EVP_KDF_CTX {}
