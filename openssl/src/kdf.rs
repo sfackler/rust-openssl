@@ -132,7 +132,7 @@ mod tests {
         let ad = hex::decode("040404040404040404040404").unwrap();
         let expected = "0d640df58d78766c08c037a34a8b53c9d01ef0452d75b65eb52520e96b01e659";
 
-        let mut actual = [0 as u8; 32];
+        let mut actual = [0u8; 32];
         super::argon2id(
             &pass,
             &salt,
@@ -155,8 +155,8 @@ mod tests {
         let salt = hex::decode("02020202020202020202020202020202").unwrap();
         let expected = "0a34f1abde67086c82e785eaf17c68382259a264f4e61b91cd2763cb75ac189a";
 
-        let mut actual = [0 as u8; 32];
-        super::argon2id(&pass.as_bytes(), &salt, None, None, 3, 4, 32, &mut actual).unwrap();
+        let mut actual = [0u8; 32];
+        super::argon2id(pass.as_bytes(), &salt, None, None, 3, 4, 32, &mut actual).unwrap();
         assert_eq!(hex::encode(&actual[..]), expected);
     }
 }

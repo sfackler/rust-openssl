@@ -147,7 +147,6 @@ mod bio;
 #[macro_use]
 mod util;
 pub mod aes;
-#[cfg(ossl320)]
 pub mod asn1;
 pub mod base64;
 pub mod bn;
