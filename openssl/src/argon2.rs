@@ -1,4 +1,5 @@
 use std::ffi::{c_void, CStr};
+use std::mem::MaybeUninit;
 use std::ptr;
 
 use crate::error::ErrorStack;
@@ -44,51 +45,51 @@ pub fn argon2id(
     assert!(threads == 1);
     unsafe {
         ffi::init();
-        let mut params = vec![];
-        let param_pass = ffi::OSSL_PARAM_construct_octet_string(
+        let mut params: [ffi::OSSL_PARAM; 10] =
+            core::array::from_fn(|_| MaybeUninit::<ffi::OSSL_PARAM>::zeroed().assume_init());
+        let mut idx = 0;
+        params[idx] = ffi::OSSL_PARAM_construct_octet_string(
             b"pass\0".as_ptr() as *const i8,
             pass.as_ptr() as *mut c_void,
             pass.len(),
         );
-        params.push(param_pass);
-        let param_salt = ffi::OSSL_PARAM_construct_octet_string(
+        idx += 1;
+        params[idx] = ffi::OSSL_PARAM_construct_octet_string(
             b"salt\0".as_ptr() as *const i8,
             salt.as_ptr() as *mut c_void,
             salt.len(),
         );
-        params.push(param_salt);
+        idx += 1;
+        params[idx] =
+            ffi::OSSL_PARAM_construct_uint(b"threads\0".as_ptr() as *const i8, &mut threads);
+        idx += 1;
+        params[idx] = ffi::OSSL_PARAM_construct_uint(b"lanes\0".as_ptr() as *const i8, &mut lanes);
+        idx += 1;
+        params[idx] =
+            ffi::OSSL_PARAM_construct_uint(b"memcost\0".as_ptr() as *const i8, &mut memcost);
+        idx += 1;
+        params[idx] = ffi::OSSL_PARAM_construct_uint(b"iter\0".as_ptr() as *const i8, &mut iter);
+        idx += 1;
+        let mut size = out.len() as u32;
+        params[idx] = ffi::OSSL_PARAM_construct_uint(b"size\0".as_ptr() as *const i8, &mut size);
+        idx += 1;
         if let Some(ad) = ad {
-            let param_ad = ffi::OSSL_PARAM_construct_octet_string(
+            params[idx] = ffi::OSSL_PARAM_construct_octet_string(
                 b"ad\0".as_ptr() as *const i8,
                 ad.as_ptr() as *mut c_void,
                 ad.len(),
             );
-            params.push(param_ad);
+            idx += 1;
         }
         if let Some(secret) = secret {
-            let param_secret = ffi::OSSL_PARAM_construct_octet_string(
+            params[idx] = ffi::OSSL_PARAM_construct_octet_string(
                 b"secret\0".as_ptr() as *const i8,
                 secret.as_ptr() as *mut c_void,
                 secret.len(),
             );
-            params.push(param_secret);
+            idx += 1;
         }
-        let param_threads =
-            ffi::OSSL_PARAM_construct_uint(b"threads\0".as_ptr() as *const i8, &mut threads);
-        params.push(param_threads);
-        let param_lanes =
-            ffi::OSSL_PARAM_construct_uint(b"lanes\0".as_ptr() as *const i8, &mut lanes);
-        params.push(param_lanes);
-        let param_memcost =
-            ffi::OSSL_PARAM_construct_uint(b"memcost\0".as_ptr() as *const i8, &mut memcost);
-        params.push(param_memcost);
-        let param_iter = ffi::OSSL_PARAM_construct_uint(b"iter\0".as_ptr() as *const i8, &mut iter);
-        params.push(param_iter);
-        let mut size = out.len() as u32;
-        let param_size = ffi::OSSL_PARAM_construct_uint(b"size\0".as_ptr() as *const i8, &mut size);
-        params.push(param_size);
-        let param_end = ffi::OSSL_PARAM_construct_end();
-        params.push(param_end);
+        params[idx] = ffi::OSSL_PARAM_construct_end();
 
         let argon2id = CStr::from_bytes_with_nul(b"ARGON2ID\0").unwrap();
         let argon2_p = cvt_p(ffi::EVP_KDF_fetch(
