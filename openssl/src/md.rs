@@ -13,28 +13,17 @@ use foreign_types::{ForeignTypeRef, Opaque};
 use openssl_macros::corresponds;
 #[cfg(ossl300)]
 use std::ffi::CString;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 #[cfg(ossl300)]
 use std::ptr;
 
 cfg_if! {
     if #[cfg(ossl300)] {
-        use std::ops::DerefMut;
-
         impl Drop for Md {
             #[inline]
             fn drop(&mut self) {
                 unsafe {
                     ffi::EVP_MD_free(self.as_ptr());
-                }
-            }
-        }
-
-        impl DerefMut for Md {
-            #[inline]
-            fn deref_mut(&mut self) -> &mut Self::Target {
-                unsafe {
-                    MdRef::from_ptr_mut(self.as_ptr())
                 }
             }
         }
@@ -62,6 +51,13 @@ impl Deref for Md {
     #[inline]
     fn deref(&self) -> &Self::Target {
         unsafe { MdRef::from_ptr(self.as_ptr()) }
+    }
+}
+
+impl DerefMut for Md {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { MdRef::from_ptr_mut(self.as_ptr()) }
     }
 }
 
