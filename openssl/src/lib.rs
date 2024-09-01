@@ -148,6 +148,7 @@ mod bio;
 mod util;
 pub mod aes;
 #[cfg(ossl320)]
+#[cfg(all(ossl320, not(osslconf = "OPENSSL_NO_ARGON2")))]
 pub mod argon2;
 pub mod asn1;
 pub mod base64;
