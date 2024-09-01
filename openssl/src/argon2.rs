@@ -1,4 +1,4 @@
-use std::ffi::{c_void, CStr};
+use std::ffi::{c_char, c_void};
 use std::mem::MaybeUninit;
 use std::ptr;
 
@@ -49,33 +49,36 @@ pub fn argon2id(
             core::array::from_fn(|_| MaybeUninit::<ffi::OSSL_PARAM>::zeroed().assume_init());
         let mut idx = 0;
         params[idx] = ffi::OSSL_PARAM_construct_octet_string(
-            b"pass\0".as_ptr() as *const i8,
+            b"pass\0".as_ptr() as *const c_char,
             pass.as_ptr() as *mut c_void,
             pass.len(),
         );
         idx += 1;
         params[idx] = ffi::OSSL_PARAM_construct_octet_string(
-            b"salt\0".as_ptr() as *const i8,
+            b"salt\0".as_ptr() as *const c_char,
             salt.as_ptr() as *mut c_void,
             salt.len(),
         );
         idx += 1;
         params[idx] =
-            ffi::OSSL_PARAM_construct_uint(b"threads\0".as_ptr() as *const i8, &mut threads);
-        idx += 1;
-        params[idx] = ffi::OSSL_PARAM_construct_uint(b"lanes\0".as_ptr() as *const i8, &mut lanes);
+            ffi::OSSL_PARAM_construct_uint(b"threads\0".as_ptr() as *const c_char, &mut threads);
         idx += 1;
         params[idx] =
-            ffi::OSSL_PARAM_construct_uint(b"memcost\0".as_ptr() as *const i8, &mut memcost);
+            ffi::OSSL_PARAM_construct_uint(b"lanes\0".as_ptr() as *const c_char, &mut lanes);
         idx += 1;
-        params[idx] = ffi::OSSL_PARAM_construct_uint(b"iter\0".as_ptr() as *const i8, &mut iter);
+        params[idx] =
+            ffi::OSSL_PARAM_construct_uint(b"memcost\0".as_ptr() as *const c_char, &mut memcost);
+        idx += 1;
+        params[idx] =
+            ffi::OSSL_PARAM_construct_uint(b"iter\0".as_ptr() as *const c_char, &mut iter);
         idx += 1;
         let mut size = out.len() as u32;
-        params[idx] = ffi::OSSL_PARAM_construct_uint(b"size\0".as_ptr() as *const i8, &mut size);
+        params[idx] =
+            ffi::OSSL_PARAM_construct_uint(b"size\0".as_ptr() as *const c_char, &mut size);
         idx += 1;
         if let Some(ad) = ad {
             params[idx] = ffi::OSSL_PARAM_construct_octet_string(
-                b"ad\0".as_ptr() as *const i8,
+                b"ad\0".as_ptr() as *const c_char,
                 ad.as_ptr() as *mut c_void,
                 ad.len(),
             );
@@ -83,7 +86,7 @@ pub fn argon2id(
         }
         if let Some(secret) = secret {
             params[idx] = ffi::OSSL_PARAM_construct_octet_string(
-                b"secret\0".as_ptr() as *const i8,
+                b"secret\0".as_ptr() as *const c_char,
                 secret.as_ptr() as *mut c_void,
                 secret.len(),
             );
@@ -91,10 +94,9 @@ pub fn argon2id(
         }
         params[idx] = ffi::OSSL_PARAM_construct_end();
 
-        let argon2id = CStr::from_bytes_with_nul(b"ARGON2ID\0").unwrap();
         let argon2_p = cvt_p(ffi::EVP_KDF_fetch(
             ptr::null_mut(),
-            argon2id.as_ptr(),
+            b"ARGON2ID\0".as_ptr() as *const c_char,
             ptr::null(),
         ))?;
         let argon2 = EvpKdf(argon2_p);
