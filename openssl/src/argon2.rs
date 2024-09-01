@@ -1,29 +1,25 @@
-use std::ffi::c_void;
+use std::ffi::{c_void, CStr};
 use std::ptr;
 
 use crate::error::ErrorStack;
 use crate::{cvt, cvt_p};
 
-struct EvpKdf {
-    kdf: *mut ffi::EVP_KDF,
-}
+struct EvpKdf(*mut ffi::EVP_KDF);
 
 impl Drop for EvpKdf {
     fn drop(&mut self) {
         unsafe {
-            ffi::EVP_KDF_free(self.kdf);
+            ffi::EVP_KDF_free(self.0);
         }
     }
 }
 
-struct EvpKdfCtx {
-    ctx: *mut ffi::EVP_KDF_CTX,
-}
+struct EvpKdfCtx(*mut ffi::EVP_KDF_CTX);
 
 impl Drop for EvpKdfCtx {
     fn drop(&mut self) {
         unsafe {
-            ffi::EVP_KDF_CTX_free(self.ctx);
+            ffi::EVP_KDF_CTX_free(self.0);
         }
     }
 }
@@ -94,16 +90,17 @@ pub fn argon2id(
         let param_end = ffi::OSSL_PARAM_construct_end();
         params.push(param_end);
 
+        let argon2id = CStr::from_bytes_with_nul(b"ARGON2ID\0").unwrap();
         let argon2_p = cvt_p(ffi::EVP_KDF_fetch(
             ptr::null_mut(),
-            b"ARGON2ID\0".as_ptr() as *const i8,
+            argon2id.as_ptr(),
             ptr::null(),
         ))?;
-        let argon2 = EvpKdf { kdf: argon2_p };
-        let ctx_p = cvt_p(ffi::EVP_KDF_CTX_new(argon2.kdf))?;
-        let ctx = EvpKdfCtx { ctx: ctx_p };
+        let argon2 = EvpKdf(argon2_p);
+        let ctx_p = cvt_p(ffi::EVP_KDF_CTX_new(argon2.0))?;
+        let ctx = EvpKdfCtx(ctx_p);
         cvt(ffi::EVP_KDF_derive(
-            ctx.ctx,
+            ctx.0,
             out.as_mut_ptr(),
             out.len(),
             params.as_ptr(),
