@@ -1,7 +1,7 @@
-#[cfg(ossl300)]
+#[cfg(ossl320)]
 struct EvpKdf(*mut ffi::EVP_KDF);
 
-#[cfg(ossl300)]
+#[cfg(ossl320)]
 impl Drop for EvpKdf {
     fn drop(&mut self) {
         unsafe {
@@ -10,10 +10,10 @@ impl Drop for EvpKdf {
     }
 }
 
-#[cfg(ossl300)]
+#[cfg(ossl320)]
 struct EvpKdfCtx(*mut ffi::EVP_KDF_CTX);
 
-#[cfg(ossl300)]
+#[cfg(ossl320)]
 impl Drop for EvpKdfCtx {
     fn drop(&mut self) {
         unsafe {
