@@ -76,6 +76,12 @@ pub struct Md(Inner);
 unsafe impl Sync for Md {}
 unsafe impl Send for Md {}
 
+impl From<crate::hash::MessageDigest> for Md {
+    fn from(value: crate::hash::MessageDigest) -> Self {
+        unsafe { Md::from_ptr(value.as_ptr() as *mut _) }
+    }
+}
+
 impl Md {
     /// Returns the `Md` corresponding to an [`Nid`].
     #[corresponds(EVP_get_digestbynid)]
