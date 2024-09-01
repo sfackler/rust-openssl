@@ -99,14 +99,12 @@ cfg_if::cfg_if! {
                 }
                 params[idx] = ffi::OSSL_PARAM_construct_end();
 
-                let argon2_p = cvt_p(ffi::EVP_KDF_fetch(
+                let argon2 = EvpKdf(cvt_p(ffi::EVP_KDF_fetch(
                     ptr::null_mut(),
                     b"ARGON2ID\0".as_ptr() as *const c_char,
                     ptr::null(),
-                ))?;
-                let argon2 = EvpKdf(argon2_p);
-                let ctx_p = cvt_p(ffi::EVP_KDF_CTX_new(argon2.0))?;
-                let ctx = EvpKdfCtx(ctx_p);
+                ))?);
+                let ctx = EvpKdfCtx(cvt_p(ffi::EVP_KDF_CTX_new(argon2.0))?);
                 cvt(ffi::EVP_KDF_derive(
                     ctx.0,
                     out.as_mut_ptr(),
@@ -151,12 +149,12 @@ mod tests {
     #[cfg(all(ossl320, not(osslconf = "OPENSSL_NO_ARGON2")))]
     fn argon2id_no_ad_secret() {
         // Test vector from OpenSSL
-        let pass = "";
+        let pass = b"";
         let salt = hex::decode("02020202020202020202020202020202").unwrap();
         let expected = "0a34f1abde67086c82e785eaf17c68382259a264f4e61b91cd2763cb75ac189a";
 
         let mut actual = [0u8; 32];
-        super::argon2id(pass.as_bytes(), &salt, None, None, 3, 4, 32, &mut actual).unwrap();
+        super::argon2id(pass, &salt, None, None, 3, 4, 32, &mut actual).unwrap();
         assert_eq!(hex::encode(&actual[..]), expected);
     }
 }
