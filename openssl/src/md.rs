@@ -8,51 +8,24 @@ use crate::error::ErrorStack;
 use crate::lib_ctx::LibCtxRef;
 use crate::nid::Nid;
 use cfg_if::cfg_if;
+use foreign_types::ForeignType;
 use foreign_types::{ForeignTypeRef, Opaque};
 use openssl_macros::corresponds;
 #[cfg(ossl300)]
 use std::ffi::CString;
+use std::ops::Deref;
 #[cfg(ossl300)]
 use std::ptr;
 
 cfg_if! {
     if #[cfg(ossl300)] {
-        use foreign_types::ForeignType;
-        use std::ops::{Deref, DerefMut};
-
-        type Inner = *mut ffi::EVP_MD;
+        use std::ops::DerefMut;
 
         impl Drop for Md {
             #[inline]
             fn drop(&mut self) {
                 unsafe {
                     ffi::EVP_MD_free(self.as_ptr());
-                }
-            }
-        }
-
-        impl ForeignType for Md {
-            type CType = ffi::EVP_MD;
-            type Ref = MdRef;
-
-            #[inline]
-            unsafe fn from_ptr(ptr: *mut Self::CType) -> Self {
-                Md(ptr)
-            }
-
-            #[inline]
-            fn as_ptr(&self) -> *mut Self::CType {
-                self.0
-            }
-        }
-
-        impl Deref for Md {
-            type Target = MdRef;
-
-            #[inline]
-            fn deref(&self) -> &Self::Target {
-                unsafe {
-                    MdRef::from_ptr(self.as_ptr())
                 }
             }
         }
@@ -65,13 +38,35 @@ cfg_if! {
                 }
             }
         }
-    } else {
-        enum Inner {}
+    }
+}
+
+impl ForeignType for Md {
+    type CType = ffi::EVP_MD;
+    type Ref = MdRef;
+
+    #[inline]
+    unsafe fn from_ptr(ptr: *mut Self::CType) -> Self {
+        Md(ptr)
+    }
+
+    #[inline]
+    fn as_ptr(&self) -> *mut Self::CType {
+        self.0
+    }
+}
+
+impl Deref for Md {
+    type Target = MdRef;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        unsafe { MdRef::from_ptr(self.as_ptr()) }
     }
 }
 
 /// A message digest algorithm.
-pub struct Md(Inner);
+pub struct Md(*mut ffi::EVP_MD);
 
 unsafe impl Sync for Md {}
 unsafe impl Send for Md {}
