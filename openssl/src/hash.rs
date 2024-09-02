@@ -583,7 +583,8 @@ mod tests {
         let mut h = Hasher::new(digest).unwrap();
         let mut buf = vec![0; digest.size()];
         h.finish_xof(&mut buf).unwrap();
-        h.squeeze_xof(&mut buf).expect_err("squeezing after finalize should fail");
+        h.squeeze_xof(&mut buf)
+            .expect_err("squeezing after finalize should fail");
     }
 
     #[cfg(ossl330)]
@@ -594,7 +595,8 @@ mod tests {
         let mut h = Hasher::new(digest).unwrap();
         let mut buf = vec![0; digest.size()];
         h.squeeze_xof(&mut buf).unwrap();
-        h.update(&data).expect_err("updating after squeeze should fail");
+        h.update(&data)
+            .expect_err("updating after squeeze should fail");
     }
 
     #[cfg(ossl330)]
@@ -604,7 +606,8 @@ mod tests {
         let mut h = Hasher::new(digest).unwrap();
         let mut buf = vec![0; digest.size()];
         h.squeeze_xof(&mut buf).unwrap();
-        h.finish_xof(&mut buf).expect_err("finalize after squeeze should fail");
+        h.finish_xof(&mut buf)
+            .expect_err("finalize after squeeze should fail");
     }
 
     #[test]
