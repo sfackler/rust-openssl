@@ -280,9 +280,8 @@ impl Hasher {
 
     /// Feeds data into the hasher.
     pub fn update(&mut self, data: &[u8]) -> Result<(), ErrorStack> {
-        match self.state {
-            Finalized => self.init()?,
-            _ => {}
+        if self.state == Finalized {
+            self.init()?;
         }
         unsafe {
             cvt(ffi::EVP_DigestUpdate(
@@ -312,9 +311,8 @@ impl Hasher {
 
     /// Returns the hash of the data written and resets the non-XOF hasher.
     pub fn finish(&mut self) -> Result<DigestBytes, ErrorStack> {
-        match self.state {
-            Finalized => self.init()?,
-            _ => {}
+        if self.state == Finalized {
+            self.init()?;
         }
         unsafe {
             #[cfg(not(boringssl))]
@@ -339,9 +337,8 @@ impl Hasher {
     /// The hash will be as long as the buf.
     #[cfg(ossl111)]
     pub fn finish_xof(&mut self, buf: &mut [u8]) -> Result<(), ErrorStack> {
-        match self.state {
-            Finalized => self.init()?,
-            _ => {}
+        if self.state == Finalized {
+            self.init()?;
         }
         unsafe {
             cvt(ffi::EVP_DigestFinalXOF(
@@ -604,7 +601,6 @@ mod tests {
     #[test]
     fn test_squeeze_then_finalize() {
         let digest = MessageDigest::shake_128();
-        let data = Vec::from_hex(MD5_TESTS[6].0).unwrap();
         let mut h = Hasher::new(digest).unwrap();
         let mut buf = vec![0; digest.size()];
         h.squeeze_xof(&mut buf).unwrap();
