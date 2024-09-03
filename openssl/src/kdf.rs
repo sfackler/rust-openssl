@@ -27,7 +27,9 @@ cfg_if::cfg_if! {
         use std::ffi::{c_char, c_void};
         use std::mem::MaybeUninit;
         use std::ptr;
+        use foreign_types::ForeignTypeRef;
         use crate::{cvt, cvt_p};
+        use crate::lib_ctx::LibCtxRef;
         use crate::error::ErrorStack;
 
         /// Derives a key using the argon2id algorithm.
@@ -38,6 +40,7 @@ cfg_if::cfg_if! {
         /// Requires OpenSSL 3.2.0 or newer.
         #[allow(clippy::too_many_arguments)]
         pub fn argon2id(
+            ctx: Option<&LibCtxRef>,
             pass: &[u8],
             salt: &[u8],
             ad: Option<&[u8]>,
@@ -49,6 +52,8 @@ cfg_if::cfg_if! {
         ) -> Result<(), ErrorStack> {
             unsafe {
                 ffi::init();
+                let libctx = ctx.map_or(ptr::null_mut(), ForeignTypeRef::as_ptr);
+
                 let mut threads = 1;
                 let mut params: [ffi::OSSL_PARAM; 10] =
                     core::array::from_fn(|_| MaybeUninit::<ffi::OSSL_PARAM>::zeroed().assume_init());
@@ -100,7 +105,7 @@ cfg_if::cfg_if! {
                 params[idx] = ffi::OSSL_PARAM_construct_end();
 
                 let argon2 = EvpKdf(cvt_p(ffi::EVP_KDF_fetch(
-                    ptr::null_mut(),
+                    libctx,
                     b"ARGON2ID\0".as_ptr() as *const c_char,
                     ptr::null(),
                 ))?);
@@ -132,6 +137,7 @@ mod tests {
 
         let mut actual = [0u8; 32];
         super::argon2id(
+            None,
             &pass,
             &salt,
             Some(&ad),
@@ -154,7 +160,7 @@ mod tests {
         let expected = "0a34f1abde67086c82e785eaf17c68382259a264f4e61b91cd2763cb75ac189a";
 
         let mut actual = [0u8; 32];
-        super::argon2id(pass, &salt, None, None, 3, 4, 32, &mut actual).unwrap();
+        super::argon2id(None, pass, &salt, None, None, 3, 4, 32, &mut actual).unwrap();
         assert_eq!(hex::encode(&actual[..]), expected);
     }
 }
