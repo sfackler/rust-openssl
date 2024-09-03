@@ -24,6 +24,7 @@ impl Drop for EvpKdfCtx {
 
 cfg_if::cfg_if! {
     if #[cfg(all(ossl320, not(osslconf = "OPENSSL_NO_ARGON2")))] {
+        use std::cmp;
         use std::ffi::{c_char, c_void};
         use std::mem::MaybeUninit;
         use std::ptr;
@@ -34,8 +35,9 @@ cfg_if::cfg_if! {
 
         /// Derives a key using the argon2id algorithm.
         ///
-        /// This function currently does not support multi-threaded operation, so
-        /// lanes greater than 1 will be processed sequentially.
+        /// To use multiple cores to process the lanes in parallel you must
+        /// set a global max thread count using `OSSL_set_max_threads`. On
+        /// builds with no threads all lanes will be processed sequentially.
         ///
         /// Requires OpenSSL 3.2.0 or newer.
         #[allow(clippy::too_many_arguments)]
@@ -54,7 +56,14 @@ cfg_if::cfg_if! {
                 ffi::init();
                 let libctx = ctx.map_or(ptr::null_mut(), ForeignTypeRef::as_ptr);
 
+                let max_threads = ffi::OSSL_get_max_threads(libctx);
                 let mut threads = 1;
+                // If max_threads is 0, then this isn't a threaded build.
+                // If max_threads is > u32::MAX we need to clamp since
+                // argon2id's threads parameter is a u32.
+                if max_threads > 0 {
+                    threads = cmp::min(lanes, cmp::min(max_threads, u32::MAX as u64) as u32);
+                }
                 let mut params: [ffi::OSSL_PARAM; 10] =
                     core::array::from_fn(|_| MaybeUninit::<ffi::OSSL_PARAM>::zeroed().assume_init());
                 let mut idx = 0;
