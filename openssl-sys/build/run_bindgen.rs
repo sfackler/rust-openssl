@@ -64,7 +64,7 @@ const INCLUDES: &str = "
 #include <openssl/poly1305.h>
 #endif
 
-#if OPENSSL_VERSION_NUMBER >= 0x30200000 && defined(OPENSSL_THREADS)
+#if OPENSSL_VERSION_NUMBER >= 0x30200000
 #include <openssl/thread.h>
 #endif
 ";

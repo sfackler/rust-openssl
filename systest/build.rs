@@ -86,7 +86,6 @@ fn main() {
             cfg.header("openssl/provider.h");
         }
         if version >= 0x30200000 {
-            // thread is present as a header even if OPENSSL_THREADS is not defined
             cfg.header("openssl/thread.h");
         }
     }
