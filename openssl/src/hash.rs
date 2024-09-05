@@ -373,7 +373,7 @@ impl Drop for Hasher {
 ///
 /// This type derefs to a byte slice - it exists to avoid allocating memory to
 /// store the digest data.
-#[derive(Copy)]
+#[derive(Copy, Eq, Hash, PartialEq)]
 pub struct DigestBytes {
     pub(crate) buf: [u8; ffi::EVP_MAX_MD_SIZE as usize],
     pub(crate) len: usize,
