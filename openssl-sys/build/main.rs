@@ -120,6 +120,7 @@ fn main() {
     println!("cargo:rustc-check-cfg=cfg(ossl310)");
     println!("cargo:rustc-check-cfg=cfg(ossl320)");
     println!("cargo:rustc-check-cfg=cfg(ossl330)");
+    println!("cargo:rustc-check-cfg=cfg(ossl340)");
 
     check_ssl_kind();
 
