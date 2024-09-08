@@ -154,21 +154,24 @@ jobs:
             - name: openssl
               version: vendored
             - name: openssl
+              version: 3.4.0-alpha1
+            - name: openssl
               version: 3.3.0
             - name: openssl
               version: 3.2.0
-              dl-path: /
             - name: openssl
               version: 1.1.1w
-              dl-path: /
             - name: openssl
               version: 1.1.0l
+              old: true
               dl-path: /old/1.1.0
             - name: openssl
               version: 1.0.2u
+              old: true
               dl-path: /old/1.0.2
             - name: openssl
               version: 1.0.1u
+              old: true
               dl-path: /old/1.0.1
           include:
             - target: x86_64-unknown-linux-gnu
@@ -255,7 +258,11 @@ jobs:
           run: |
             case "${{ matrix.library.name }}" in
             "openssl")
-              url="https://www.openssl.org/source${{ matrix.library.dl-path }}/openssl-${{ matrix.library.version }}.tar.gz"
+              if [[ "${{ matrix.library.old }}" == "true" ]]; then
+                url="https://www.openssl.org/source${{ matrix.library.dl-path }}/openssl-${{ matrix.library.version }}.tar.gz"
+              else
+                url="https://github.com/openssl/openssl/releases/download/openssl-${{ matrix.library.version }}/openssl-${{ matrix.library.version }}.tar.gz"
+              fi
               tar_flags="--strip-components=1"
               ;;
             "libressl")

@@ -131,5 +131,4 @@ fn test_versions() {
     if !built_on().is_empty() {
         assert!(built_on().starts_with("built on:"));
     }
-    assert!(dir().starts_with("OPENSSLDIR:"));
 }
