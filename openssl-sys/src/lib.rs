@@ -62,6 +62,7 @@ mod openssl {
     pub use self::ssl::*;
     pub use self::ssl3::*;
     pub use self::tls1::*;
+    pub use self::ts::*;
     pub use self::types::*;
     pub use self::x509::*;
     pub use self::x509_vfy::*;
@@ -92,6 +93,7 @@ mod openssl {
     mod ssl;
     mod ssl3;
     mod tls1;
+    mod ts;
     mod types;
     mod x509;
     mod x509_vfy;
