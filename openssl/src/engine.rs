@@ -52,7 +52,7 @@ impl Engine {
     ///
     /// let engine = Engine::load_builtin_engines();
     /// ```
-    #[corresponds(ENGINE_new)]
+    #[corresponds(ENGINE_load_builtin_engines)]
     pub fn load_builtin_engines() {
         unsafe { ffi::ENGINE_load_builtin_engines() }
     }
