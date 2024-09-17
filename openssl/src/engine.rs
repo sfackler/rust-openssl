@@ -40,6 +40,8 @@ impl Engine {
     /// ```
     #[corresponds(ENGINE_new)]
     pub fn new() -> Result<Engine, ErrorStack> {
+        ffi::init();
+
         unsafe { cvt_p(ffi::ENGINE_new()).map(Engine) }
     }
 
@@ -54,6 +56,9 @@ impl Engine {
     /// ```
     #[corresponds(ENGINE_load_builtin_engines)]
     pub fn load_builtin_engines() {
+        ffi::init();
+
+        // TODO: not sure about the ffi::init for this one.
         unsafe { ffi::ENGINE_load_builtin_engines() }
     }
 
@@ -68,6 +73,8 @@ impl Engine {
     /// ```
     #[corresponds(ENGINE_by_id)]
     pub fn by_id(id: &str) -> Result<Engine, ErrorStack> {
+        ffi::init();
+
         let id = CString::new(id).unwrap();
         unsafe { cvt_p(ffi::ENGINE_by_id(id.as_ptr())).map(Engine) }
     }
