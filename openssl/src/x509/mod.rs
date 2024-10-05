@@ -135,7 +135,7 @@ impl X509StoreContextRef {
     {
         struct Cleanup<'a>(&'a mut X509StoreContextRef);
 
-        impl<'a> Drop for Cleanup<'a> {
+        impl Drop for Cleanup<'_> {
             fn drop(&mut self) {
                 unsafe {
                     ffi::X509_STORE_CTX_cleanup(self.0.as_ptr());
@@ -873,7 +873,7 @@ impl Eq for X509 {}
 /// A context object required to construct certain `X509` extension values.
 pub struct X509v3Context<'a>(ffi::X509V3_CTX, PhantomData<(&'a X509Ref, &'a ConfRef)>);
 
-impl<'a> X509v3Context<'a> {
+impl X509v3Context<'_> {
     pub fn as_ptr(&self) -> *mut ffi::X509V3_CTX {
         &self.0 as *const _ as *mut _
     }

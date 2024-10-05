@@ -122,7 +122,7 @@ pub struct OcspStatus<'a> {
     pub next_update: &'a Asn1GeneralizedTimeRef,
 }
 
-impl<'a> OcspStatus<'a> {
+impl OcspStatus<'_> {
     /// Checks validity of the `this_update` and `next_update` fields.
     ///
     /// The `nsec` parameter specifies an amount of slack time that will be used when comparing

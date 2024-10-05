@@ -247,7 +247,7 @@ impl PartialEq<Asn1Time> for Asn1TimeRef {
 }
 
 #[cfg(any(ossl102, boringssl))]
-impl<'a> PartialEq<Asn1Time> for &'a Asn1TimeRef {
+impl PartialEq<Asn1Time> for &Asn1TimeRef {
     fn eq(&self, other: &Asn1Time) -> bool {
         self.diff(other)
             .map(|t| t.days == 0 && t.secs == 0)
@@ -270,7 +270,7 @@ impl PartialOrd<Asn1Time> for Asn1TimeRef {
 }
 
 #[cfg(any(ossl102, boringssl))]
-impl<'a> PartialOrd<Asn1Time> for &'a Asn1TimeRef {
+impl PartialOrd<Asn1Time> for &Asn1TimeRef {
     fn partial_cmp(&self, other: &Asn1Time) -> Option<Ordering> {
         self.compare(other).ok()
     }

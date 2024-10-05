@@ -56,10 +56,10 @@ pub struct Encrypter<'a> {
     _p: PhantomData<&'a ()>,
 }
 
-unsafe impl<'a> Sync for Encrypter<'a> {}
-unsafe impl<'a> Send for Encrypter<'a> {}
+unsafe impl Sync for Encrypter<'_> {}
+unsafe impl Send for Encrypter<'_> {}
 
-impl<'a> Drop for Encrypter<'a> {
+impl Drop for Encrypter<'_> {
     fn drop(&mut self) {
         unsafe {
             ffi::EVP_PKEY_CTX_free(self.pctx);
@@ -260,10 +260,10 @@ pub struct Decrypter<'a> {
     _p: PhantomData<&'a ()>,
 }
 
-unsafe impl<'a> Sync for Decrypter<'a> {}
-unsafe impl<'a> Send for Decrypter<'a> {}
+unsafe impl Sync for Decrypter<'_> {}
+unsafe impl Send for Decrypter<'_> {}
 
-impl<'a> Drop for Decrypter<'a> {
+impl Drop for Decrypter<'_> {
     fn drop(&mut self) {
         unsafe {
             ffi::EVP_PKEY_CTX_free(self.pctx);
