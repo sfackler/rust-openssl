@@ -9,7 +9,7 @@ use crate::util;
 
 pub struct MemBioSlice<'a>(*mut ffi::BIO, PhantomData<&'a [u8]>);
 
-impl<'a> Drop for MemBioSlice<'a> {
+impl Drop for MemBioSlice<'_> {
     fn drop(&mut self) {
         unsafe {
             ffi::BIO_free_all(self.0);

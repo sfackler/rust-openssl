@@ -160,6 +160,7 @@ jobs:
             - name: openssl
               version: 3.2.0
             - name: openssl
+              old: true
               version: 1.1.1w
             - name: openssl
               version: 1.1.0l

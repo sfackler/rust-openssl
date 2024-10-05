@@ -1272,7 +1272,7 @@ macro_rules! delegate {
     };
 }
 
-impl<'a, 'b> Add<&'b BigNumRef> for &'a BigNumRef {
+impl Add<&BigNumRef> for &BigNumRef {
     type Output = BigNum;
 
     fn add(self, oth: &BigNumRef) -> BigNum {
@@ -1284,7 +1284,7 @@ impl<'a, 'b> Add<&'b BigNumRef> for &'a BigNumRef {
 
 delegate!(Add, add);
 
-impl<'a, 'b> Sub<&'b BigNumRef> for &'a BigNumRef {
+impl Sub<&BigNumRef> for &BigNumRef {
     type Output = BigNum;
 
     fn sub(self, oth: &BigNumRef) -> BigNum {
@@ -1296,7 +1296,7 @@ impl<'a, 'b> Sub<&'b BigNumRef> for &'a BigNumRef {
 
 delegate!(Sub, sub);
 
-impl<'a, 'b> Mul<&'b BigNumRef> for &'a BigNumRef {
+impl Mul<&BigNumRef> for &BigNumRef {
     type Output = BigNum;
 
     fn mul(self, oth: &BigNumRef) -> BigNum {
@@ -1309,7 +1309,7 @@ impl<'a, 'b> Mul<&'b BigNumRef> for &'a BigNumRef {
 
 delegate!(Mul, mul);
 
-impl<'a, 'b> Div<&'b BigNumRef> for &'a BigNumRef {
+impl<'b> Div<&'b BigNumRef> for &BigNumRef {
     type Output = BigNum;
 
     fn div(self, oth: &'b BigNumRef) -> BigNum {
@@ -1322,7 +1322,7 @@ impl<'a, 'b> Div<&'b BigNumRef> for &'a BigNumRef {
 
 delegate!(Div, div);
 
-impl<'a, 'b> Rem<&'b BigNumRef> for &'a BigNumRef {
+impl<'b> Rem<&'b BigNumRef> for &BigNumRef {
     type Output = BigNum;
 
     fn rem(self, oth: &'b BigNumRef) -> BigNum {
@@ -1335,7 +1335,7 @@ impl<'a, 'b> Rem<&'b BigNumRef> for &'a BigNumRef {
 
 delegate!(Rem, rem);
 
-impl<'a> Shl<i32> for &'a BigNumRef {
+impl Shl<i32> for &BigNumRef {
     type Output = BigNum;
 
     fn shl(self, n: i32) -> BigNum {
@@ -1345,7 +1345,7 @@ impl<'a> Shl<i32> for &'a BigNumRef {
     }
 }
 
-impl<'a> Shl<i32> for &'a BigNum {
+impl Shl<i32> for &BigNum {
     type Output = BigNum;
 
     fn shl(self, n: i32) -> BigNum {
@@ -1353,7 +1353,7 @@ impl<'a> Shl<i32> for &'a BigNum {
     }
 }
 
-impl<'a> Shr<i32> for &'a BigNumRef {
+impl Shr<i32> for &BigNumRef {
     type Output = BigNum;
 
     fn shr(self, n: i32) -> BigNum {
@@ -1363,7 +1363,7 @@ impl<'a> Shr<i32> for &'a BigNumRef {
     }
 }
 
-impl<'a> Shr<i32> for &'a BigNum {
+impl Shr<i32> for &BigNum {
     type Output = BigNum;
 
     fn shr(self, n: i32) -> BigNum {
@@ -1371,7 +1371,7 @@ impl<'a> Shr<i32> for &'a BigNum {
     }
 }
 
-impl<'a> Neg for &'a BigNumRef {
+impl Neg for &BigNumRef {
     type Output = BigNum;
 
     fn neg(self) -> BigNum {
@@ -1379,7 +1379,7 @@ impl<'a> Neg for &'a BigNumRef {
     }
 }
 
-impl<'a> Neg for &'a BigNum {
+impl Neg for &BigNum {
     type Output = BigNum;
 
     fn neg(self) -> BigNum {

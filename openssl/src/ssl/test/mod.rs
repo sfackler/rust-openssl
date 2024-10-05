@@ -1367,20 +1367,20 @@ fn stateless() {
 
     pub struct Outgoing<'a>(&'a mut Vec<u8>);
 
-    impl<'a> Drop for Outgoing<'a> {
+    impl Drop for Outgoing<'_> {
         fn drop(&mut self) {
             self.0.clear();
         }
     }
 
-    impl<'a> ::std::ops::Deref for Outgoing<'a> {
+    impl ::std::ops::Deref for Outgoing<'_> {
         type Target = [u8];
         fn deref(&self) -> &[u8] {
             self.0
         }
     }
 
-    impl<'a> AsRef<[u8]> for Outgoing<'a> {
+    impl AsRef<[u8]> for Outgoing<'_> {
         fn as_ref(&self) -> &[u8] {
             self.0
         }

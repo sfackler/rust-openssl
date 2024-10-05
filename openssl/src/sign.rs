@@ -365,7 +365,7 @@ impl Signer<'_> {
     }
 }
 
-impl<'a> Write for Signer<'a> {
+impl Write for Signer<'_> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.update(buf)?;
         Ok(buf.len())
@@ -384,10 +384,10 @@ pub struct Verifier<'a> {
     pkey_pd: PhantomData<&'a ()>,
 }
 
-unsafe impl<'a> Sync for Verifier<'a> {}
-unsafe impl<'a> Send for Verifier<'a> {}
+unsafe impl Sync for Verifier<'_> {}
+unsafe impl Send for Verifier<'_> {}
 
-impl<'a> Drop for Verifier<'a> {
+impl Drop for Verifier<'_> {
     fn drop(&mut self) {
         // pkey_ctx is owned by the md_ctx, so no need to explicitly free it.
         unsafe {
@@ -566,7 +566,7 @@ impl<'a> Verifier<'a> {
     }
 }
 
-impl<'a> Write for Verifier<'a> {
+impl Write for Verifier<'_> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.update(buf)?;
         Ok(buf.len())
