@@ -9,6 +9,8 @@ pub use self::crypto::*;
 pub use self::dh::*;
 pub use self::dsa::*;
 pub use self::ec::*;
+#[cfg(ossl110)]
+pub use self::engine::*;
 pub use self::err::*;
 pub use self::evp::*;
 pub use self::hmac::*;
@@ -48,6 +50,8 @@ mod crypto;
 mod dh;
 mod dsa;
 mod ec;
+#[cfg(ossl110)]
+mod engine;
 mod err;
 mod evp;
 mod hmac;
