@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+## [v0.9.104] - 2024-10-15
+
+### Added
+
+* Added support for LibreSSL 4.0.x.
+* Added `EVP_KDF_*` and `EVP_KDF_CTX_*` bindings.
+* Added `EVP_DigestSqueeze`.
+* Added `OSSL_PARAM_construct_octet_string`.
+* Added `OSSL_set_max_threads` and `OSSL_get_max_threads`.
+
+### Changed
+
+* `openssl-sys` is now a 2021 edition crate
+* Explicitly specify the MSRV in `Cargo.toml`
+* Raised the `bindgen` (optional) dependency from 0.65 to 0.69
+
 ## [v0.9.103] - 2024-07-20
 
 ### Added
@@ -607,7 +623,8 @@ Fixed builds against OpenSSL built with `no-cast`.
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.103..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.104..master
+[v0.9.104]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.103...openssl-sys-v0.9.104
 [v0.9.103]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.102...openssl-sys-v0.9.103
 [v0.9.102]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.101...openssl-sys-v0.9.102
 [v0.9.101]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.100...openssl-sys-v0.9.101
