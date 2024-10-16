@@ -182,8 +182,8 @@ stack!(stack_st_GENERAL_SUBTREE);
 
 #[repr(C)]
 pub struct NAME_CONSTRAINTS {
-    pub permitted: *mut stack_st_GENERAL_SUBTREE,
-    pub excluded: *mut stack_st_GENERAL_SUBTREE,
+    pub permittedSubtrees: *mut stack_st_GENERAL_SUBTREE,
+    pub excludedSubtrees: *mut stack_st_GENERAL_SUBTREE,
 }
 
 extern "C" {

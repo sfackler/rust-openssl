@@ -2333,11 +2333,11 @@ foreign_type_and_impl_send_sync! {
 
 impl NameConstraintsRef {
     pub fn permitted(&self) -> Option<&StackRef<GeneralSubtree>> {
-        unsafe { StackRef::from_const_ptr_opt((*self.as_ptr()).permitted) }
+        unsafe { StackRef::from_const_ptr_opt((*self.as_ptr()).permittedSubtrees) }
     }
 
     pub fn excluded(&self) -> Option<&StackRef<GeneralSubtree>> {
-        unsafe { StackRef::from_const_ptr_opt((*self.as_ptr()).excluded) }
+        unsafe { StackRef::from_const_ptr_opt((*self.as_ptr()).excludedSubtrees) }
     }
 }
 
