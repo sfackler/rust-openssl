@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## [v0.10.67] - 2024-10-15
+
+### Added
+
+* Added support for LibreSSL 4.0.x.
+* Added `argon2id`
+
+### Fixed
+
+* Fixed a case where `MdCtxRef::digest_verify_final` could leave an error on the stack.
+* Fixed a case where `RsaRef::check_key` could leave an errror on the stack.
+
+### Changed
+
+* `openssl` is now a 2021 edition crate
+* Explicitly specify the MSRV in `Cargo.toml`
+
 ## [v0.10.66] - 2024-07-21
 
 ### Fixed
@@ -908,7 +925,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.66...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.67...master
+[v0.10.67]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.66...openssl-v0.10.67
 [v0.10.66]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.65...openssl-v0.10.66
 [v0.10.65]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.64...openssl-v0.10.65
 [v0.10.64]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.63...openssl-v0.10.64
