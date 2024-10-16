@@ -2357,15 +2357,11 @@ impl Stackable for PolicyMapping {
 
 impl PolicyMappingRef {
     pub fn issuer_domain_policy(&self) -> &Asn1ObjectRef {
-        unsafe {
-            Asn1ObjectRef::from_ptr((*self.as_ptr()).issuerDomainPolicy)
-        }
+        unsafe { Asn1ObjectRef::from_ptr((*self.as_ptr()).issuerDomainPolicy) }
     }
 
     pub fn subject_domain_policy(&self) -> &Asn1ObjectRef {
-        unsafe {
-            Asn1ObjectRef::from_ptr((*self.as_ptr()).subjectDomainPolicy)
-        }
+        unsafe { Asn1ObjectRef::from_ptr((*self.as_ptr()).subjectDomainPolicy) }
     }
 }
 

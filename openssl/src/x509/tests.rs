@@ -282,9 +282,9 @@ fn test_name_constraints() {
     assert_eq!(base, ".example.com");
 
     let minimum = permitted[0].minimum().is_none();
-    assert_eq!(minimum, true);
+    assert!(minimum);
     let maximum = permitted[0].maximum().is_none();
-    assert_eq!(maximum, true);
+    assert!(maximum);
 
     let excluded = name_constraints.excluded().unwrap();
     assert_eq!(excluded.len(), 1);
@@ -293,9 +293,9 @@ fn test_name_constraints() {
     assert_eq!(base, ".example.net");
 
     let minimum = excluded[0].minimum().is_none();
-    assert_eq!(minimum, true);
+    assert!(minimum);
     let maximum = excluded[0].maximum().is_none();
-    assert_eq!(maximum, true);
+    assert!(maximum);
 }
 
 #[test]
