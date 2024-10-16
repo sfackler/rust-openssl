@@ -189,3 +189,15 @@ pub struct NAME_CONSTRAINTS {
 extern "C" {
     pub fn NAME_CONSTRAINTS_free(nc: *mut NAME_CONSTRAINTS);
 }
+
+#[repr(C)]
+pub struct POLICY_MAPPING {
+    pub issuerDomainPolicy: *mut ASN1_OBJECT,
+    pub subjectDomainPolicy: *mut ASN1_OBJECT,
+}
+
+extern "C" {
+    pub fn POLICY_MAPPING_free(nc: *mut POLICY_MAPPING);
+}
+
+stack!(stack_st_POLICY_MAPPING);

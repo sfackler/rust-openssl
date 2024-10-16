@@ -493,6 +493,22 @@ impl X509Ref {
         }
     }
 
+    /// Returns this certificate's [`policy mappings`] entries, if they exist.
+    ///
+    /// [`policy mappings`]: https://tools.ietf.org/html/rfc5280#section-4.2.1.5
+    #[corresponds(X509_get_ext_d2i)]
+    pub fn policy_mappings(&self) -> Option<Stack<PolicyMapping>> {
+        unsafe {
+            let stack = ffi::X509_get_ext_d2i(
+                self.as_ptr(),
+                ffi::NID_policy_mappings,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+            Stack::from_ptr_opt(stack as *mut _)
+        }
+    }
+
     /// Retrieves the path length extension from a certificate, if it exists.
     #[corresponds(X509_get_pathlen)]
     #[cfg(any(ossl110, boringssl))]
@@ -2322,6 +2338,34 @@ impl NameConstraintsRef {
 
     pub fn excluded(&self) -> Option<&StackRef<GeneralSubtree>> {
         unsafe { StackRef::from_const_ptr_opt((*self.as_ptr()).excluded) }
+    }
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::POLICY_MAPPING;
+    fn drop = ffi::POLICY_MAPPING_free;
+
+    /// `PolicyMapping` of certificate authority information.
+    pub struct PolicyMapping;
+    /// Reference to `PolicyMapping`.
+    pub struct PolicyMappingRef;
+}
+
+impl Stackable for PolicyMapping {
+    type StackType = ffi::stack_st_POLICY_MAPPING;
+}
+
+impl PolicyMappingRef {
+    pub fn issuer_domain_policy(&self) -> &Asn1ObjectRef {
+        unsafe {
+            Asn1ObjectRef::from_ptr((*self.as_ptr()).issuerDomainPolicy)
+        }
+    }
+
+    pub fn subject_domain_policy(&self) -> &Asn1ObjectRef {
+        unsafe {
+            Asn1ObjectRef::from_ptr((*self.as_ptr()).subjectDomainPolicy)
+        }
     }
 }
 

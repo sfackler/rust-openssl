@@ -5,6 +5,7 @@
 ### Added
 
 - Added `X509Ref::name_constraints`
+- Added `X509Ref::policy_mappings`
 
 ## [v0.10.67] - 2024-10-15
 

@@ -299,6 +299,23 @@ fn test_name_constraints() {
 }
 
 #[test]
+fn test_policy_mappings() {
+    let cert = include_bytes!("../../test/policy_mappings.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    // Access through .policy_mappings()
+    let policy_mappings = cert
+        .policy_mappings()
+        .expect("Policy mappings should be present");
+
+    assert_eq!(policy_mappings.len(), 1);
+    let policy = policy_mappings[0].issuer_domain_policy().to_string();
+    assert_eq!(policy, "2.16.840.1.101.3.2.1.48.1");
+    let policy = policy_mappings[0].subject_domain_policy().to_string();
+    assert_eq!(policy, "2.16.840.1.101.3.2.1.48.2");
+}
+
+#[test]
 fn test_aia_ca_issuer() {
     // With AIA
     let cert = include_bytes!("../../test/aia_test_cert.pem");
