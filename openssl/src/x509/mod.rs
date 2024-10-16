@@ -477,6 +477,22 @@ impl X509Ref {
         }
     }
 
+    /// Returns this certificate's [`name constraints`] entry, if it exists.
+    ///
+    /// [`name constraints`]: https://tools.ietf.org/html/rfc5280#section-4.2.1.10
+    #[corresponds(X509_get_ext_d2i)]
+    pub fn name_constraints(&self) -> Option<&NameConstraintsRef> {
+        unsafe {
+            let ext = ffi::X509_get_ext_d2i(
+                self.as_ptr(),
+                ffi::NID_name_constraints,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+            NameConstraintsRef::from_const_ptr_opt(ext as *mut _)
+        }
+    }
+
     /// Retrieves the path length extension from a certificate, if it exists.
     #[corresponds(X509_get_pathlen)]
     #[cfg(any(ossl110, boringssl))]
@@ -2259,6 +2275,54 @@ impl AccessDescriptionRef {
 
 impl Stackable for AccessDescription {
     type StackType = ffi::stack_st_ACCESS_DESCRIPTION;
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::GENERAL_SUBTREE;
+    fn drop = ffi::GENERAL_SUBTREE_free;
+
+    /// An `X509` subtree.
+    pub struct GeneralSubtree;
+    /// Reference to `GeneralSubtree`.
+    pub struct GeneralSubtreeRef;
+}
+
+impl Stackable for GeneralSubtree {
+    type StackType = ffi::stack_st_GENERAL_SUBTREE;
+}
+
+impl GeneralSubtreeRef {
+    pub fn base(&self) -> &GeneralNameRef {
+        unsafe { GeneralNameRef::from_ptr((*self.as_ptr()).base) }
+    }
+
+    pub fn minimum(&self) -> Option<&Asn1IntegerRef> {
+        unsafe { Asn1IntegerRef::from_const_ptr_opt((*self.as_ptr()).minimum) }
+    }
+
+    pub fn maximum(&self) -> Option<&Asn1IntegerRef> {
+        unsafe { Asn1IntegerRef::from_const_ptr_opt((*self.as_ptr()).maximum) }
+    }
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::NAME_CONSTRAINTS;
+    fn drop = ffi::NAME_CONSTRAINTS_free;
+
+    /// `NameConstraints` of certificate authority information.
+    pub struct NameConstraints;
+    /// Reference to `NameConstraints`.
+    pub struct NameConstraintsRef;
+}
+
+impl NameConstraintsRef {
+    pub fn permitted(&self) -> Option<&StackRef<GeneralSubtree>> {
+        unsafe { StackRef::from_const_ptr_opt((*self.as_ptr()).permitted) }
+    }
+
+    pub fn excluded(&self) -> Option<&StackRef<GeneralSubtree>> {
+        unsafe { StackRef::from_const_ptr_opt((*self.as_ptr()).excluded) }
+    }
 }
 
 foreign_type_and_impl_send_sync! {

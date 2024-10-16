@@ -165,3 +165,27 @@ extern "C" {
     pub fn X509_check_ip(x: *mut X509, chk: *const c_uchar, chklen: usize, flags: c_uint) -> c_int;
     pub fn X509_check_ip_asc(x: *mut X509, ipasc: *const c_char, flags: c_uint) -> c_int;
 }
+
+#[repr(C)]
+pub struct GENERAL_SUBTREE {
+    pub base: *mut GENERAL_NAME,
+    pub minimum: *mut ASN1_INTEGER,
+    pub maximum: *mut ASN1_INTEGER,
+}
+
+extern "C" {
+    pub fn GENERAL_SUBTREE_new() -> *mut GENERAL_SUBTREE;
+    pub fn GENERAL_SUBTREE_free(name: *mut GENERAL_SUBTREE);
+}
+
+stack!(stack_st_GENERAL_SUBTREE);
+
+#[repr(C)]
+pub struct NAME_CONSTRAINTS {
+    pub permitted: *mut stack_st_GENERAL_SUBTREE,
+    pub excluded: *mut stack_st_GENERAL_SUBTREE,
+}
+
+extern "C" {
+    pub fn NAME_CONSTRAINTS_free(nc: *mut NAME_CONSTRAINTS);
+}

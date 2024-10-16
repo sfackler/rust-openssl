@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Added `X509Ref::name_constraints`
+
 ## [v0.10.67] - 2024-10-15
 
 ### Added
