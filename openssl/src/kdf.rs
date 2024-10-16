@@ -25,10 +25,11 @@ impl Drop for EvpKdfCtx {
 cfg_if::cfg_if! {
     if #[cfg(all(ossl320, not(osslconf = "OPENSSL_NO_ARGON2")))] {
         use std::cmp;
-        use std::ffi::{c_char, c_void};
+        use std::ffi::c_void;
         use std::mem::MaybeUninit;
         use std::ptr;
         use foreign_types::ForeignTypeRef;
+        use libc::c_char;
         use crate::{cvt, cvt_p};
         use crate::lib_ctx::LibCtxRef;
         use crate::error::ErrorStack;

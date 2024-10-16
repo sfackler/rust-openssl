@@ -7,6 +7,12 @@
 - Added `X509Ref::name_constraints`
 - Added `X509Ref::policy_mappings`
 
+## [v0.10.68] - 2024-10-16
+
+### Fixed
+
+* Fixed building on Rust 1.63.0 (our MSRV) with OpenSSL 3.2 or newer.
+
 ## [v0.10.67] - 2024-10-15
 
 ### Added
@@ -930,7 +936,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.67...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.68...master
+[v0.10.68]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.67...openssl-v0.10.68
 [v0.10.67]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.66...openssl-v0.10.67
 [v0.10.66]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.65...openssl-v0.10.66
 [v0.10.65]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.64...openssl-v0.10.65
