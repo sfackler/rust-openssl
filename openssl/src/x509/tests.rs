@@ -1192,3 +1192,30 @@ fn test_store_all_certificates() {
 
     assert_eq!(store.all_certificates().len(), 1);
 }
+
+#[test]
+fn test_name_display() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    const EXPECTED_TO_STRING_OUTPUT: &str =
+        "CN=foobar.com,O=Internet Widgits Pty Ltd,ST=Some-State,C=AU";
+
+    let rdn = cert.subject_name().to_string();
+    assert_eq!(
+        rdn, EXPECTED_TO_STRING_OUTPUT,
+        "output did not match expected",
+    );
+
+    let emoji_cert = include_bytes!("../../test/emoji_cert.pem");
+    let emoji_cert = X509::from_pem(emoji_cert).unwrap();
+
+    const EXPECTED_EMOJI_OUTPUT: &str =
+        "CN=www.example.com,O=\u{1f980}\u{1f9ea}\u{1f44d},ST=YY,C=XX";
+
+    let rdn = emoji_cert.subject_name().to_string();
+    assert_eq!(
+        rdn, EXPECTED_EMOJI_OUTPUT,
+        "formatting of cert name with Unicode Emoji failed"
+    );
+}
