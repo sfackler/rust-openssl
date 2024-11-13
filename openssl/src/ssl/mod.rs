@@ -602,17 +602,17 @@ impl SslAlert {
 
 /// An error returned from an ALPN selection callback.
 ///
-/// Requires OpenSSL 1.0.2 or LibreSSL 2.6.1 or newer.
-#[cfg(any(ossl102, libressl261))]
+/// Requires BoringSSL or OpenSSL 1.0.2 or LibreSSL 2.6.1 or newer.
+#[cfg(any(ossl102, libressl261, boringssl))]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct AlpnError(c_int);
 
-#[cfg(any(ossl102, libressl261))]
+#[cfg(any(ossl102, libressl261, boringssl))]
 impl AlpnError {
     /// Terminate the handshake with a fatal alert.
     ///
-    /// Requires OpenSSL 1.1.0 or newer.
-    #[cfg(ossl110)]
+    /// Requires BoringSSL or OpenSSL 1.1.0 or newer.
+    #[cfg(any(ossl110, boringssl))]
     pub const ALERT_FATAL: AlpnError = AlpnError(ffi::SSL_TLSEXT_ERR_ALERT_FATAL);
 
     /// Do not select a protocol, but continue the handshake.
@@ -1267,19 +1267,26 @@ impl SslContextBuilder {
     /// of those protocols on success. The [`select_next_proto`] function implements the standard
     /// protocol selection algorithm.
     ///
-    /// Requires OpenSSL 1.0.2 or LibreSSL 2.6.1 or newer.
+    /// Requires BoringSSL or OpenSSL 1.0.2 or LibreSSL 2.6.1 or newer.
     ///
     /// [`SslContextBuilder::set_alpn_protos`]: struct.SslContextBuilder.html#method.set_alpn_protos
     /// [`select_next_proto`]: fn.select_next_proto.html
     #[corresponds(SSL_CTX_set_alpn_select_cb)]
-    #[cfg(any(ossl102, libressl261))]
+    #[cfg(any(ossl102, libressl261, boringssl))]
     pub fn set_alpn_select_callback<F>(&mut self, callback: F)
     where
         F: for<'a> Fn(&mut SslRef, &'a [u8]) -> Result<&'a [u8], AlpnError> + 'static + Sync + Send,
     {
         unsafe {
             self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
+            #[cfg(not(boringssl))]
             ffi::SSL_CTX_set_alpn_select_cb__fixed_rust(
+                self.as_ptr(),
+                Some(callbacks::raw_alpn_select::<F>),
+                ptr::null_mut(),
+            );
+            #[cfg(boringssl)]
+            ffi::SSL_CTX_set_alpn_select_cb(
                 self.as_ptr(),
                 Some(callbacks::raw_alpn_select::<F>),
                 ptr::null_mut(),
