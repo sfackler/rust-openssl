@@ -36,7 +36,7 @@
 //! ```
 
 #![cfg_attr(
-    not(boringssl),
+    not(any(boringssl, awslc)),
     doc = r#"\
 
 Compute an HMAC:
@@ -269,7 +269,7 @@ impl Signer<'_> {
         self.len_intern()
     }
 
-    #[cfg(all(not(ossl111), not(boringssl), not(libressl370)))]
+    #[cfg(not(any(ossl111, boringssl, libressl370, awslc)))]
     fn len_intern(&self) -> Result<usize, ErrorStack> {
         unsafe {
             let mut len = 0;
@@ -282,7 +282,7 @@ impl Signer<'_> {
         }
     }
 
-    #[cfg(any(ossl111, boringssl, libressl370))]
+    #[cfg(any(ossl111, boringssl, libressl370, awslc))]
     fn len_intern(&self) -> Result<usize, ErrorStack> {
         unsafe {
             let mut len = 0;
@@ -333,7 +333,7 @@ impl Signer<'_> {
     /// This method will fail if the buffer is not large enough for the signature. Use the `len`
     /// method to get an upper bound on the required size.
     #[corresponds(EVP_DigestSign)]
-    #[cfg(any(ossl111, boringssl, libressl370))]
+    #[cfg(any(ossl111, boringssl, libressl370, awslc))]
     pub fn sign_oneshot(
         &mut self,
         sig_buf: &mut [u8],
@@ -355,7 +355,7 @@ impl Signer<'_> {
     /// Returns the signature.
     ///
     /// This is a simple convenience wrapper over `len` and `sign_oneshot`.
-    #[cfg(any(ossl111, boringssl, libressl370))]
+    #[cfg(any(ossl111, boringssl, libressl370, awslc))]
     pub fn sign_oneshot_to_vec(&mut self, data_buf: &[u8]) -> Result<Vec<u8>, ErrorStack> {
         let mut sig_buf = vec![0; self.len()?];
         let len = self.sign_oneshot(&mut sig_buf, data_buf)?;
@@ -544,7 +544,7 @@ impl<'a> Verifier<'a> {
 
     /// Determines if the data given in `buf` matches the provided signature.
     #[corresponds(EVP_DigestVerify)]
-    #[cfg(any(ossl111, boringssl, libressl370))]
+    #[cfg(any(ossl111, boringssl, libressl370, awslc))]
     pub fn verify_oneshot(&mut self, signature: &[u8], buf: &[u8]) -> Result<bool, ErrorStack> {
         unsafe {
             let r = ffi::EVP_DigestVerify(
@@ -593,7 +593,7 @@ unsafe fn EVP_DigestVerifyFinal(
 #[cfg(test)]
 mod test {
     use hex::{self, FromHex};
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     use std::iter;
 
     use crate::ec::{EcGroup, EcKey};
@@ -657,7 +657,7 @@ mod test {
         assert!(!verifier.verify(&Vec::from_hex(SIGNATURE).unwrap()).unwrap());
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_hmac(ty: MessageDigest, tests: &[(Vec<u8>, Vec<u8>, Vec<u8>)]) {
         for (key, data, res) in tests.iter() {
             let pkey = PKey::hmac(key).unwrap();
@@ -668,7 +668,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn hmac_md5() {
         // test vectors from RFC 2202
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] = [
@@ -715,7 +715,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn hmac_sha1() {
         // test vectors from RFC 2202
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] = [
@@ -794,7 +794,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(any(ossl111, boringssl, libressl370))]
+    #[cfg(any(ossl111, boringssl, libressl370, awslc))]
     fn eddsa() {
         let key = PKey::generate_ed25519().unwrap();
 

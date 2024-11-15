@@ -71,6 +71,47 @@ fn check_ssl_kind() {
         // BoringSSL does not have any build logic, exit early
         std::process::exit(0);
     }
+
+    let is_aws_lc = cfg!(feature = "aws-lc");
+    let is_aws_lc_fips = cfg!(feature = "aws-lc-fips");
+
+    if is_aws_lc || is_aws_lc_fips {
+        println!("cargo:rustc-cfg=awslc");
+        println!("cargo:awslc=true");
+
+        let env_var_prefix = match (is_aws_lc, is_aws_lc_fips) {
+            (true, false) => "DEP_AWS_LC_",
+            (false, true) => "DEP_AWS_LC_FIPS_",
+            _ => {
+                panic!("aws-lc and aws-lc-fips are mutually exclusive features!");
+            }
+        };
+
+        let mut version = None;
+        for (name, _) in std::env::vars() {
+            if let Some(name) = name.strip_prefix(env_var_prefix) {
+                if let Some(name) = name.strip_suffix("_INCLUDE") {
+                    version = Some(name.to_owned());
+                    break;
+                }
+            }
+        }
+        let version = version.expect("aws-lc version detected");
+
+        if let Ok(vars) = std::env::var(format!("{env_var_prefix}{version}_CONF")) {
+            for var in vars.split(',') {
+                println!("cargo:rustc-cfg=osslconf=\"{var}\"");
+            }
+            println!("cargo:conf={vars}");
+        }
+
+        if let Ok(val) = std::env::var(format!("{env_var_prefix}{version}_INCLUDE")) {
+            println!("cargo:include={val}");
+        }
+
+        // AWS-LC does not have any build logic, exit early
+        std::process::exit(0);
+    }
 }
 
 fn main() {
@@ -79,6 +120,7 @@ fn main() {
     println!("cargo:rustc-check-cfg=cfg(openssl)");
     println!("cargo:rustc-check-cfg=cfg(libressl)");
     println!("cargo:rustc-check-cfg=cfg(boringssl)");
+    println!("cargo:rustc-check-cfg=cfg(awslc)");
 
     println!("cargo:rustc-check-cfg=cfg(libressl250)");
     println!("cargo:rustc-check-cfg=cfg(libressl251)");

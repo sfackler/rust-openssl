@@ -52,7 +52,7 @@
 
 use crate::cipher::CipherRef;
 use crate::error::ErrorStack;
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 use crate::pkey::{HasPrivate, HasPublic, PKey, PKeyRef};
 use crate::{cvt, cvt_p};
 #[cfg(ossl102)]
@@ -202,7 +202,7 @@ impl CipherCtxRef {
     /// Panics if `pub_keys` is not the same size as `encrypted_keys`, the IV buffer is smaller than the cipher's IV
     /// size, or if an IV is provided before the cipher.
     #[corresponds(EVP_SealInit)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn seal_init<T>(
         &mut self,
         type_: Option<&CipherRef>,
@@ -259,7 +259,7 @@ impl CipherCtxRef {
     /// Panics if the IV buffer is smaller than the cipher's required IV size or if the IV is provided before the
     /// cipher.
     #[corresponds(EVP_OpenInit)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn open_init<T>(
         &mut self,
         type_: Option<&CipherRef>,
@@ -329,7 +329,7 @@ impl CipherCtxRef {
     /// Panics if the context has not been initialized with a cipher or if the buffer is smaller than the cipher's key
     /// length.
     #[corresponds(EVP_CIPHER_CTX_rand_key)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn rand_key(&self, buf: &mut [u8]) -> Result<(), ErrorStack> {
         assert!(buf.len() >= self.key_length());
 
@@ -728,11 +728,11 @@ impl CipherCtxRef {
 mod test {
     use super::*;
     use crate::{cipher::Cipher, rand::rand_bytes};
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     use std::slice;
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn seal_open() {
         let private_pem = include_bytes!("../test/rsa.pem");
         let public_pem = include_bytes!("../test/rsa.pem.pub");

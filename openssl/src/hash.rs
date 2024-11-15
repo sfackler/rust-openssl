@@ -44,7 +44,7 @@ use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
 
 cfg_if! {
-    if #[cfg(any(ossl110, boringssl, libressl382))] {
+    if #[cfg(any(ossl110, boringssl, libressl382, awslc))] {
         use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
     } else {
         use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
@@ -94,7 +94,7 @@ impl MessageDigest {
         }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn null() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_md_null()) }
     }
@@ -323,9 +323,9 @@ impl Hasher {
             self.init()?;
         }
         unsafe {
-            #[cfg(not(boringssl))]
+            #[cfg(not(any(boringssl, awslc)))]
             let mut len = ffi::EVP_MAX_MD_SIZE;
-            #[cfg(boringssl)]
+            #[cfg(any(boringssl, awslc))]
             let mut len = ffi::EVP_MAX_MD_SIZE as u32;
             let mut buf = [0; ffi::EVP_MAX_MD_SIZE as usize];
             cvt(ffi::EVP_DigestFinal_ex(
@@ -343,7 +343,7 @@ impl Hasher {
 
     /// Writes the hash of the data into the supplied buf and resets the XOF hasher.
     /// The hash will be as long as the buf.
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, awslc))]
     pub fn finish_xof(&mut self, buf: &mut [u8]) -> Result<(), ErrorStack> {
         if self.state == Finalized {
             self.init()?;

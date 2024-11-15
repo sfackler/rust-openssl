@@ -29,7 +29,7 @@ fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     let mut ctx = SslContextBuilder::new(method)?;
 
     cfg_if! {
-        if #[cfg(not(boringssl))] {
+        if #[cfg(not(any(boringssl, awslc)))] {
             let mut opts = SslOptions::ALL
                 | SslOptions::NO_COMPRESSION
                 | SslOptions::NO_SSLV2

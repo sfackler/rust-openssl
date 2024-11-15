@@ -1,6 +1,6 @@
 use bitflags::bitflags;
 use foreign_types::ForeignTypeRef;
-use libc::{c_int, c_long, c_ulong};
+use libc::{c_int, c_long};
 use std::mem;
 use std::ptr;
 
@@ -17,7 +17,7 @@ use openssl_macros::corresponds;
 bitflags! {
     #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     #[repr(transparent)]
-    pub struct OcspFlag: c_ulong {
+    pub struct OcspFlag: c_int {
         const NO_CERTS = ffi::OCSP_NOCERTS;
         const NO_INTERN = ffi::OCSP_NOINTERN;
         const NO_CHAIN = ffi::OCSP_NOCHAIN;
@@ -169,7 +169,7 @@ impl OcspBasicResponseRef {
                 self.as_ptr(),
                 certs.as_ptr(),
                 store.as_ptr(),
-                flags.bits(),
+                flags.bits().try_into().map_err(|_|ErrorStack::get())?,
             ))
             .map(|_| ())
         }
