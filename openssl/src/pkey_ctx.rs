@@ -1087,14 +1087,14 @@ mod test {
     #[cfg(ossl320)]
     fn ecdsa_deterministic_signature() {
         let private_key_pem = "-----BEGIN PRIVATE KEY-----
-MDkCAQAwEwYHKoZIzj0CAQYIKoZIzj0DAQEEHzAdAgEBBBhvqwNJNOTA/Jrmf1tWWanX0f79GH7g
-n9Q=
+MEECAQAwEwYHKoZIzj0CAQYIKoZIzj0DAQcEJzAlAgEBBCDJr6nYRbp1FmtcIVdnsdaTTlDD2zbo
+mxJ7imIrEg9nIQ==
 -----END PRIVATE KEY-----";
 
         let key1 = EcKey::private_key_from_pem(private_key_pem.as_bytes()).unwrap();
         let key1 = PKey::from_ec_key(key1).unwrap();
         let input = "sample";
-        let expected_output = hex::decode("303502190098C6BD12B23EAF5E2A2045132086BE3EB8EBD62ABF6698FF021857A22B07DEA9530F8DE9471B1DC6624472E8E2844BC25B64").unwrap();
+        let expected_output = hex::decode("3044022061340C88C3AAEBEB4F6D667F672CA9759A6CCAA9FA8811313039EE4A35471D3202206D7F147DAC089441BB2E2FE8F7A3FA264B9C475098FDCF6E00D7C996E1B8B7EB").unwrap();
 
         let hashed_input = hash(MessageDigest::sha1(), input.as_bytes()).unwrap();
         let mut ctx = PkeyCtx::new(&key1).unwrap();
