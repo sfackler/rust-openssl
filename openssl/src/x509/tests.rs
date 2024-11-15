@@ -266,6 +266,56 @@ fn test_subject_alt_name_iter() {
 }
 
 #[test]
+fn test_name_constraints() {
+    let cert = include_bytes!("../../test/name_constraints.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    // Access through .name_constraints()
+    let name_constraints = cert
+        .name_constraints()
+        .expect("Name constraints extension should be present");
+
+    let permitted = name_constraints.permitted().unwrap();
+    assert_eq!(permitted.len(), 1);
+
+    let base = permitted[0].base().dnsname().unwrap();
+    assert_eq!(base, ".example.com");
+
+    let minimum = permitted[0].minimum().is_none();
+    assert!(minimum);
+    let maximum = permitted[0].maximum().is_none();
+    assert!(maximum);
+
+    let excluded = name_constraints.excluded().unwrap();
+    assert_eq!(excluded.len(), 1);
+
+    let base = excluded[0].base().dnsname().unwrap();
+    assert_eq!(base, ".example.net");
+
+    let minimum = excluded[0].minimum().is_none();
+    assert!(minimum);
+    let maximum = excluded[0].maximum().is_none();
+    assert!(maximum);
+}
+
+#[test]
+fn test_policy_mappings() {
+    let cert = include_bytes!("../../test/policy_mappings.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    // Access through .policy_mappings()
+    let policy_mappings = cert
+        .policy_mappings()
+        .expect("Policy mappings should be present");
+
+    assert_eq!(policy_mappings.len(), 1);
+    let policy = policy_mappings[0].issuer_domain_policy().to_string();
+    assert_eq!(policy, "2.16.840.1.101.3.2.1.48.1");
+    let policy = policy_mappings[0].subject_domain_policy().to_string();
+    assert_eq!(policy, "2.16.840.1.101.3.2.1.48.2");
+}
+
+#[test]
 fn test_aia_ca_issuer() {
     // With AIA
     let cert = include_bytes!("../../test/aia_test_cert.pem");
