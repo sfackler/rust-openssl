@@ -666,6 +666,29 @@ impl X509Ref {
         }
     }
 
+    /// Return this certificate's list of extensions.
+    pub fn extensions(&self) -> Result<Vec<&X509ExtensionRef>, ErrorStack> {
+        let mut exts = Vec::new();
+        // SAFETY: the rust openssl binding guarantees that x509 is a valid object.
+        let ext_count = unsafe { ffi::X509_get_ext_count(self.as_ptr()) };
+
+        for index in 0..ext_count {
+            // SAFETY: the rust openssl binding guarantees that x509 is a valid object
+            // and `index` is a valid index.
+            // From the documentation of X509_get_ext:
+            // The returned extension is an internal pointer which must not be freed
+            // up by the application. Therefore this pointer is valid as long as the X509
+            // object lives.
+            let ext = unsafe {
+                X509ExtensionRef::from_ptr(cvt_p(ffi::X509_get_ext(self.as_ptr(), index))?)
+            };
+
+            exts.push(ext)
+        }
+
+        Ok(exts)
+    }
+
     to_pem! {
         /// Serializes the certificate into a PEM-encoded X509 structure.
         ///
@@ -1049,6 +1072,43 @@ impl X509Extension {
 }
 
 impl X509ExtensionRef {
+    /// Returns the criticality of this extension.
+    pub fn critical(&self) -> bool {
+        // SAFETY: `self` is a valid object.
+        let critical = unsafe { ffi::X509_EXTENSION_get_critical(self.as_ptr()) };
+        // In the ASN1, the critical marker is a boolean so it's actually impossible for
+        // openssl to return anything but 0 and 1, so throw in error in case we see anything else.
+        match critical {
+            0 => false,
+            1 => true,
+            _ => panic!("openssl returned non-boolean critical marker for extension"),
+        }
+    }
+
+    /// Returns this extension's type.
+    pub fn object(&self) -> Result<&Asn1ObjectRef, ErrorStack> {
+        // SAFETY: `self` is a valid object and the returned pointer is marked with the lifetime
+        // of the X509 object that owns the memory.
+        unsafe {
+            // From the documentation of X509_EXTENSION_get_object:
+            // The returned pointer is an internal value which must not be freed up.
+            let data = cvt_p(ffi::X509_EXTENSION_get_object(self.as_ptr()))?;
+            Ok(Asn1ObjectRef::from_ptr(data))
+        }
+    }
+
+    /// Returns this extension's data.
+    pub fn data(&self) -> Result<&Asn1OctetStringRef, ErrorStack> {
+        // SAFETY: `self` is a valid object and the returned pointer is marked with the lifetime
+        // of the X509 object that owns the memory.
+        unsafe {
+            // From the documentation of X509_EXTENSION_get_data:
+            // The returned pointer is an internal value which must not be freed up.
+            let data = cvt_p(ffi::X509_EXTENSION_get_data(self.as_ptr()))?;
+            Ok(Asn1OctetStringRef::from_ptr(data))
+        }
+    }
+
     to_der! {
         /// Serializes the Extension to its standard DER encoding.
         #[corresponds(i2d_X509_EXTENSION)]
@@ -1340,6 +1400,17 @@ impl X509NameEntryRef {
             let object = ffi::X509_NAME_ENTRY_get_object(self.as_ptr());
             Asn1ObjectRef::from_ptr(object)
         }
+    }
+
+    /// Returns the index of the RDN that a of an `X509NameEntry` is part of.
+    /// This function retrieves X.501 RelativeDistinguishedName (RDN) that a `X509NameEntry` is part of in the `X509Name`
+    /// object using it. The first RDN has index 0. If an RDN consists of more than one X509_NAME_ENTRY object, they all
+    /// share the same index. This is useful when working with multi-valued RDNs.
+    ///
+    /// This corresponds to `X509_NAME_ENTRY_set`.
+    #[cfg(any(ossl110, libressl270))]
+    pub fn set(&self) -> c_int {
+        unsafe { ffi::X509_NAME_ENTRY_set(self.as_ptr()) }
     }
 }
 
