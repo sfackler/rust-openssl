@@ -7,3 +7,6 @@ members = [
     "openssl-sys",
     "systest",
 ]
+
+[patch.crates-io]
+openssl-src = { git = "https://github.com/alexcrichton/openssl-src-rs", branch = "no-module" }
