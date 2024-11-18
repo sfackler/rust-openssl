@@ -18,6 +18,7 @@ rust-version = "1.63.0"
 [features]
 vendored = ['openssl-src']
 unstable_boringssl = ['bssl-sys']
+probe = []
 
 [dependencies]
 libc = "0.2"
