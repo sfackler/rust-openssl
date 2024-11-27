@@ -13,6 +13,9 @@ use crate::x509::extension::{
     AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, KeyUsage, SubjectAlternativeName,
     SubjectKeyIdentifier,
 };
+#[cfg(ossl110)]
+#[cfg(not(OPENSSL_NO_RFC3779))]
+use crate::x509::extension::{SbgpAsIdentifier, SbgpIpAddressIdentifier};
 #[cfg(not(boringssl))]
 use crate::x509::store::X509Lookup;
 use crate::x509::store::X509StoreBuilder;
@@ -1176,6 +1179,170 @@ fn test_dist_point_null() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
     assert!(cert.crl_distribution_points().is_none());
+}
+
+#[test]
+#[cfg(ossl110)]
+#[cfg(not(OPENSSL_NO_RFC3779))]
+fn test_sbgp_extensions_parsing() {
+    use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+    use std::str::FromStr;
+
+    let cert_bytes = include_bytes!("../../test/rfc3779.pem");
+    let cert = X509::from_pem(cert_bytes).unwrap();
+
+    let parent_cert_bytes = include_bytes!("../../test/rfc3779-parent.pem");
+    let parent_cert = X509::from_pem(parent_cert_bytes).unwrap();
+
+    let asn = cert.sbgp_asn().unwrap();
+    assert!(!asn.inherited());
+    assert!(asn.is_canonical());
+
+    #[cfg(ossl111)]
+    {
+        let pasn = parent_cert.sbgp_asn().unwrap();
+        assert!(asn.subset_of(&pasn));
+        assert!(!pasn.subset_of(&asn));
+    }
+
+    let asn_ranges = asn.ranges().unwrap();
+    assert_eq!(asn_ranges[0], (10, 18));
+    assert_eq!(asn_ranges[1], (20, 20));
+
+    let families = cert.sbgp_ip_addresses().unwrap();
+    let pfamilies = parent_cert.sbgp_ip_addresses().unwrap();
+    assert!(!families.inherited());
+    assert!(families.is_canonical());
+    assert!(families.subset_of(&pfamilies));
+    assert!(!pfamilies.subset_of(&families));
+
+    for family in families {
+        let ranges = family.range().unwrap();
+        for (ip_min, ip_max) in ranges {
+            if let (IpAddr::V6(a_v6_min), IpAddr::V6(a_v6_max)) = (ip_min, ip_max) {
+                assert_eq!(a_v6_min, Ipv6Addr::from_str("fd00::").unwrap());
+                assert_eq!(
+                    a_v6_max,
+                    Ipv6Addr::from_str("fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff").unwrap()
+                );
+            }
+            if let (IpAddr::V4(a_v4_min), IpAddr::V4(a_v4_max)) = (ip_min, ip_max) {
+                assert_eq!(a_v4_min, Ipv4Addr::from_str("10.0.0.0").unwrap());
+                assert_eq!(a_v4_max, Ipv4Addr::from_str("10.0.0.255").unwrap());
+            }
+        }
+    }
+}
+
+#[test]
+#[cfg(ossl110)]
+#[cfg(not(OPENSSL_NO_RFC3779))]
+fn test_sbgp_as_identifier_builder() {
+    let mut builder = X509Builder::new().unwrap();
+    let as_id_ext = SbgpAsIdentifier::new()
+        .add_asn(1000)
+        .add_asn_range(2500, 2700)
+        .add_asn(9000)
+        .build()
+        .unwrap();
+
+    builder.append_extension(as_id_ext).unwrap();
+    let cert = builder.build();
+
+    let asn = cert.sbgp_asn().unwrap();
+    assert!(!asn.inherited());
+    assert_eq!(
+        asn.ranges(),
+        Some(vec![(1000, 1000), (2500, 2700), (9000, 9000)])
+    );
+}
+
+#[test]
+#[cfg(ossl110)]
+#[cfg(not(OPENSSL_NO_RFC3779))]
+fn test_sbgp_as_identifier_builder_inherit() {
+    let mut builder = X509Builder::new().unwrap();
+    let ext = SbgpAsIdentifier::new().add_inherit().build().unwrap();
+
+    builder.append_extension(ext).unwrap();
+    let cert = builder.build();
+
+    let asn = cert.sbgp_asn().unwrap();
+    assert!(asn.inherited());
+    assert_eq!(asn.ranges(), None);
+
+    let mut builder = X509Builder::new().unwrap();
+    let ext = SbgpAsIdentifier::new().add_inherit().build().unwrap();
+
+    builder.append_extension(ext).unwrap();
+    let cert = builder.build();
+
+    let asn = cert.sbgp_asn().unwrap();
+    assert!(asn.inherited());
+    assert_eq!(asn.ranges(), None);
+}
+
+#[test]
+#[cfg(ossl110)]
+#[cfg(not(OPENSSL_NO_RFC3779))]
+fn test_sbgp_ip_addr_ranges_builder() {
+    use crate::x509::sbgp::IpVersion;
+    use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+    use std::str::FromStr;
+
+    let mut builder = X509Builder::new().unwrap();
+    let ip_addr_ext = SbgpIpAddressIdentifier::new()
+        .add_ip_addr(IpAddr::from_str("10.0.0.0").unwrap())
+        .add_ip_prefix(IpAddr::from_str("20.0.0.0").unwrap(), 16)
+        .add_ipv6_addr_range(
+            Ipv6Addr::from_str("fc00::200").unwrap(),
+            Ipv6Addr::from_str("fc00::400").unwrap(),
+        )
+        .add_ipv4_addr_range(
+            Ipv4Addr::from_str("30.0.0.0").unwrap(),
+            Ipv4Addr::from_str("30.0.0.100").unwrap(),
+        )
+        .build()
+        .unwrap();
+
+    builder.append_extension(ip_addr_ext).unwrap();
+    let cert = builder.build();
+
+    let ranges = cert.sbgp_ip_addresses().unwrap();
+    assert!(!ranges.inherited());
+    assert!(ranges.is_canonical());
+
+    let ranges = ranges.into_iter().collect::<Vec<_>>();
+
+    assert_eq!(ranges.len(), 2);
+
+    assert_eq!(ranges[0].fam(), Some(IpVersion::V4));
+    assert_eq!(
+        ranges[0].range(),
+        Some(vec![
+            (
+                IpAddr::from_str("10.0.0.0").unwrap(),
+                IpAddr::from_str("10.0.0.0").unwrap()
+            ),
+            (
+                IpAddr::from_str("20.0.0.0").unwrap(),
+                IpAddr::from_str("20.0.255.255").unwrap()
+            ),
+            (
+                IpAddr::from_str("30.0.0.0").unwrap(),
+                IpAddr::from_str("30.0.0.100").unwrap()
+            )
+        ])
+    );
+
+    assert_eq!(ranges[1].fam(), Some(IpVersion::V6));
+    assert_eq!(
+        ranges[1].range(),
+        Some(vec![(
+            IpAddr::from_str("fc00::200").unwrap(),
+            IpAddr::from_str("fc00::400").unwrap(),
+        )])
+    );
 }
 
 #[test]

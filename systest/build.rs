@@ -124,6 +124,14 @@ fn main() {
         s == "ProbeResult" ||
             s == "X509_OBJECT_data" || // inline union
             s == "DIST_POINT_NAME_st_anon_union" || // inline union
+            s == "ASIdOrRange_st_anon_union" || // inline union
+            s == "ASIdOrRange" ||
+            s == "ASIdentifierChoice_st_anon_union" || // inline union
+            s == "ASIdentifierChoice" ||
+            s == "IPAddressOrRange_st_anon_union" || // inline union
+            s == "IPAddressOrRange" ||
+            s == "IPAddressChoice_st_anon_union" || // inline union
+            s == "IPAddressChoice" ||
             s == "PKCS7_data" ||
             s == "ASN1_TYPE_value"
     });
