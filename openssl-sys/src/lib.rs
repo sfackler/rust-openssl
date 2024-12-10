@@ -76,6 +76,7 @@ mod openssl {
     pub use self::evp::*;
     #[cfg(not(feature = "bindgen"))]
     pub use self::handwritten::*;
+    pub use self::hpke::*;
     pub use self::obj_mac::*;
     pub use self::ocsp::*;
     pub use self::pem::*;
@@ -106,6 +107,7 @@ mod openssl {
     mod evp;
     #[cfg(not(feature = "bindgen"))]
     mod handwritten;
+    mod hpke;
     mod obj_mac;
     mod ocsp;
     mod pem;

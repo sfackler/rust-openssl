@@ -1144,3 +1144,15 @@ pub struct OSSL_PARAM {
 pub enum EVP_KDF {}
 #[cfg(ossl300)]
 pub enum EVP_KDF_CTX {}
+
+#[cfg(ossl320)]
+pub enum OSSL_HPKE_CTX {}
+
+#[cfg(ossl320)]
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct OSSL_HPKE_SUITE {
+    pub kem_id: u16,
+    pub kdf_id: u16,
+    pub aead_id: u16,
+}
