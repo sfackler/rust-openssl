@@ -278,6 +278,7 @@ impl Hasher {
         if self.state == Finalized {
             self.init()?;
         }
+        #[cfg(ossl330)]
         if self.state == Squeeze {
             // [`EVP_DigestUpdate`], depending on the implementation, may allow Updates after Squeezes.
             // But, [FIPS 202], as shown in Figure 7, has a distinguished absorbing phase followed by a squeezing phase.
