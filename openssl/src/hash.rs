@@ -194,6 +194,8 @@ unsafe impl Send for MessageDigest {}
 enum State {
     Reset,
     Updated,
+    #[cfg(ossl330)]
+    Squeeze,
     Finalized,
 }
 
@@ -260,6 +262,8 @@ impl Hasher {
             Updated => {
                 self.finish()?;
             }
+            #[cfg(ossl330)]
+            Squeeze => (),
             Finalized => (),
         }
         unsafe {
@@ -274,6 +278,19 @@ impl Hasher {
         if self.state == Finalized {
             self.init()?;
         }
+        #[cfg(ossl330)]
+        if self.state == Squeeze {
+            // [`EVP_DigestUpdate`], depending on the implementation, may allow Updates after Squeezes.
+            // But, [FIPS 202], as shown in Figure 7, has a distinguished absorbing phase followed by a squeezing phase.
+            // Indeed, the [`sha3.c`] implmentation disallows Updates after Squeezes.
+            // For consistency, we always return an error when Update is called after Squeeze.
+            //
+            // [`EVP_DigestUpdate`]: https://github.com/openssl/openssl/blob/b3bb214720f20f3b126ae4b9c330e9a48b835415/crypto/evp/digest.c#L385-L393
+            // [FIPS 202]: https://dx.doi.org/10.6028/NIST.FIPS.202
+            // [`sha3.c`]: https://github.com/openssl/openssl/blob/b3bb214720f20f3b126ae4b9c330e9a48b835415/crypto/sha/sha3.c#L52-L63
+            let errors = ErrorStack::get();
+            return Err(errors);
+        }
         unsafe {
             cvt(ffi::EVP_DigestUpdate(
                 self.ctx,
@@ -283,6 +300,21 @@ impl Hasher {
         }
         self.state = Updated;
         Ok(())
+    }
+
+    /// Squeezes buf out of the hasher. Can be called multiple times, unlike `finish_xof`.
+    /// The output will be as long as the buf.
+    #[cfg(ossl330)]
+    pub fn squeeze_xof(&mut self, buf: &mut [u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_DigestSqueeze(
+                self.ctx,
+                buf.as_mut_ptr(),
+                buf.len(),
+            ))?;
+            self.state = Squeeze;
+            Ok(())
+        }
     }
 
     /// Returns the hash of the data written and resets the non-XOF hasher.
@@ -481,6 +513,21 @@ mod tests {
         assert_eq!(buf, expected);
     }
 
+    /// Squeezes the expected length by doing two squeezes.
+    #[cfg(ossl330)]
+    fn hash_xof_squeeze_test(hashtype: MessageDigest, hashtest: &(&str, &str)) {
+        let data = Vec::from_hex(hashtest.0).unwrap();
+        let mut h = Hasher::new(hashtype).unwrap();
+        h.update(&data).unwrap();
+
+        let expected = Vec::from_hex(hashtest.1).unwrap();
+        let mut buf = vec![0; expected.len()];
+        assert!(expected.len() > 10);
+        h.squeeze_xof(&mut buf[..10]).unwrap();
+        h.squeeze_xof(&mut buf[10..]).unwrap();
+        assert_eq!(buf, expected);
+    }
+
     fn hash_recycle_test(h: &mut Hasher, hashtest: &(&str, &str)) {
         h.write_all(&Vec::from_hex(hashtest.0).unwrap()).unwrap();
         let res = h.finish().unwrap();
@@ -535,6 +582,40 @@ mod tests {
         let res = h.finish().unwrap();
         let null = hash(MessageDigest::md5(), &[]).unwrap();
         assert_eq!(&*res, &*null);
+    }
+
+    #[cfg(ossl330)]
+    #[test]
+    fn test_finish_then_squeeze() {
+        let digest = MessageDigest::shake_128();
+        let mut h = Hasher::new(digest).unwrap();
+        let mut buf = vec![0; digest.size()];
+        h.finish_xof(&mut buf).unwrap();
+        h.squeeze_xof(&mut buf)
+            .expect_err("squeezing after finalize should fail");
+    }
+
+    #[cfg(ossl330)]
+    #[test]
+    fn test_squeeze_then_update() {
+        let digest = MessageDigest::shake_128();
+        let data = Vec::from_hex(MD5_TESTS[6].0).unwrap();
+        let mut h = Hasher::new(digest).unwrap();
+        let mut buf = vec![0; digest.size()];
+        h.squeeze_xof(&mut buf).unwrap();
+        h.update(&data)
+            .expect_err("updating after squeeze should fail");
+    }
+
+    #[cfg(ossl330)]
+    #[test]
+    fn test_squeeze_then_finalize() {
+        let digest = MessageDigest::shake_128();
+        let mut h = Hasher::new(digest).unwrap();
+        let mut buf = vec![0; digest.size()];
+        h.squeeze_xof(&mut buf).unwrap();
+        h.finish_xof(&mut buf)
+            .expect_err("finalize after squeeze should fail");
     }
 
     #[test]
@@ -710,6 +791,8 @@ mod tests {
 
         for test in tests.iter() {
             hash_xof_test(MessageDigest::shake_128(), test);
+            #[cfg(ossl330)]
+            hash_xof_squeeze_test(MessageDigest::shake_128(), test);
         }
 
         assert_eq!(MessageDigest::shake_128().block_size(), 168);
@@ -730,6 +813,8 @@ mod tests {
 
         for test in tests.iter() {
             hash_xof_test(MessageDigest::shake_256(), test);
+            #[cfg(ossl330)]
+            hash_xof_squeeze_test(MessageDigest::shake_256(), test);
         }
 
         assert_eq!(MessageDigest::shake_256().block_size(), 136);
