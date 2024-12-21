@@ -85,6 +85,9 @@ fn main() {
         if version >= 0x30000000 {
             cfg.header("openssl/provider.h");
         }
+        if version >= 0x30200000 {
+            cfg.header("openssl/thread.h");
+        }
     }
 
     #[allow(clippy::if_same_then_else)]

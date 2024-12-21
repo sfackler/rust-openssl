@@ -346,7 +346,6 @@ pub const NID_id_mod_cmp2000: c_int = 284;
 pub const NID_info_access: c_int = 177;
 pub const NID_biometricInfo: c_int = 285;
 pub const NID_qcStatements: c_int = 286;
-pub const NID_ac_auditEntity: c_int = 287;
 pub const NID_ac_targeting: c_int = 288;
 pub const NID_aaControls: c_int = 289;
 pub const NID_sbgp_ipAddrBlock: c_int = 290;
@@ -1015,3 +1014,10 @@ pub const NID_shake256: c_int = 1101;
 pub const NID_chacha20_poly1305: c_int = 1018;
 #[cfg(libressl271)]
 pub const NID_chacha20_poly1305: c_int = 967;
+cfg_if! {
+    if #[cfg(ossl340)] {
+        pub const NID_ac_auditEntity: c_int = 1323;
+    } else {
+        pub const NID_ac_auditEntity: c_int = 287;
+    }
+}

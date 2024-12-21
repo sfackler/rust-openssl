@@ -184,12 +184,28 @@ cfg_if! {
         pub const EVP_PKEY_OP_DERIVE: c_int = 1 << 10;
     }
 }
+#[cfg(ossl340)]
+pub const EVP_PKEY_OP_SIGNMSG: c_int = 1 << 14;
+#[cfg(ossl340)]
+pub const EVP_PKEY_OP_VERIFYMSG: c_int = 1 << 15;
 
-pub const EVP_PKEY_OP_TYPE_SIG: c_int = EVP_PKEY_OP_SIGN
-    | EVP_PKEY_OP_VERIFY
-    | EVP_PKEY_OP_VERIFYRECOVER
-    | EVP_PKEY_OP_SIGNCTX
-    | EVP_PKEY_OP_VERIFYCTX;
+cfg_if! {
+    if #[cfg(ossl340)] {
+        pub const EVP_PKEY_OP_TYPE_SIG: c_int = EVP_PKEY_OP_SIGN
+            | EVP_PKEY_OP_SIGNMSG
+            | EVP_PKEY_OP_VERIFY
+            | EVP_PKEY_OP_VERIFYMSG
+            | EVP_PKEY_OP_VERIFYRECOVER
+            | EVP_PKEY_OP_SIGNCTX
+            | EVP_PKEY_OP_VERIFYCTX;
+    } else {
+        pub const EVP_PKEY_OP_TYPE_SIG: c_int = EVP_PKEY_OP_SIGN
+            | EVP_PKEY_OP_VERIFY
+            | EVP_PKEY_OP_VERIFYRECOVER
+            | EVP_PKEY_OP_SIGNCTX
+            | EVP_PKEY_OP_VERIFYCTX;
+    }
+}
 
 pub const EVP_PKEY_OP_TYPE_CRYPT: c_int = EVP_PKEY_OP_ENCRYPT | EVP_PKEY_OP_DECRYPT;
 

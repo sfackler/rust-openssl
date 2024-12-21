@@ -63,6 +63,10 @@ const INCLUDES: &str = "
 #if defined(LIBRESSL_VERSION_NUMBER) || defined(OPENSSL_IS_BORINGSSL)
 #include <openssl/poly1305.h>
 #endif
+
+#if OPENSSL_VERSION_NUMBER >= 0x30200000
+#include <openssl/thread.h>
+#endif
 ";
 
 #[cfg(feature = "bindgen")]
