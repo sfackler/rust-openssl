@@ -1268,7 +1268,8 @@ fn no_version_overlap() {
 #[test]
 #[cfg(ossl111)]
 fn custom_extensions() {
-    static FOUND_EXTENSION: AtomicBool = AtomicBool::new(false);
+    static FOUND_EXTENSION_1: AtomicBool = AtomicBool::new(false);
+    static FOUND_EXTENSION_2: AtomicBool = AtomicBool::new(false);
 
     let mut server = Server::builder();
     server
@@ -1278,7 +1279,19 @@ fn custom_extensions() {
             ExtensionContext::CLIENT_HELLO,
             |_, _, _| -> Result<Option<&'static [u8]>, _> { unreachable!() },
             |_, _, data, _| {
-                FOUND_EXTENSION.store(data == b"hello", Ordering::SeqCst);
+                FOUND_EXTENSION_1.store(data == b"hello", Ordering::SeqCst);
+                Ok(())
+            },
+        )
+        .unwrap();
+    server
+        .ctx()
+        .add_custom_ext(
+            23456,
+            ExtensionContext::CLIENT_HELLO,
+            |_, _, _| -> Result<Option<&'static [u8]>, _> { unreachable!() },
+            |_, _, data, _| {
+                FOUND_EXTENSION_2.store(data == b"another hello", Ordering::SeqCst);
                 Ok(())
             },
         )
@@ -1296,10 +1309,20 @@ fn custom_extensions() {
             |_, _, _, _| unreachable!(),
         )
         .unwrap();
+    client
+        .ctx()
+        .add_custom_ext(
+            23456,
+            ssl::ExtensionContext::CLIENT_HELLO,
+            |_, _, _| Ok(Some(b"another hello")),
+            |_, _, _, _| unreachable!(),
+        )
+        .unwrap();
 
     client.connect();
 
-    assert!(FOUND_EXTENSION.load(Ordering::SeqCst));
+    assert!(FOUND_EXTENSION_1.load(Ordering::SeqCst));
+    assert!(FOUND_EXTENSION_2.load(Ordering::SeqCst));
 }
 
 fn _check_kinds() {
