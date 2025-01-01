@@ -554,16 +554,18 @@ impl NameType {
     }
 }
 
+#[cfg(ossl111)]
 enum CustomExtCbType {
     Add,
     Parse,
 }
 
 static INDEXES: Lazy<Mutex<HashMap<TypeId, c_int>>> = Lazy::new(|| Mutex::new(HashMap::new()));
-static CUSTOM_EXT_INDEXES: Lazy<Mutex<HashMap<u64, c_int>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
 static SSL_INDEXES: Lazy<Mutex<HashMap<TypeId, c_int>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 static SESSION_CTX_INDEX: OnceCell<Index<Ssl, SslContext>> = OnceCell::new();
+#[cfg(ossl111)]
+static CUSTOM_EXT_INDEXES: Lazy<Mutex<HashMap<u64, c_int>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
 
 fn try_get_session_ctx_index() -> Result<&'static Index<Ssl, SslContext>, ErrorStack> {
     SESSION_CTX_INDEX.get_or_try_init(Ssl::new_ex_index)
@@ -1842,6 +1844,7 @@ impl SslContext {
         }
     }
 
+    #[cfg(ossl111)]
     fn get_custom_ext_cb_key(ext_type: u16, cb_type: CustomExtCbType) -> u64 {
         match cb_type {
             CustomExtCbType::Add => ext_type as u64,
@@ -1849,6 +1852,7 @@ impl SslContext {
         }
     }
 
+    #[cfg(ossl111)]
     fn cached_custom_ext_ex_index<T>(key: u64) -> Index<SslContext, T>
     where
         T: 'static + Sync + Send,
