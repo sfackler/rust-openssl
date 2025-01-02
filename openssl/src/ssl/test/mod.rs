@@ -1268,8 +1268,7 @@ fn no_version_overlap() {
 #[test]
 #[cfg(ossl111)]
 fn custom_extensions() {
-    static FOUND_EXTENSION_1: AtomicBool = AtomicBool::new(false);
-    static FOUND_EXTENSION_2: AtomicBool = AtomicBool::new(false);
+    static FOUND_EXTENSION: AtomicBool = AtomicBool::new(false);
 
     let mut server = Server::builder();
     server
@@ -1279,19 +1278,7 @@ fn custom_extensions() {
             ExtensionContext::CLIENT_HELLO,
             |_, _, _| -> Result<Option<&'static [u8]>, _> { unreachable!() },
             |_, _, data, _| {
-                FOUND_EXTENSION_1.store(data == b"hello", Ordering::SeqCst);
-                Ok(())
-            },
-        )
-        .unwrap();
-    server
-        .ctx()
-        .add_custom_ext(
-            23456,
-            ExtensionContext::CLIENT_HELLO,
-            |_, _, _| -> Result<Option<&'static [u8]>, _> { unreachable!() },
-            |_, _, data, _| {
-                FOUND_EXTENSION_2.store(data == b"another hello", Ordering::SeqCst);
+                FOUND_EXTENSION.store(data == b"hello", Ordering::SeqCst);
                 Ok(())
             },
         )
@@ -1309,22 +1296,65 @@ fn custom_extensions() {
             |_, _, _, _| unreachable!(),
         )
         .unwrap();
-    client
+
+    client.connect();
+
+    assert!(FOUND_EXTENSION.load(Ordering::SeqCst));
+}
+
+#[test]
+#[cfg(ossl111)]
+fn custom_extensions_with_same_callback_signature() {
+    static FOUND_EXTENSION_1: AtomicBool = AtomicBool::new(false);
+    static FOUND_EXTENSION_2: AtomicBool = AtomicBool::new(false);
+
+    fn insert_custom_extension(builder: &mut SslContextBuilder, ext_type: u16, data: Vec<u8>) {
+        builder
+            .add_custom_ext(
+                ext_type,
+                ExtensionContext::CLIENT_HELLO,
+                move |_, _, _| Ok(Some(data.clone())),
+                |_, _, _, _| Ok(()),
+            )
+            .expect("Failed to add custom extension");
+    }
+
+    let mut server = Server::builder();
+    server
+        .ctx()
+        .add_custom_ext(
+            12345,
+            ExtensionContext::CLIENT_HELLO,
+            |_, _, _| -> Result<Option<&'static [u8]>, _> { unreachable!() },
+            move |_, _, data, _| {
+                FOUND_EXTENSION_1.store(data == b"some data".to_vec(), Ordering::SeqCst);
+                Ok(())
+            },
+        )
+        .unwrap();
+    server
         .ctx()
         .add_custom_ext(
             23456,
-            ssl::ExtensionContext::CLIENT_HELLO,
-            |_, _, _| Ok(Some(b"another hello")),
-            |_, _, _, _| unreachable!(),
+            ExtensionContext::CLIENT_HELLO,
+            |_, _, _| -> Result<Option<&'static [u8]>, _> { unreachable!() },
+            move |_, _, data, _| {
+                FOUND_EXTENSION_2.store(data == b"some other data".to_vec(), Ordering::SeqCst);
+                Ok(())
+            },
         )
         .unwrap();
 
+    let server = server.build();
+
+    let mut client = server.client();
+    insert_custom_extension(client.ctx(), 12345, b"some data".to_vec());
+    insert_custom_extension(client.ctx(), 23456, b"some other data".to_vec());
     client.connect();
 
     assert!(FOUND_EXTENSION_1.load(Ordering::SeqCst));
     assert!(FOUND_EXTENSION_2.load(Ordering::SeqCst));
 }
-
 fn _check_kinds() {
     fn is_send<T: Send>() {}
     fn is_sync<T: Sync>() {}
