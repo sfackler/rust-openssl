@@ -924,12 +924,23 @@ impl SslContextBuilder {
     /// The file should contain a sequence of PEM-formatted CA certificates.
     #[corresponds(SSL_CTX_load_verify_locations)]
     pub fn set_ca_file<P: AsRef<Path>>(&mut self, file: P) -> Result<(), ErrorStack> {
-        let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
+        self.load_verify_locations(Some(file.as_ref()), None)
+    }
+
+    /// Loads trusted root certificates from a file and/or a directory.
+    #[corresponds(SSL_CTX_load_verify_locations)]
+    pub fn load_verify_locations(
+        &mut self,
+        ca_file: Option<&Path>,
+        ca_path: Option<&Path>,
+    ) -> Result<(), ErrorStack> {
+        let ca_file = ca_file.map(|p| CString::new(p.as_os_str().to_str().unwrap()).unwrap());
+        let ca_path = ca_path.map(|p| CString::new(p.as_os_str().to_str().unwrap()).unwrap());
         unsafe {
             cvt(ffi::SSL_CTX_load_verify_locations(
                 self.as_ptr(),
-                file.as_ptr() as *const _,
-                ptr::null(),
+                ca_file.as_ref().map_or(ptr::null(), |s| s.as_ptr()),
+                ca_path.as_ref().map_or(ptr::null(), |s| s.as_ptr()),
             ))
             .map(|_| ())
         }
