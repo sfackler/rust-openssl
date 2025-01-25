@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [v0.10.69] - 2025-01-25
+
+### Fixed
+
+* Fixed the version constraint on `openssl-macros`.
+
+### Added
+
+* Added `SslContextBuilder::load_verify_locations`.
+* Added `Hasher::squeeze_xof`.
+* Added `SslContextBuilder::set_alpn_select_callback` support for boringssl.
+
 ## [v0.10.68] - 2024-10-16
 
 ### Fixed
