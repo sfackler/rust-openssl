@@ -216,7 +216,7 @@ jobs:
                 name: libressl
                 version: 4.0.0
       name: ${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-${{ matrix.bindgen }}
-      runs-on: ubuntu-latest
+      runs-on: ubuntu-22.04
       env:
         OPENSSL_DIR: /opt/openssl
         CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
@@ -248,7 +248,7 @@ jobs:
         - uses: actions/cache@v4
           with:
             path: /opt/openssl
-            key: openssl-${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-6
+            key: openssl-${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-7
           if: matrix.library.version != 'vendored'
           id: openssl-cache
         - run: |
