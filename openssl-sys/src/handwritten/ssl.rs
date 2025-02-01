@@ -701,6 +701,10 @@ cfg_if! {
             pub fn TLS_server_method() -> *const SSL_METHOD;
 
             pub fn TLS_client_method() -> *const SSL_METHOD;
+
+            pub fn DTLS_server_method() -> *const SSL_METHOD;
+
+            pub fn DTLS_client_method() -> *const SSL_METHOD;
         }
     } else {
         extern "C" {
