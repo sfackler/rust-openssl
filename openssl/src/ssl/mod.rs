@@ -372,7 +372,7 @@ impl SslMethod {
     }
 
     /// Support all versions of the DTLS protocol, explicitly as a server.
-    #[corresponds(DTLS_method)]
+    #[corresponds(DTLS_server_method)]
     #[cfg(any(boringssl, ossl110, libressl291))]
     pub fn dtls_server() -> SslMethod {
         unsafe { SslMethod(DTLS_server_method()) }
