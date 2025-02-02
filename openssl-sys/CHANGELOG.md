@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [v0.9.105] - 2025-02-02
+
+### Added
+
+* Added `DTLS_server_method` and `DTLS_client_method`.
+
 ## [v0.9.104] - 2024-10-15
 
 ### Added
