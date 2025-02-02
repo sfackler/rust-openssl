@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [v0.10.70] - 2025-02-02
+
+### Fixed
+
+* Fixed improper lifetime constraints in `ssl::select_next_proto` that allowed a use after free.
+
+### Added
+
+* Added `SslMethod::dtls_client` and `SslMethod::dtls_server`.
+
 ## [v0.10.69] - 2025-01-25
 
 ### Fixed
