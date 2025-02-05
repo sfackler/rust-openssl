@@ -440,6 +440,11 @@ extern "C" {
     #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
     pub fn EVP_idea_ofb() -> *const EVP_CIPHER;
 
+    #[cfg(not(osslconf = "OPENSSL_NO_RC2"))]
+    pub fn EVP_rc2_cbc() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_RC2"))]
+    pub fn EVP_rc2_40_cbc() -> *const EVP_CIPHER;
+
     #[cfg(not(ossl110))]
     pub fn OPENSSL_add_all_algorithms_noconf();
 

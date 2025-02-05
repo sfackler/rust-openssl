@@ -454,6 +454,16 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_sm4_ofb()) }
     }
 
+    #[cfg(not(osslconf = "OPENSSL_NO_RC2"))]
+    pub fn rc2_cbc() -> Cipher {
+        unsafe { Cipher(ffi::EVP_rc2_cbc()) }
+    }
+
+    #[cfg(not(osslconf = "OPENSSL_NO_RC2"))]
+    pub fn rc2_40_cbc() -> Cipher {
+        unsafe { Cipher(ffi::EVP_rc2_40_cbc()) }
+    }
+
     /// Creates a `Cipher` from a raw pointer to its OpenSSL type.
     ///
     /// # Safety
