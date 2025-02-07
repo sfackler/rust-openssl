@@ -1894,7 +1894,7 @@ impl X509Crl {
 
                 cvt(ffi::X509_CRL_set_issuer_name(
                     crl.as_ptr(),
-                    issuer_cert.issuer_name().as_ptr(),
+                    issuer_cert.subject_name().as_ptr(),
                 ))?;
 
                 let context = {
