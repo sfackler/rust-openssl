@@ -644,3 +644,73 @@ pub unsafe fn SSL_session_reused(ssl: *mut SSL) -> c_int {
 pub const OPENSSL_INIT_LOAD_SSL_STRINGS: u64 = 0x00200000;
 #[cfg(ossl111b)]
 pub const OPENSSL_INIT_NO_ATEXIT: u64 = 0x00080000;
+
+cfg_if! {
+    if #[cfg(ossl330)] {
+        pub const SSL_VALUE_CLASS_GENERIC: c_uint = 0;
+        pub const SSL_VALUE_CLASS_FEATURE_REQUEST: c_uint = 1;
+        pub const SSL_VALUE_CLASS_FEATURE_PEER_REQUEST: c_uint = 2;
+        pub const SSL_VALUE_CLASS_FEATURE_NEGOTIATED: c_uint = 3;
+
+        pub const SSL_VALUE_NONE: c_uint = 0;
+        pub const SSL_VALUE_QUIC_STREAM_BIDI_LOCAL_AVAIL: c_uint = 1;
+        pub const SSL_VALUE_QUIC_STREAM_BIDI_REMOTE_AVAIL: c_uint = 2;
+        pub const SSL_VALUE_QUIC_STREAM_UNI_LOCAL_AVAIL: c_uint = 3;
+        pub const SSL_VALUE_QUIC_STREAM_UNI_REMOTE_AVAIL: c_uint = 4;
+        pub const SSL_VALUE_QUIC_IDLE_TIMEOUT: c_uint = 5;
+        pub const SSL_VALUE_EVENT_HANDLING_MODE: c_uint = 6;
+        pub const SSL_VALUE_STREAM_WRITE_BUF_SIZE: c_uint = 7;
+        pub const SSL_VALUE_STREAM_WRITE_BUF_USED: c_uint = 8;
+        pub const SSL_VALUE_STREAM_WRITE_BUF_AVAIL: c_uint = 9;
+
+        pub const SSL_VALUE_EVENT_HANDLING_MODE_INHERIT: c_uint = 0;
+        pub const SSL_VALUE_EVENT_HANDLING_MODE_IMPLICIT: c_uint = 1;
+        pub const SSL_VALUE_EVENT_HANDLING_MODE_EXPLICIT: c_uint = 2;
+
+        pub unsafe fn SSL_get_generic_value_uint(ssl: *mut SSL, id: u32, value: *mut u64) -> c_int {
+            SSL_get_value_uint(ssl, SSL_VALUE_CLASS_GENERIC, id, value)
+        }
+        pub unsafe fn SSL_set_generic_value_uint(ssl: *mut SSL, id: u32, value: u64) -> c_int {
+            SSL_set_value_uint(ssl, SSL_VALUE_CLASS_GENERIC, id, value)
+        }
+        pub unsafe fn SSL_get_feature_request_uint(ssl: *mut SSL, id: u32, value: *mut u64) -> c_int {
+            SSL_get_value_uint(ssl, SSL_VALUE_CLASS_FEATURE_REQUEST, id, value)
+        }
+        pub unsafe fn SSL_set_feature_request_uint(ssl: *mut SSL, id: u32, value: u64) -> c_int {
+            SSL_set_value_uint(ssl, SSL_VALUE_CLASS_FEATURE_REQUEST, id, value)
+        }
+        pub unsafe fn SSL_get_feature_peer_request_uint(ssl: *mut SSL, id: u32, value: *mut u64) -> c_int {
+            SSL_get_value_uint(ssl, SSL_VALUE_CLASS_FEATURE_PEER_REQUEST, id, value)
+        }
+        pub unsafe fn SSL_get_feature_negotiated_uint(ssl: *mut SSL, id: u32, value: *mut u64) -> c_int {
+            SSL_get_value_uint(ssl, SSL_VALUE_CLASS_FEATURE_NEGOTIATED, id, value)
+        }
+        pub unsafe fn SSL_get_quic_stream_bidi_local_avail(ssl: *mut SSL, value: *mut u64) -> c_int {
+            SSL_get_generic_value_uint(ssl, SSL_VALUE_QUIC_STREAM_BIDI_LOCAL_AVAIL, value)
+        }
+        pub unsafe fn SSL_get_quic_stream_bidi_remote_avail(ssl: *mut SSL, value: *mut u64) -> c_int {
+            SSL_get_generic_value_uint(ssl, SSL_VALUE_QUIC_STREAM_BIDI_REMOTE_AVAIL, value)
+        }
+        pub unsafe fn SSL_get_quic_stream_uni_local_avail(ssl: *mut SSL, value: *mut u64) -> c_int {
+            SSL_get_generic_value_uint(ssl, SSL_VALUE_QUIC_STREAM_UNI_LOCAL_AVAIL, value)
+        }
+        pub unsafe fn SSL_get_quic_stream_uni_remote_avail(ssl: *mut SSL, value: *mut u64) -> c_int {
+            SSL_get_generic_value_uint(ssl, SSL_VALUE_QUIC_STREAM_UNI_REMOTE_AVAIL, value)
+        }
+        pub unsafe fn SSL_get_event_handling_mode(ssl: *mut SSL, value: *mut u64) -> c_int {
+            SSL_get_generic_value_uint(ssl, SSL_VALUE_EVENT_HANDLING_MODE, value)
+        }
+        pub unsafe fn SSL_set_event_handling_mode(ssl: *mut SSL, value: u64) -> c_int {
+            SSL_set_generic_value_uint(ssl, SSL_VALUE_EVENT_HANDLING_MODE, value)
+        }
+        pub unsafe fn SSL_get_stream_write_buf_size(ssl: *mut SSL, value: *mut u64) -> c_int {
+            SSL_get_generic_value_uint(ssl, SSL_VALUE_STREAM_WRITE_BUF_SIZE, value)
+        }
+        pub unsafe fn SSL_get_stream_write_buf_avail(ssl: *mut SSL, value: *mut u64) -> c_int {
+            SSL_get_generic_value_uint(ssl, SSL_VALUE_STREAM_WRITE_BUF_AVAIL, value)
+        }
+        pub unsafe fn SSL_get_stream_write_buf_used(ssl: *mut SSL, value: *mut u64) -> c_int {
+            SSL_get_generic_value_uint(ssl, SSL_VALUE_STREAM_WRITE_BUF_USED, value)
+        }
+    }
+}

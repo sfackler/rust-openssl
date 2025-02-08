@@ -7,7 +7,7 @@
 use std::env;
 
 fn main() {
-    println!("cargo:rustc-check-cfg=cfg(osslconf, values(\"OPENSSL_NO_OCB\", \"OPENSSL_NO_SM4\", \"OPENSSL_NO_SEED\", \"OPENSSL_NO_CHACHA\", \"OPENSSL_NO_CAST\", \"OPENSSL_NO_IDEA\", \"OPENSSL_NO_CAMELLIA\", \"OPENSSL_NO_RC4\", \"OPENSSL_NO_BF\", \"OPENSSL_NO_PSK\", \"OPENSSL_NO_DEPRECATED_3_0\", \"OPENSSL_NO_SCRYPT\", \"OPENSSL_NO_SM3\", \"OPENSSL_NO_RMD160\", \"OPENSSL_NO_EC2M\", \"OPENSSL_NO_OCSP\", \"OPENSSL_NO_CMS\"))");
+    println!("cargo:rustc-check-cfg=cfg(osslconf, values(\"OPENSSL_NO_OCB\", \"OPENSSL_NO_SM4\", \"OPENSSL_NO_SEED\", \"OPENSSL_NO_CHACHA\", \"OPENSSL_NO_CAST\", \"OPENSSL_NO_IDEA\", \"OPENSSL_NO_CAMELLIA\", \"OPENSSL_NO_RC4\", \"OPENSSL_NO_BF\", \"OPENSSL_NO_PSK\", \"OPENSSL_NO_DEPRECATED_3_0\", \"OPENSSL_NO_SCRYPT\", \"OPENSSL_NO_SM3\", \"OPENSSL_NO_RMD160\", \"OPENSSL_NO_EC2M\", \"OPENSSL_NO_OCSP\", \"OPENSSL_NO_CMS\", \"OPENSSL_NO_EC\", \"OPENSSL_NO_ARGON2\", \"OPENSSL_NO_RC2\"))");
 
     println!("cargo:rustc-check-cfg=cfg(libressl)");
     println!("cargo:rustc-check-cfg=cfg(boringssl)");
@@ -31,6 +31,7 @@ fn main() {
     println!("cargo:rustc-check-cfg=cfg(libressl380)");
     println!("cargo:rustc-check-cfg=cfg(libressl382)");
     println!("cargo:rustc-check-cfg=cfg(libressl390)");
+    println!("cargo:rustc-check-cfg=cfg(libressl400)");
 
     println!("cargo:rustc-check-cfg=cfg(ossl101)");
     println!("cargo:rustc-check-cfg=cfg(ossl102)");
@@ -42,6 +43,7 @@ fn main() {
     println!("cargo:rustc-check-cfg=cfg(ossl300)");
     println!("cargo:rustc-check-cfg=cfg(ossl310)");
     println!("cargo:rustc-check-cfg=cfg(ossl320)");
+    println!("cargo:rustc-check-cfg=cfg(ossl330)");
 
     if env::var("DEP_OPENSSL_LIBRESSL").is_ok() {
         println!("cargo:rustc-cfg=libressl");
@@ -111,6 +113,9 @@ fn main() {
         if version >= 0x3_09_00_00_0 {
             println!("cargo:rustc-cfg=libressl390");
         }
+        if version >= 0x4_00_00_00_0 {
+            println!("cargo:rustc-cfg=libressl400");
+        }
     }
 
     if let Ok(vars) = env::var("DEP_OPENSSL_CONF") {
@@ -151,6 +156,9 @@ fn main() {
         }
         if version >= 0x3_02_00_00_0 {
             println!("cargo:rustc-cfg=ossl320");
+        }
+        if version >= 0x3_03_00_00_0 {
+            println!("cargo:rustc-cfg=ossl330");
         }
     }
 }

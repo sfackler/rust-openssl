@@ -39,16 +39,16 @@
 //! $ sudo pkgin install openssl
 //!
 //! # Arch Linux
-//! $ sudo pacman -S pkg-config openssl
+//! $ sudo pacman -S pkgconf openssl
 //!
 //! # Debian and Ubuntu
 //! $ sudo apt-get install pkg-config libssl-dev
 //!
 //! # Fedora
-//! $ sudo dnf install pkg-config perl-FindBin perl-IPC-Cmd openssl-devel
+//! $ sudo dnf install pkgconf perl-FindBin perl-IPC-Cmd openssl-devel
 //!
 //! # Alpine Linux
-//! $ apk add pkgconfig openssl-dev
+//! $ apk add pkgconf openssl-dev
 //!
 //! # openSUSE
 //! $ sudo zypper in libopenssl-devel
@@ -168,6 +168,7 @@ pub mod ex_data;
 #[cfg(not(any(libressl, ossl300)))]
 pub mod fips;
 pub mod hash;
+pub mod kdf;
 #[cfg(ossl300)]
 pub mod lib_ctx;
 pub mod md;

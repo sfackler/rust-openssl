@@ -2,6 +2,67 @@
 
 ## [Unreleased]
 
+## [v0.10.70] - 2025-02-02
+
+### Fixed
+
+* Fixed improper lifetime constraints in `ssl::select_next_proto` that allowed a use after free.
+
+### Added
+
+* Added `SslMethod::dtls_client` and `SslMethod::dtls_server`.
+
+## [v0.10.69] - 2025-01-25
+
+### Fixed
+
+* Fixed the version constraint on `openssl-macros`.
+
+### Added
+
+* Added `SslContextBuilder::load_verify_locations`.
+* Added `Hasher::squeeze_xof`.
+* Added `SslContextBuilder::set_alpn_select_callback` support for boringssl.
+
+## [v0.10.68] - 2024-10-16
+
+### Fixed
+
+* Fixed building on Rust 1.63.0 (our MSRV) with OpenSSL 3.2 or newer.
+
+## [v0.10.67] - 2024-10-15
+
+### Added
+
+* Added support for LibreSSL 4.0.x.
+* Added `argon2id`
+
+### Fixed
+
+* Fixed a case where `MdCtxRef::digest_verify_final` could leave an error on the stack.
+* Fixed a case where `RsaRef::check_key` could leave an errror on the stack.
+
+### Changed
+
+* `openssl` is now a 2021 edition crate
+* Explicitly specify the MSRV in `Cargo.toml`
+
+## [v0.10.66] - 2024-07-21
+
+### Fixed
+
+- Fixed undefined behavior in `MemBio::get_buf` when the resulting buffer had a length of 0.
+
+## [v0.10.65] - 2024-07-20
+
+### Fixed
+
+* Ensure we are initialized in `MessageDigest::from_nid`, `Md::from_nid`, `Md::fetch`
+
+### Changed
+
+* Expose `SslContextBuilder::set_keylog_callback` on BoringSSL
+
 ## [v0.10.64] - 2024-02-19
 
 ### Added
@@ -892,7 +953,11 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.64...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.68...master
+[v0.10.68]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.67...openssl-v0.10.68
+[v0.10.67]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.66...openssl-v0.10.67
+[v0.10.66]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.65...openssl-v0.10.66
+[v0.10.65]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.64...openssl-v0.10.65
 [v0.10.64]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.63...openssl-v0.10.64
 [v0.10.63]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.62...openssl-v0.10.63
 [v0.10.62]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.61...openssl-v0.10.62

@@ -29,6 +29,8 @@ pub use self::sha::*;
 pub use self::srtp::*;
 pub use self::ssl::*;
 pub use self::stack::*;
+#[cfg(ossl320)]
+pub use self::thread::*;
 pub use self::tls1::*;
 pub use self::types::*;
 pub use self::x509::*;
@@ -66,6 +68,8 @@ mod sha;
 mod srtp;
 mod ssl;
 mod stack;
+#[cfg(ossl320)]
+mod thread;
 mod tls1;
 mod types;
 mod x509;

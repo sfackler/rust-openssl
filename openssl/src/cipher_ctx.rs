@@ -328,10 +328,6 @@ impl CipherCtxRef {
     ///
     /// Panics if the context has not been initialized with a cipher or if the buffer is smaller than the cipher's key
     /// length.
-    ///
-    /// This corresponds to [`EVP_CIPHER_CTX_rand_key`].
-    ///
-    /// [`EVP_CIPHER_CTX_rand_key`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_rand_key.html
     #[corresponds(EVP_CIPHER_CTX_rand_key)]
     #[cfg(not(boringssl))]
     pub fn rand_key(&self, buf: &mut [u8]) -> Result<(), ErrorStack> {

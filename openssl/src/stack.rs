@@ -343,7 +343,7 @@ impl<'a, T: Stackable> DoubleEndedIterator for Iter<'a, T> {
     }
 }
 
-impl<'a, T: Stackable> ExactSizeIterator for Iter<'a, T> {}
+impl<T: Stackable> ExactSizeIterator for Iter<'_, T> {}
 
 /// A mutable iterator over the stack's contents.
 pub struct IterMut<'a, T: Stackable> {
@@ -377,4 +377,4 @@ impl<'a, T: Stackable> DoubleEndedIterator for IterMut<'a, T> {
     }
 }
 
-impl<'a, T: Stackable> ExactSizeIterator for IterMut<'a, T> {}
+impl<T: Stackable> ExactSizeIterator for IterMut<'_, T> {}
