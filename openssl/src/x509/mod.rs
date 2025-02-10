@@ -620,7 +620,7 @@ impl X509Ref {
     ///
     /// Note that `0` return value stands for version 1, `1` for version 2 and so on.
     #[corresponds(X509_get_version)]
-    #[cfg(any(ossl110, libressl281))]
+    #[cfg(any(ossl110, libressl250))]
     #[allow(clippy::unnecessary_cast)]
     pub fn version(&self) -> i32 {
         unsafe { ffi::X509_get_version(self.as_ptr()) as i32 }
@@ -1821,9 +1821,9 @@ impl X509Crl {
         ffi::d2i_X509_CRL
     }
 
-    #[cfg(any(ossl110, libressl281))]
+    #[cfg(any(ossl110, libressl250))]
     const X509_VERSION_3: i32 = 2;
-    #[cfg(any(ossl110, libressl281))]
+    #[cfg(any(ossl110, libressl250))]
     const X509_CRL_VERSION_2: i32 = 1;
 
     // if not cfg(ossl110) issuer_cert is unused
@@ -1832,7 +1832,7 @@ impl X509Crl {
         unsafe {
             let crl = Self(cvt_p(ffi::X509_CRL_new())?);
 
-            #[cfg(any(ossl110, libressl281))]
+            #[cfg(any(ossl110, libressl250))]
             if issuer_cert.version() >= Self::X509_VERSION_3 {
                 use crate::x509::extension::AuthorityKeyIdentifier;
 
@@ -1886,7 +1886,7 @@ impl X509Crl {
     }
 
     /// Note that `0` return value stands for version 1, `1` for version 2.
-    #[cfg(any(ossl110, libressl281))]
+    #[cfg(any(ossl110, libressl250))]
     #[corresponds(X509_CRL_get_version)]
     pub fn version(&self) -> i32 {
         unsafe { ffi::X509_CRL_get_version(self.as_ptr()) as i32 }
@@ -1983,7 +1983,7 @@ impl X509Crl {
     /// This is an internal function, therefore the caller is expected to ensure not to call this with a CRLv1
     /// Set the crl_number extension's value.
     /// If the extension is not present, it will be added.
-    #[cfg(any(ossl110, libressl281))]
+    #[cfg(any(ossl110, libressl250))]
     fn set_crl_number(&mut self, value: &BigNum) -> Result<(), ErrorStack> {
         debug_assert_eq!(self.version(), Self::X509_CRL_VERSION_2);
         unsafe {
@@ -2003,7 +2003,7 @@ impl X509Crl {
     /// Increment the crl number (or try to add the extension if not present)
     ///
     /// Returns the new crl number, unless self is a crlv1, which does not support extensions
-    #[cfg(any(ossl110, libressl281))]
+    #[cfg(any(ossl110, libressl250))]
     pub fn increment_crl_number(&mut self) -> Result<Option<BigNum>, ErrorStack> {
         if self.version() == Self::X509_CRL_VERSION_2 {
             let new_crl_number = if let Some(mut n) = self.read_crl_number()? {
