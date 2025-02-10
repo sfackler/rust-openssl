@@ -1959,7 +1959,10 @@ impl X509Crl {
     pub fn read_crl_number(&self) -> Result<Option<BigNum>, ErrorStack> {
         unsafe {
             let mut crit = 0;
-            let number = Asn1Integer::from_ptr_opt(std::mem::transmute(ffi::X509_CRL_get_ext_d2i(
+            let number = Asn1Integer::from_ptr_opt(std::mem::transmute::<
+                *mut libc::c_void,
+                *mut ffi::ASN1_INTEGER,
+            >(ffi::X509_CRL_get_ext_d2i(
                 self.as_ptr(),
                 ffi::NID_crl_number,
                 &mut crit,
@@ -1991,7 +1994,7 @@ impl X509Crl {
             cvt(ffi::X509_CRL_add1_ext_i2d(
                 self.as_ptr(),
                 ffi::NID_crl_number,
-                std::mem::transmute(value.as_ptr()),
+                std::mem::transmute::<*mut ffi::ASN1_INTEGER, *mut libc::c_void>(value.as_ptr()),
                 0,
                 #[allow(clippy::useless_conversion)]
                 ffi::X509V3_ADD_REPLACE.try_into().expect("This is an openssl flag and should therefore always fit into the expected integer type"),
@@ -2394,7 +2397,8 @@ impl GeneralNameRef {
                 return None;
             }
             #[cfg(boringssl)]
-            let d: *const ffi::ASN1_STRING = std::mem::transmute((*self.as_ptr()).d);
+            let d: *mut ffi::ASN1_STRING =
+                std::mem::transmute::<*mut c_void, *mut ffi::ASN1_STRING>((*self.as_ptr()).d);
             #[cfg(not(boringssl))]
             let d = (*self.as_ptr()).d;
 
