@@ -38,7 +38,7 @@ pub fn bytes_to_key(
     count: i32,
 ) -> Result<KeyIvPair, ErrorStack> {
     unsafe {
-        assert!(data.len() <= c_int::max_value() as usize);
+        assert!(data.len() <= c_int::MAX as usize);
         let salt_ptr = match salt {
             Some(salt) => {
                 assert_eq!(salt.len(), ffi::PKCS5_SALT_LEN as usize);

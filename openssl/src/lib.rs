@@ -19,8 +19,9 @@
 //! openssl = { version = "0.10", features = ["vendored"] }
 //! ```
 //!
-//! The vendored copy will not be configured to automatically find the system's root certificates, but the
-//! `openssl-probe` crate can be used to do that instead.
+//! The vendored copy will be configured to automatically find a configuration and root certificates at `/usr/local/ssl`.
+//! This path can be overridden with an environment variable (see the manual section below).
+//! Alternatively, the `openssl-probe` crate can be used to find root certificates at runtime.
 //!
 //! ## Automatic
 //!
@@ -38,16 +39,16 @@
 //! $ sudo pkgin install openssl
 //!
 //! # Arch Linux
-//! $ sudo pacman -S pkg-config openssl
+//! $ sudo pacman -S pkgconf openssl
 //!
 //! # Debian and Ubuntu
 //! $ sudo apt-get install pkg-config libssl-dev
 //!
 //! # Fedora
-//! $ sudo dnf install pkg-config perl-FindBin openssl-devel
+//! $ sudo dnf install pkgconf perl-FindBin perl-IPC-Cmd openssl-devel
 //!
 //! # Alpine Linux
-//! $ apk add pkgconfig openssl-dev
+//! $ apk add pkgconf openssl-dev
 //!
 //! # openSUSE
 //! $ sudo zypper in libopenssl-devel
@@ -66,6 +67,12 @@
 //! * `OPENSSL_LIBS` - If set, a `:`-separated list of library names to link to (e.g. `ssl:crypto`). This can be used
 //!     if nonstandard library names were used for whatever reason.
 //! * `OPENSSL_NO_VENDOR` - If set, always find OpenSSL in the system, even if the `vendored` feature is enabled.
+//!
+//! If the `vendored` Cargo feature is enabled, the following environment variable can also be used to further configure
+//! the OpenSSL build.
+//!
+//! * `OPENSSL_CONFIG_DIR` - If set, the copy of OpenSSL built by the `openssl-src` crate will be configured to look for
+//!     configuration files and root certificates in this directory.
 //!
 //! Additionally, these variables can be prefixed with the upper-cased target architecture (e.g.
 //!     `X86_64_UNKNOWN_LINUX_GNU_OPENSSL_DIR`), which can be useful when cross compiling.
@@ -161,6 +168,7 @@ pub mod ex_data;
 #[cfg(not(any(libressl, ossl300)))]
 pub mod fips;
 pub mod hash;
+pub mod kdf;
 #[cfg(ossl300)]
 pub mod lib_ctx;
 pub mod md;

@@ -56,8 +56,16 @@ const INCLUDES: &str = "
 #include <openssl/provider.h>
 #endif
 
+#if OPENSSL_VERSION_NUMBER >= 0x30200000
+#include <openssl/quic.h>
+#endif
+
 #if defined(LIBRESSL_VERSION_NUMBER) || defined(OPENSSL_IS_BORINGSSL)
 #include <openssl/poly1305.h>
+#endif
+
+#if OPENSSL_VERSION_NUMBER >= 0x30200000
+#include <openssl/thread.h>
 #endif
 ";
 
@@ -70,8 +78,9 @@ pub fn run(include_dirs: &[PathBuf]) {
         .rust_target(RustTarget::Stable_1_47)
         .ctypes_prefix("::libc")
         .raw_line("use libc::*;")
+        .raw_line("#[cfg(windows)] use std::os::windows::raw::HANDLE;")
         .raw_line("type evp_pkey_st = EVP_PKEY;")
-        .allowlist_file(".*/openssl/[^/]+\\.h")
+        .allowlist_file(".*[/\\\\]openssl/[^/\\\\]+\\.h")
         .allowlist_recursively(false)
         // libc is missing pthread_once_t on macOS
         .blocklist_type("CRYPTO_ONCE")
@@ -85,6 +94,8 @@ pub fn run(include_dirs: &[PathBuf]) {
         .blocklist_type("OSSL_FUNC_core_vset_error_fn")
         .blocklist_type("OSSL_FUNC_BIO_vprintf_fn")
         .blocklist_type("OSSL_FUNC_BIO_vsnprintf_fn")
+        // struct hostent * does not exist on Windows
+        .blocklist_function("BIO_gethostbyname")
         // Maintain compatibility for existing enum definitions
         .rustified_enum("point_conversion_form_t")
         // Maintain compatibility for pre-union definitions
@@ -205,6 +216,7 @@ pub fn run_boringssl(include_dirs: &[PathBuf]) {
         .compile("boring_static_wrapper");
 }
 
+#[cfg(feature = "bindgen")]
 #[derive(Debug)]
 struct OpensslCallbacks;
 

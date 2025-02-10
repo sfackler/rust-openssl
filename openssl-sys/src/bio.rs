@@ -70,3 +70,47 @@ extern "C" {
         destroy: unsafe extern "C" fn(*mut BIO) -> c_int,
     ) -> c_int;
 }
+
+cfg_if! {
+    if #[cfg(ossl320)] {
+        use std::ptr;
+
+        pub const BIO_CTRL_DGRAM_GET_MTU: c_int = 41;
+        pub const BIO_CTRL_DGRAM_SET_MTU: c_int = 42;
+        pub const BIO_CTRL_DGRAM_GET_LOCAL_ADDR_CAP: c_int = 82;
+        pub const BIO_CTRL_DGRAM_GET_LOCAL_ADDR_ENABLE: c_int = 83;
+        pub const BIO_CTRL_DGRAM_SET_LOCAL_ADDR_ENABLE: c_int = 84;
+        pub const BIO_CTRL_DGRAM_GET_CAPS: c_int = 86;
+        pub const BIO_CTRL_DGRAM_SET_CAPS: c_int = 87;
+        pub const BIO_CTRL_DGRAM_GET_NO_TRUNC: c_int = 88;
+        pub const BIO_CTRL_DGRAM_SET_NO_TRUNC: c_int = 89;
+
+        pub unsafe fn BIO_dgram_get_no_trunc(bio: *mut BIO) -> c_int {
+            BIO_ctrl(bio, BIO_CTRL_DGRAM_GET_NO_TRUNC, 0, ptr::null_mut()) as c_int
+        }
+        pub unsafe fn BIO_dgram_set_no_trunc(bio: *mut BIO, enable: c_int) -> c_int {
+            BIO_ctrl(bio, BIO_CTRL_DGRAM_SET_NO_TRUNC, enable as c_long, ptr::null_mut()) as c_int
+        }
+        pub unsafe fn BIO_dgram_get_cap(bio: *mut BIO) -> u32 {
+            BIO_ctrl(bio, BIO_CTRL_DGRAM_GET_CAPS, 0, ptr::null_mut()) as u32
+        }
+        pub unsafe fn BIO_dgram_set_cap(bio: *mut BIO, cap: u32) -> c_int {
+            BIO_ctrl(bio, BIO_CTRL_DGRAM_SET_CAPS, cap as c_long, ptr::null_mut()) as c_int
+        }
+        pub unsafe fn BIO_dgram_get_local_addr_cap(bio: *mut BIO) -> c_int {
+            BIO_ctrl(bio, BIO_CTRL_DGRAM_GET_LOCAL_ADDR_CAP, 0, ptr::null_mut()) as c_int
+        }
+        pub unsafe fn BIO_dgram_get_local_addr_enable(bio: *mut BIO, enable: *mut c_int) -> c_int {
+            BIO_ctrl(bio, BIO_CTRL_DGRAM_GET_LOCAL_ADDR_ENABLE, 0, enable as *mut c_void) as c_int
+        }
+        pub unsafe fn BIO_dgram_set_local_addr_enable(bio: *mut BIO, enable: c_int) -> c_int {
+            BIO_ctrl(bio, BIO_CTRL_DGRAM_SET_LOCAL_ADDR_ENABLE, enable as c_long, ptr::null_mut()) as c_int
+        }
+        pub unsafe fn BIO_dgram_get_mtu(bio: *mut BIO) -> c_uint {
+            BIO_ctrl(bio, BIO_CTRL_DGRAM_GET_MTU, 0, ptr::null_mut()) as c_uint
+        }
+        pub unsafe fn BIO_dgram_set_mtu(bio: *mut BIO, mtu: c_uint) -> c_int {
+            BIO_ctrl(bio, BIO_CTRL_DGRAM_SET_MTU, mtu as c_long, ptr::null_mut()) as c_int
+        }
+    }
+}

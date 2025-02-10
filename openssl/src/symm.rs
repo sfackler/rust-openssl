@@ -57,6 +57,7 @@ use crate::error::ErrorStack;
 use crate::nid::Nid;
 use cfg_if::cfg_if;
 use foreign_types::ForeignTypeRef;
+use openssl_macros::corresponds;
 
 #[derive(Copy, Clone)]
 pub enum Mode {
@@ -74,10 +75,7 @@ pub struct Cipher(*const ffi::EVP_CIPHER);
 
 impl Cipher {
     /// Looks up the cipher for a certain nid.
-    ///
-    /// This corresponds to [`EVP_get_cipherbynid`]
-    ///
-    /// [`EVP_get_cipherbynid`]: https://www.openssl.org/docs/manmaster/crypto/EVP_get_cipherbyname.html
+    #[corresponds(EVP_get_cipherbynid)]
     pub fn from_nid(nid: Nid) -> Option<Cipher> {
         let ptr = unsafe { ffi::EVP_get_cipherbyname(ffi::OBJ_nid2sn(nid.as_raw())) };
         if ptr.is_null() {
@@ -88,10 +86,7 @@ impl Cipher {
     }
 
     /// Returns the cipher's Nid.
-    ///
-    /// This corresponds to [`EVP_CIPHER_nid`]
-    ///
-    /// [`EVP_CIPHER_nid`]: https://www.openssl.org/docs/manmaster/crypto/EVP_CIPHER_nid.html
+    #[corresponds(EVP_CIPHER_nid)]
     pub fn nid(&self) -> Nid {
         let nid = unsafe { ffi::EVP_CIPHER_nid(self.0) };
         Nid::from_raw(nid)
@@ -459,6 +454,16 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_sm4_ofb()) }
     }
 
+    #[cfg(not(osslconf = "OPENSSL_NO_RC2"))]
+    pub fn rc2_cbc() -> Cipher {
+        unsafe { Cipher(ffi::EVP_rc2_cbc()) }
+    }
+
+    #[cfg(not(osslconf = "OPENSSL_NO_RC2"))]
+    pub fn rc2_40_cbc() -> Cipher {
+        unsafe { Cipher(ffi::EVP_rc2_40_cbc()) }
+    }
+
     /// Creates a `Cipher` from a raw pointer to its OpenSSL type.
     ///
     /// # Safety
@@ -691,7 +696,7 @@ impl Crypter {
     /// Panics for block ciphers if `output.len() < input.len() + block_size`,
     /// where `block_size` is the block size of the cipher (see `Cipher::block_size`).
     ///
-    /// Panics if `output.len() > c_int::max_value()`.
+    /// Panics if `output.len() > c_int::MAX`.
     pub fn update(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, ErrorStack> {
         self.ctx.cipher_update(input, Some(output))
     }

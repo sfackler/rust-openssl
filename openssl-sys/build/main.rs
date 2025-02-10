@@ -74,6 +74,55 @@ fn check_ssl_kind() {
 }
 
 fn main() {
+    println!("cargo:rustc-check-cfg=cfg(osslconf, values(\"OPENSSL_NO_OCB\", \"OPENSSL_NO_SM4\", \"OPENSSL_NO_SEED\", \"OPENSSL_NO_CHACHA\", \"OPENSSL_NO_CAST\", \"OPENSSL_NO_IDEA\", \"OPENSSL_NO_CAMELLIA\", \"OPENSSL_NO_RC4\", \"OPENSSL_NO_BF\", \"OPENSSL_NO_PSK\", \"OPENSSL_NO_DEPRECATED_3_0\", \"OPENSSL_NO_SCRYPT\", \"OPENSSL_NO_SM3\", \"OPENSSL_NO_RMD160\", \"OPENSSL_NO_EC2M\", \"OPENSSL_NO_OCSP\", \"OPENSSL_NO_CMS\", \"OPENSSL_NO_COMP\", \"OPENSSL_NO_SOCK\", \"OPENSSL_NO_STDIO\", \"OPENSSL_NO_EC\", \"OPENSSL_NO_SSL3_METHOD\", \"OPENSSL_NO_KRB5\", \"OPENSSL_NO_TLSEXT\", \"OPENSSL_NO_SRP\", \"OPENSSL_NO_RFC3779\", \"OPENSSL_NO_SHA\", \"OPENSSL_NO_NEXTPROTONEG\", \"OPENSSL_NO_ENGINE\", \"OPENSSL_NO_BUF_FREELISTS\", \"OPENSSL_NO_RC2\"))");
+
+    println!("cargo:rustc-check-cfg=cfg(openssl)");
+    println!("cargo:rustc-check-cfg=cfg(libressl)");
+    println!("cargo:rustc-check-cfg=cfg(boringssl)");
+
+    println!("cargo:rustc-check-cfg=cfg(libressl250)");
+    println!("cargo:rustc-check-cfg=cfg(libressl251)");
+    println!("cargo:rustc-check-cfg=cfg(libressl252)");
+    println!("cargo:rustc-check-cfg=cfg(libressl261)");
+    println!("cargo:rustc-check-cfg=cfg(libressl270)");
+    println!("cargo:rustc-check-cfg=cfg(libressl271)");
+    println!("cargo:rustc-check-cfg=cfg(libressl273)");
+    println!("cargo:rustc-check-cfg=cfg(libressl280)");
+    println!("cargo:rustc-check-cfg=cfg(libressl281)");
+    println!("cargo:rustc-check-cfg=cfg(libressl291)");
+    println!("cargo:rustc-check-cfg=cfg(libressl310)");
+    println!("cargo:rustc-check-cfg=cfg(libressl321)");
+    println!("cargo:rustc-check-cfg=cfg(libressl332)");
+    println!("cargo:rustc-check-cfg=cfg(libressl340)");
+    println!("cargo:rustc-check-cfg=cfg(libressl350)");
+    println!("cargo:rustc-check-cfg=cfg(libressl360)");
+    println!("cargo:rustc-check-cfg=cfg(libressl361)");
+    println!("cargo:rustc-check-cfg=cfg(libressl370)");
+    println!("cargo:rustc-check-cfg=cfg(libressl380)");
+    println!("cargo:rustc-check-cfg=cfg(libressl381)");
+    println!("cargo:rustc-check-cfg=cfg(libressl382)");
+    println!("cargo:rustc-check-cfg=cfg(libressl390)");
+    println!("cargo:rustc-check-cfg=cfg(libressl400)");
+    println!("cargo:rustc-check-cfg=cfg(libressl410)");
+
+    println!("cargo:rustc-check-cfg=cfg(ossl101)");
+    println!("cargo:rustc-check-cfg=cfg(ossl102)");
+    println!("cargo:rustc-check-cfg=cfg(ossl102f)");
+    println!("cargo:rustc-check-cfg=cfg(ossl102h)");
+    println!("cargo:rustc-check-cfg=cfg(ossl110)");
+    println!("cargo:rustc-check-cfg=cfg(ossl110f)");
+    println!("cargo:rustc-check-cfg=cfg(ossl110g)");
+    println!("cargo:rustc-check-cfg=cfg(ossl110h)");
+    println!("cargo:rustc-check-cfg=cfg(ossl111)");
+    println!("cargo:rustc-check-cfg=cfg(ossl111b)");
+    println!("cargo:rustc-check-cfg=cfg(ossl111c)");
+    println!("cargo:rustc-check-cfg=cfg(ossl111d)");
+    println!("cargo:rustc-check-cfg=cfg(ossl300)");
+    println!("cargo:rustc-check-cfg=cfg(ossl310)");
+    println!("cargo:rustc-check-cfg=cfg(ossl320)");
+    println!("cargo:rustc-check-cfg=cfg(ossl330)");
+    println!("cargo:rustc-check-cfg=cfg(ossl340)");
+
     check_ssl_kind();
 
     let target = env::var("TARGET").unwrap();
@@ -130,6 +179,34 @@ fn main() {
     let kind = determine_mode(&lib_dirs, &libs);
     for lib in libs.into_iter() {
         println!("cargo:rustc-link-lib={}={}", kind, lib);
+    }
+
+    // libssl in BoringSSL requires the C++ runtime, and static libraries do
+    // not carry dependency information. On unix-like platforms, the C++
+    // runtime and standard library are typically picked up by default via the
+    // C++ compiler, which has a platform-specific default. (See implementations
+    // of `GetDefaultCXXStdlibType` in Clang.) Builds may also choose to
+    // override this and specify their own with `-nostdinc++` and `-nostdlib++`
+    // flags. Some compilers also provide options like `-stdlib=libc++`.
+    //
+    // Typically, such information is carried all the way up the build graph,
+    // but Cargo is not an integrated cross-language build system, so it cannot
+    // safely handle any of these situations. As a result, we need to make
+    // guesses. Getting this wrong may result in symbol conflicts and memory
+    // errors, but this unsafety is inherent to driving builds with
+    // externally-built libraries using Cargo.
+    //
+    // For now, we guess that the build was made with the defaults. This too is
+    // difficult because Rust does not expose this information from Clang, but
+    // try to match the behavior for common platforms. For a more robust option,
+    // this likely needs to be deferred to the caller with an environment
+    // variable.
+    if version == Version::Boringssl && kind == "static" && env::var("CARGO_CFG_UNIX").is_ok() {
+        let cpp_lib = match env::var("CARGO_CFG_TARGET_OS").unwrap().as_ref() {
+            "macos" => "c++",
+            _ => "stdc++",
+        };
+        println!("cargo:rustc-link-lib={}", cpp_lib);
     }
 
     // https://github.com/openssl/openssl/pull/15086
@@ -197,13 +274,13 @@ pointing to your OpenSSL installation or installing OpenSSL headers package
 specific to your distribution:
 
     # On Ubuntu
-    sudo apt-get install libssl-dev
+    sudo apt-get install pkg-config libssl-dev
     # On Arch Linux
-    sudo pacman -S openssl
+    sudo pacman -S pkgconf openssl
     # On Fedora
-    sudo dnf install openssl-devel
+    sudo dnf install pkgconf perl-FindBin perl-IPC-Cmd openssl-devel
     # On Alpine Linux
-    apk add openssl-dev
+    apk add pkgconf openssl-dev
 
 See rust-openssl documentation for more information:
 
@@ -303,6 +380,9 @@ See rust-openssl documentation for more information:
             (3, 8, 1) => ('3', '8', '1'),
             (3, 8, _) => ('3', '8', 'x'),
             (3, 9, 0) => ('3', '9', '0'),
+            (3, 9, _) => ('3', '9', 'x'),
+            (4, 0, 0) => ('4', '0', '0'),
+            (4, 0, _) => ('4', '0', 'x'),
             _ => version_error(),
         };
 
@@ -345,7 +425,7 @@ fn version_error() -> ! {
         "
 
 This crate is only compatible with OpenSSL (version 1.0.1 through 1.1.1, or 3), or LibreSSL 2.5
-through 3.9.0, but a different version of OpenSSL was found. The build is now aborting
+through 4.0.x, but a different version of OpenSSL was found. The build is now aborting
 due to this version mismatch.
 
 "

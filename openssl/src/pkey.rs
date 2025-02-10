@@ -60,6 +60,7 @@ use openssl_macros::corresponds;
 use std::convert::{TryFrom, TryInto};
 use std::ffi::CString;
 use std::fmt;
+#[cfg(all(not(boringssl), ossl110))]
 use std::mem;
 use std::ptr;
 
@@ -407,38 +408,37 @@ impl<T> Clone for PKey<T> {
 
 impl<T> PKey<T> {
     /// Creates a new `PKey` containing an RSA key.
-    #[corresponds(EVP_PKEY_assign_RSA)]
+    #[corresponds(EVP_PKEY_set1_RSA)]
     pub fn from_rsa(rsa: Rsa<T>) -> Result<PKey<T>, ErrorStack> {
+        // TODO: Next time we make backwards incompatible changes, this could
+        // become an `&RsaRef<T>`. Same for all the other `from_*` methods.
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
             let pkey = PKey::from_ptr(evp);
-            cvt(ffi::EVP_PKEY_assign_RSA(pkey.0, rsa.as_ptr()))?;
-            mem::forget(rsa);
+            cvt(ffi::EVP_PKEY_set1_RSA(pkey.0, rsa.as_ptr()))?;
             Ok(pkey)
         }
     }
 
     /// Creates a new `PKey` containing a DSA key.
-    #[corresponds(EVP_PKEY_assign_DSA)]
+    #[corresponds(EVP_PKEY_set1_DSA)]
     pub fn from_dsa(dsa: Dsa<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
             let pkey = PKey::from_ptr(evp);
-            cvt(ffi::EVP_PKEY_assign_DSA(pkey.0, dsa.as_ptr()))?;
-            mem::forget(dsa);
+            cvt(ffi::EVP_PKEY_set1_DSA(pkey.0, dsa.as_ptr()))?;
             Ok(pkey)
         }
     }
 
     /// Creates a new `PKey` containing a Diffie-Hellman key.
-    #[corresponds(EVP_PKEY_assign_DH)]
+    #[corresponds(EVP_PKEY_set1_DH)]
     #[cfg(not(boringssl))]
     pub fn from_dh(dh: Dh<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
             let pkey = PKey::from_ptr(evp);
-            cvt(ffi::EVP_PKEY_assign_DH(pkey.0, dh.as_ptr()))?;
-            mem::forget(dh);
+            cvt(ffi::EVP_PKEY_set1_DH(pkey.0, dh.as_ptr()))?;
             Ok(pkey)
         }
     }
@@ -460,13 +460,12 @@ impl<T> PKey<T> {
     }
 
     /// Creates a new `PKey` containing an elliptic curve key.
-    #[corresponds(EVP_PKEY_assign_EC_KEY)]
+    #[corresponds(EVP_PKEY_set1_EC_KEY)]
     pub fn from_ec_key(ec_key: EcKey<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
             let pkey = PKey::from_ptr(evp);
-            cvt(ffi::EVP_PKEY_assign_EC_KEY(pkey.0, ec_key.as_ptr()))?;
-            mem::forget(ec_key);
+            cvt(ffi::EVP_PKEY_set1_EC_KEY(pkey.0, ec_key.as_ptr()))?;
             Ok(pkey)
         }
     }
@@ -482,7 +481,7 @@ impl PKey<Private> {
     #[cfg(not(boringssl))]
     pub fn hmac(key: &[u8]) -> Result<PKey<Private>, ErrorStack> {
         unsafe {
-            assert!(key.len() <= c_int::max_value() as usize);
+            assert!(key.len() <= c_int::MAX as usize);
             let key = cvt_p(ffi::EVP_PKEY_new_mac_key(
                 ffi::EVP_PKEY_HMAC,
                 ptr::null_mut(),
@@ -676,7 +675,7 @@ impl PKey<Private> {
     pub fn private_key_from_pkcs8(der: &[u8]) -> Result<PKey<Private>, ErrorStack> {
         unsafe {
             ffi::init();
-            let len = der.len().min(c_long::max_value() as usize) as c_long;
+            let len = der.len().min(c_long::MAX as usize) as c_long;
             let p8inf = cvt_p(ffi::d2i_PKCS8_PRIV_KEY_INFO(
                 ptr::null_mut(),
                 &mut der.as_ptr(),

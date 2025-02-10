@@ -77,6 +77,7 @@ use crate::ssl::bio::BioMethod;
 use crate::ssl::callbacks::*;
 use crate::ssl::error::InnerError;
 use crate::stack::{Stack, StackRef, Stackable};
+use crate::util;
 use crate::util::{ForeignTypeExt, ForeignTypeRefExt};
 use crate::x509::store::{X509Store, X509StoreBuilderRef, X509StoreRef};
 #[cfg(any(ossl102, boringssl, libressl261))]
@@ -101,7 +102,6 @@ use std::ops::{Deref, DerefMut};
 use std::panic::resume_unwind;
 use std::path::Path;
 use std::ptr;
-use std::slice;
 use std::str;
 use std::sync::{Arc, Mutex};
 
@@ -364,6 +364,20 @@ impl SslMethod {
         unsafe { SslMethod(TLS_server_method()) }
     }
 
+    /// Support all versions of the DTLS protocol, explicitly as a client.
+    #[corresponds(DTLS_client_method)]
+    #[cfg(any(boringssl, ossl110, libressl291))]
+    pub fn dtls_client() -> SslMethod {
+        unsafe { SslMethod(DTLS_client_method()) }
+    }
+
+    /// Support all versions of the DTLS protocol, explicitly as a server.
+    #[corresponds(DTLS_server_method)]
+    #[cfg(any(boringssl, ossl110, libressl291))]
+    pub fn dtls_server() -> SslMethod {
+        unsafe { SslMethod(DTLS_server_method()) }
+    }
+
     /// Constructs an `SslMethod` from a pointer to the underlying OpenSSL value.
     ///
     /// # Safety
@@ -602,17 +616,17 @@ impl SslAlert {
 
 /// An error returned from an ALPN selection callback.
 ///
-/// Requires OpenSSL 1.0.2 or LibreSSL 2.6.1 or newer.
-#[cfg(any(ossl102, libressl261))]
+/// Requires BoringSSL or OpenSSL 1.0.2 or LibreSSL 2.6.1 or newer.
+#[cfg(any(ossl102, libressl261, boringssl))]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct AlpnError(c_int);
 
-#[cfg(any(ossl102, libressl261))]
+#[cfg(any(ossl102, libressl261, boringssl))]
 impl AlpnError {
     /// Terminate the handshake with a fatal alert.
     ///
-    /// Requires OpenSSL 1.1.0 or newer.
-    #[cfg(ossl110)]
+    /// Requires BoringSSL or OpenSSL 1.1.0 or newer.
+    #[cfg(any(ossl110, boringssl))]
     pub const ALERT_FATAL: AlpnError = AlpnError(ffi::SSL_TLSEXT_ERR_ALERT_FATAL);
 
     /// Do not select a protocol, but continue the handshake.
@@ -695,7 +709,7 @@ cfg_if! {
 ///
 /// [`SslContextBuilder::set_alpn_protos`]: struct.SslContextBuilder.html#method.set_alpn_protos
 #[corresponds(SSL_select_next_proto)]
-pub fn select_next_proto<'a>(server: &[u8], client: &'a [u8]) -> Option<&'a [u8]> {
+pub fn select_next_proto<'a>(server: &'a [u8], client: &'a [u8]) -> Option<&'a [u8]> {
     unsafe {
         let mut out = ptr::null_mut();
         let mut outlen = 0;
@@ -708,7 +722,7 @@ pub fn select_next_proto<'a>(server: &[u8], client: &'a [u8]) -> Option<&'a [u8]
             client.len() as c_uint,
         );
         if r == ffi::OPENSSL_NPN_NEGOTIATED {
-            Some(slice::from_raw_parts(out as *const u8, outlen as usize))
+            Some(util::from_raw_parts(out as *const u8, outlen as usize))
         } else {
             None
         }
@@ -924,12 +938,23 @@ impl SslContextBuilder {
     /// The file should contain a sequence of PEM-formatted CA certificates.
     #[corresponds(SSL_CTX_load_verify_locations)]
     pub fn set_ca_file<P: AsRef<Path>>(&mut self, file: P) -> Result<(), ErrorStack> {
-        let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
+        self.load_verify_locations(Some(file.as_ref()), None)
+    }
+
+    /// Loads trusted root certificates from a file and/or a directory.
+    #[corresponds(SSL_CTX_load_verify_locations)]
+    pub fn load_verify_locations(
+        &mut self,
+        ca_file: Option<&Path>,
+        ca_path: Option<&Path>,
+    ) -> Result<(), ErrorStack> {
+        let ca_file = ca_file.map(|p| CString::new(p.as_os_str().to_str().unwrap()).unwrap());
+        let ca_path = ca_path.map(|p| CString::new(p.as_os_str().to_str().unwrap()).unwrap());
         unsafe {
             cvt(ffi::SSL_CTX_load_verify_locations(
                 self.as_ptr(),
-                file.as_ptr() as *const _,
-                ptr::null(),
+                ca_file.as_ref().map_or(ptr::null(), |s| s.as_ptr()),
+                ca_path.as_ref().map_or(ptr::null(), |s| s.as_ptr()),
             ))
             .map(|_| ())
         }
@@ -965,7 +990,7 @@ impl SslContextBuilder {
     #[corresponds(SSL_CTX_set_session_id_context)]
     pub fn set_session_id_context(&mut self, sid_ctx: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            assert!(sid_ctx.len() <= c_uint::max_value() as usize);
+            assert!(sid_ctx.len() <= c_uint::MAX as usize);
             cvt(ffi::SSL_CTX_set_session_id_context(
                 self.as_ptr(),
                 sid_ctx.as_ptr(),
@@ -1228,7 +1253,7 @@ impl SslContextBuilder {
     #[cfg(any(ossl102, libressl261, boringssl))]
     pub fn set_alpn_protos(&mut self, protocols: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            assert!(protocols.len() <= c_uint::max_value() as usize);
+            assert!(protocols.len() <= c_uint::MAX as usize);
             let r = ffi::SSL_CTX_set_alpn_protos(
                 self.as_ptr(),
                 protocols.as_ptr(),
@@ -1267,19 +1292,26 @@ impl SslContextBuilder {
     /// of those protocols on success. The [`select_next_proto`] function implements the standard
     /// protocol selection algorithm.
     ///
-    /// Requires OpenSSL 1.0.2 or LibreSSL 2.6.1 or newer.
+    /// Requires BoringSSL or OpenSSL 1.0.2 or LibreSSL 2.6.1 or newer.
     ///
     /// [`SslContextBuilder::set_alpn_protos`]: struct.SslContextBuilder.html#method.set_alpn_protos
     /// [`select_next_proto`]: fn.select_next_proto.html
     #[corresponds(SSL_CTX_set_alpn_select_cb)]
-    #[cfg(any(ossl102, libressl261))]
+    #[cfg(any(ossl102, libressl261, boringssl))]
     pub fn set_alpn_select_callback<F>(&mut self, callback: F)
     where
         F: for<'a> Fn(&mut SslRef, &'a [u8]) -> Result<&'a [u8], AlpnError> + 'static + Sync + Send,
     {
         unsafe {
             self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
+            #[cfg(not(boringssl))]
             ffi::SSL_CTX_set_alpn_select_cb__fixed_rust(
+                self.as_ptr(),
+                Some(callbacks::raw_alpn_select::<F>),
+                ptr::null_mut(),
+            );
+            #[cfg(boringssl)]
+            ffi::SSL_CTX_set_alpn_select_cb(
                 self.as_ptr(),
                 Some(callbacks::raw_alpn_select::<F>),
                 ptr::null_mut(),
@@ -1470,7 +1502,7 @@ impl SslContextBuilder {
     ///
     /// Requires OpenSSL 1.1.1 or newer.
     #[corresponds(SSL_CTX_set_keylog_callback)]
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, boringssl))]
     pub fn set_keylog_callback<F>(&mut self, callback: F)
     where
         F: Fn(&SslRef, &str) + 'static + Sync + Send,
@@ -2174,7 +2206,7 @@ impl SslSessionRef {
             let mut len = 0;
             let p = ffi::SSL_SESSION_get_id(self.as_ptr(), &mut len);
             #[allow(clippy::unnecessary_cast)]
-            slice::from_raw_parts(p as *const u8, len as usize)
+            util::from_raw_parts(p as *const u8, len as usize)
         }
     }
 
@@ -2297,10 +2329,6 @@ impl Ssl {
     }
 
     /// Creates a new `Ssl`.
-    ///
-    /// This corresponds to [`SSL_new`].
-    ///
-    /// [`SSL_new`]: https://www.openssl.org/docs/manmaster/ssl/SSL_new.html
     #[corresponds(SSL_new)]
     pub fn new(ctx: &SslContextRef) -> Result<Ssl, ErrorStack> {
         let session_ctx_index = try_get_session_ctx_index()?;
@@ -2314,15 +2342,10 @@ impl Ssl {
     }
 
     /// Initiates a client-side TLS handshake.
-    ///
-    /// This corresponds to [`SSL_connect`].
-    ///
     /// # Warning
     ///
     /// OpenSSL's default configuration is insecure. It is highly recommended to use
     /// `SslConnector` rather than `Ssl` directly, as it manages that configuration.
-    ///
-    /// [`SSL_connect`]: https://www.openssl.org/docs/manmaster/man3/SSL_connect.html
     #[corresponds(SSL_connect)]
     #[allow(deprecated)]
     pub fn connect<S>(self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
@@ -2334,14 +2357,10 @@ impl Ssl {
 
     /// Initiates a server-side TLS handshake.
     ///
-    /// This corresponds to [`SSL_accept`].
-    ///
     /// # Warning
     ///
     /// OpenSSL's default configuration is insecure. It is highly recommended to use
     /// `SslAcceptor` rather than `Ssl` directly, as it manages that configuration.
-    ///
-    /// [`SSL_accept`]: https://www.openssl.org/docs/manmaster/man3/SSL_accept.html
     #[corresponds(SSL_accept)]
     #[allow(deprecated)]
     pub fn accept<S>(self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
@@ -2487,7 +2506,7 @@ impl SslRef {
     #[cfg(any(ossl102, libressl261, boringssl))]
     pub fn set_alpn_protos(&mut self, protocols: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            assert!(protocols.len() <= c_uint::max_value() as usize);
+            assert!(protocols.len() <= c_uint::MAX as usize);
             let r =
                 ffi::SSL_set_alpn_protos(self.as_ptr(), protocols.as_ptr(), protocols.len() as _);
             // fun fact, SSL_set_alpn_protos has a reversed return code D:
@@ -2650,16 +2669,12 @@ impl SslRef {
             if data.is_null() {
                 None
             } else {
-                Some(slice::from_raw_parts(data, len as usize))
+                Some(util::from_raw_parts(data, len as usize))
             }
         }
     }
 
     /// Enables the DTLS extension "use_srtp" as defined in RFC5764.
-    ///
-    /// This corresponds to [`SSL_set_tlsext_use_srtp`].
-    ///
-    /// [`SSL_set_tlsext_use_srtp`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_tlsext_use_srtp.html
     #[corresponds(SSL_set_tlsext_use_srtp)]
     pub fn set_tlsext_use_srtp(&mut self, protocols: &str) -> Result<(), ErrorStack> {
         unsafe {
@@ -2678,10 +2693,6 @@ impl SslRef {
     /// Gets all SRTP profiles that are enabled for handshake via set_tlsext_use_srtp
     ///
     /// DTLS extension "use_srtp" as defined in RFC5764 has to be enabled.
-    ///
-    /// This corresponds to [`SSL_get_srtp_profiles`].
-    ///
-    /// [`SSL_get_srtp_profiles`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_tlsext_use_srtp.html
     #[corresponds(SSL_get_srtp_profiles)]
     pub fn srtp_profiles(&self) -> Option<&StackRef<SrtpProtectionProfile>> {
         unsafe {
@@ -2928,7 +2939,7 @@ impl SslRef {
             if len < 0 {
                 None
             } else {
-                Some(slice::from_raw_parts(p as *const u8, len as usize))
+                Some(util::from_raw_parts(p as *const u8, len as usize))
             }
         }
     }
@@ -2938,7 +2949,7 @@ impl SslRef {
     #[cfg(not(boringssl))]
     pub fn set_ocsp_status(&mut self, response: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            assert!(response.len() <= c_int::max_value() as usize);
+            assert!(response.len() <= c_int::MAX as usize);
             let p = cvt_p(ffi::OPENSSL_malloc(response.len() as _))?;
             ptr::copy_nonoverlapping(response.as_ptr(), p as *mut u8, response.len());
             cvt(ffi::SSL_set_tlsext_status_ocsp_resp(
@@ -3099,7 +3110,7 @@ impl SslRef {
             if len == 0 {
                 None
             } else {
-                Some(slice::from_raw_parts(ptr, len))
+                Some(util::from_raw_parts(ptr, len))
             }
         }
     }
@@ -3118,7 +3129,7 @@ impl SslRef {
             if len == 0 {
                 None
             } else {
-                Some(slice::from_raw_parts(ptr, len))
+                Some(util::from_raw_parts(ptr, len))
             }
         }
     }
@@ -3137,7 +3148,7 @@ impl SslRef {
             if len == 0 {
                 None
             } else {
-                Some(slice::from_raw_parts(ptr, len))
+                Some(util::from_raw_parts(ptr, len))
             }
         }
     }
@@ -3191,7 +3202,7 @@ impl SslRef {
             if len == 0 {
                 None
             } else {
-                Some(slice::from_raw_parts(ptr, len))
+                Some(util::from_raw_parts(ptr, len))
             }
         }
     }
@@ -3526,9 +3537,7 @@ where
 {
     /// Restarts the handshake process.
     ///
-    /// This corresponds to [`SSL_do_handshake`].
-    ///
-    /// [`SSL_do_handshake`]: https://www.openssl.org/docs/manmaster/man3/SSL_do_handshake.html
+    #[corresponds(SSL_do_handshake)]
     pub fn handshake(mut self) -> Result<SslStream<S>, HandshakeError<S>> {
         match self.stream.do_handshake() {
             Ok(()) => Ok(self.stream),
@@ -3764,7 +3773,7 @@ impl<S: Read + Write> SslStream<S> {
     pub fn ssl_read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
         // SAFETY: `ssl_read_uninit` does not de-initialize the buffer.
         unsafe {
-            self.ssl_read_uninit(slice::from_raw_parts_mut(
+            self.ssl_read_uninit(util::from_raw_parts_mut(
                 buf.as_mut_ptr().cast::<MaybeUninit<u8>>(),
                 buf.len(),
             ))
@@ -3801,7 +3810,7 @@ impl<S: Read + Write> SslStream<S> {
                     return Ok(0);
                 }
 
-                let len = usize::min(c_int::max_value() as usize, buf.len()) as c_int;
+                let len = usize::min(c_int::MAX as usize, buf.len()) as c_int;
                 let ret = unsafe {
                     ffi::SSL_read(self.ssl().as_ptr(), buf.as_mut_ptr().cast(), len)
                 };
@@ -3842,7 +3851,7 @@ impl<S: Read + Write> SslStream<S> {
                     return Ok(0);
                 }
 
-                let len = usize::min(c_int::max_value() as usize, buf.len()) as c_int;
+                let len = usize::min(c_int::MAX as usize, buf.len()) as c_int;
                 let ret = unsafe {
                     ffi::SSL_write(self.ssl().as_ptr(), buf.as_ptr().cast(), len)
                 };
@@ -3880,7 +3889,7 @@ impl<S: Read + Write> SslStream<S> {
                     return Ok(0);
                 }
 
-                let len = usize::min(c_int::max_value() as usize, buf.len()) as c_int;
+                let len = usize::min(c_int::MAX as usize, buf.len()) as c_int;
                 let ret = unsafe {
                     ffi::SSL_peek(self.ssl().as_ptr(), buf.as_mut_ptr().cast(), len)
                 };
@@ -3997,7 +4006,7 @@ impl<S: Read + Write> Read for SslStream<S> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         // SAFETY: `read_uninit` does not de-initialize the buffer
         unsafe {
-            self.read_uninit(slice::from_raw_parts_mut(
+            self.read_uninit(util::from_raw_parts_mut(
                 buf.as_mut_ptr().cast::<MaybeUninit<u8>>(),
                 buf.len(),
             ))
@@ -4056,10 +4065,7 @@ where
     /// `accept`. If a HelloRetryRequest containing a fresh cookie was
     /// transmitted, `Ok(false)` is returned instead. If the handshake cannot
     /// proceed at all, `Err` is returned.
-    ///
-    /// This corresponds to [`SSL_stateless`]
-    ///
-    /// [`SSL_stateless`]: https://www.openssl.org/docs/manmaster/man3/SSL_stateless.html
+    #[corresponds(SSL_stateless)]
     #[cfg(ossl111)]
     pub fn stateless(&mut self) -> Result<bool, ErrorStack> {
         match unsafe { ffi::SSL_stateless(self.inner.ssl.as_ptr()) } {
@@ -4071,19 +4077,13 @@ where
     }
 
     /// Configure as an outgoing stream from a client.
-    ///
-    /// This corresponds to [`SSL_set_connect_state`].
-    ///
-    /// [`SSL_set_connect_state`]: https://www.openssl.org/docs/manmaster/man3/SSL_set_connect_state.html
+    #[corresponds(SSL_set_connect_state)]
     pub fn set_connect_state(&mut self) {
         unsafe { ffi::SSL_set_connect_state(self.inner.ssl.as_ptr()) }
     }
 
     /// Configure as an incoming stream to a server.
-    ///
-    /// This corresponds to [`SSL_set_accept_state`].
-    ///
-    /// [`SSL_set_accept_state`]: https://www.openssl.org/docs/manmaster/man3/SSL_set_accept_state.html
+    #[corresponds(SSL_set_accept_state)]
     pub fn set_accept_state(&mut self) {
         unsafe { ffi::SSL_set_accept_state(self.inner.ssl.as_ptr()) }
     }
@@ -4129,10 +4129,7 @@ where
     /// Initiates the handshake.
     ///
     /// This will fail if `set_accept_state` or `set_connect_state` was not called first.
-    ///
-    /// This corresponds to [`SSL_do_handshake`].
-    ///
-    /// [`SSL_do_handshake`]: https://www.openssl.org/docs/manmaster/man3/SSL_do_handshake.html
+    #[corresponds(SSL_do_handshake)]
     pub fn handshake(mut self) -> Result<SslStream<S>, HandshakeError<S>> {
         match self.inner.do_handshake() {
             Ok(()) => Ok(self.inner),
@@ -4160,10 +4157,7 @@ where
     /// Returns `Ok(0)` if all early data has been read.
     ///
     /// Requires OpenSSL 1.1.1 or LibreSSL 3.4.0 or newer.
-    ///
-    /// This corresponds to [`SSL_read_early_data`].
-    ///
-    /// [`SSL_read_early_data`]: https://www.openssl.org/docs/manmaster/man3/SSL_read_early_data.html
+    #[corresponds(SSL_read_early_data)]
     #[cfg(any(ossl111, libressl340))]
     pub fn read_early_data(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
         self.inner.read_early_data(buf)
@@ -4175,10 +4169,7 @@ where
     /// `set_connect_state` first.
     ///
     /// Requires OpenSSL 1.1.1 or LibreSSL 3.4.0 or newer.
-    ///
-    /// This corresponds to [`SSL_write_early_data`].
-    ///
-    /// [`SSL_write_early_data`]: https://www.openssl.org/docs/manmaster/man3/SSL_write_early_data.html
+    #[corresponds(SSL_write_early_data)]
     #[cfg(any(ossl111, libressl340))]
     pub fn write_early_data(&mut self, buf: &[u8]) -> Result<usize, Error> {
         self.inner.write_early_data(buf)
@@ -4311,7 +4302,7 @@ cfg_if! {
 }
 cfg_if! {
     if #[cfg(any(boringssl, ossl110, libressl291))] {
-        use ffi::{TLS_method, DTLS_method, TLS_client_method, TLS_server_method};
+        use ffi::{TLS_method, DTLS_method, TLS_client_method, TLS_server_method, DTLS_server_method, DTLS_client_method};
     } else {
         use ffi::{
             SSLv23_method as TLS_method, DTLSv1_method as DTLS_method, SSLv23_client_method as TLS_client_method,

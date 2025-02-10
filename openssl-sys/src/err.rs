@@ -9,8 +9,8 @@ pub const ERR_LIB_ASN1: c_int = 13;
 
 cfg_if! {
     if #[cfg(ossl300)] {
-        pub const ERR_SYSTEM_FLAG: c_ulong = c_int::max_value() as c_ulong + 1;
-        pub const ERR_SYSTEM_MASK: c_ulong = c_int::max_value() as c_ulong;
+        pub const ERR_SYSTEM_FLAG: c_ulong = c_int::MAX as c_ulong + 1;
+        pub const ERR_SYSTEM_MASK: c_ulong = c_int::MAX as c_ulong;
 
         pub const ERR_LIB_OFFSET: c_ulong = 23;
         pub const ERR_LIB_MASK: c_ulong = 0xff;

@@ -62,7 +62,7 @@ jobs:
       # Remember to also update `--rust-target` in `openssl-sys/build/run_bindgen.rs`
       - uses: sfackler/actions/rustup@master
         with:
-          version: 1.56.0
+          version: 1.63.0
       - run: echo "version=$(rustc --version)" >> $GITHUB_OUTPUT
         id: rust-version
       - uses: actions/cache@v4
@@ -150,23 +150,29 @@ jobs:
             - false
           library:
             - name: boringssl
-              version: e6489902b7fb692875341b8ab5e57f0515f47bc1
+              version: e23fe9b6eecc10e4f9ea1f0027fea5eaee7bd6b6
             - name: openssl
               version: vendored
             - name: openssl
-              version: 3.2.0
-              dl-path: /
+              version: 3.4.0
             - name: openssl
+              version: 3.3.0
+            - name: openssl
+              version: 3.2.0
+            - name: openssl
+              old: true
               version: 1.1.1w
-              dl-path: /
             - name: openssl
               version: 1.1.0l
+              old: true
               dl-path: /old/1.1.0
             - name: openssl
               version: 1.0.2u
+              old: true
               dl-path: /old/1.0.2
             - name: openssl
               version: 1.0.1u
+              old: true
               dl-path: /old/1.0.1
           include:
             - target: x86_64-unknown-linux-gnu
@@ -178,17 +184,17 @@ jobs:
               bindgen: true
               library:
                 name: libressl
-                version: 3.7.3
+                version: 3.8.4
             - target: x86_64-unknown-linux-gnu
               bindgen: true
               library:
                 name: libressl
-                version: 3.8.3
+                version: 3.9.2
             - target: x86_64-unknown-linux-gnu
               bindgen: true
               library:
                 name: libressl
-                version: 3.9.0
+                version: 4.0.0
             - target: x86_64-unknown-linux-gnu
               bindgen: false
               library:
@@ -198,19 +204,19 @@ jobs:
               bindgen: false
               library:
                 name: libressl
-                version: 3.7.3
+                version: 3.8.4
             - target: x86_64-unknown-linux-gnu
               bindgen: false
               library:
                 name: libressl
-                version: 3.8.3
+                version: 3.9.2
             - target: x86_64-unknown-linux-gnu
               bindgen: false
               library:
                 name: libressl
-                version: 3.9.0
+                version: 4.0.0
       name: ${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-${{ matrix.bindgen }}
-      runs-on: ubuntu-latest
+      runs-on: ubuntu-22.04
       env:
         OPENSSL_DIR: /opt/openssl
         CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
@@ -242,7 +248,7 @@ jobs:
         - uses: actions/cache@v4
           with:
             path: /opt/openssl
-            key: openssl-${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-6
+            key: openssl-${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-7
           if: matrix.library.version != 'vendored'
           id: openssl-cache
         - run: |
@@ -253,7 +259,11 @@ jobs:
           run: |
             case "${{ matrix.library.name }}" in
             "openssl")
-              url="https://www.openssl.org/source${{ matrix.library.dl-path }}/openssl-${{ matrix.library.version }}.tar.gz"
+              if [[ "${{ matrix.library.old }}" == "true" ]]; then
+                url="https://www.openssl.org/source${{ matrix.library.dl-path }}/openssl-${{ matrix.library.version }}.tar.gz"
+              else
+                url="https://github.com/openssl/openssl/releases/download/openssl-${{ matrix.library.version }}/openssl-${{ matrix.library.version }}.tar.gz"
+              fi
               tar_flags="--strip-components=1"
               ;;
             "libressl")
@@ -273,7 +283,7 @@ jobs:
               ;;
             "i686-unknown-linux-gnu")
               OS_COMPILER=linux-elf
-              OS_FLAGS=-m32
+              OS_FLAGS="-m32 -msse2"
               ;;
             "arm-unknown-linux-gnueabihf")
               OS_COMPILER=linux-armv4

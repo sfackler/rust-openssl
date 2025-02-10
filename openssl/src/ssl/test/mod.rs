@@ -502,7 +502,7 @@ fn test_connect_with_srtp_ssl() {
 /// Tests that when the `SslStream` is created as a server stream, the protocols
 /// are correctly advertised to the client.
 #[test]
-#[cfg(any(ossl102, libressl261))]
+#[cfg(any(ossl102, libressl261, boringssl))]
 fn test_alpn_server_advertise_multiple() {
     let mut server = Server::builder();
     server.ctx().set_alpn_select_callback(|_, client| {
@@ -517,7 +517,7 @@ fn test_alpn_server_advertise_multiple() {
 }
 
 #[test]
-#[cfg(ossl110)]
+#[cfg(any(ossl110, boringssl))]
 fn test_alpn_server_select_none_fatal() {
     let mut server = Server::builder();
     server.ctx().set_alpn_select_callback(|_, client| {
@@ -533,7 +533,7 @@ fn test_alpn_server_select_none_fatal() {
 }
 
 #[test]
-#[cfg(any(ossl102, libressl261))]
+#[cfg(any(ossl102, libressl261, boringssl))]
 fn test_alpn_server_select_none() {
     static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
@@ -1367,20 +1367,20 @@ fn stateless() {
 
     pub struct Outgoing<'a>(&'a mut Vec<u8>);
 
-    impl<'a> Drop for Outgoing<'a> {
+    impl Drop for Outgoing<'_> {
         fn drop(&mut self) {
             self.0.clear();
         }
     }
 
-    impl<'a> ::std::ops::Deref for Outgoing<'a> {
+    impl ::std::ops::Deref for Outgoing<'_> {
         type Target = [u8];
         fn deref(&self) -> &[u8] {
             self.0
         }
     }
 
-    impl<'a> AsRef<[u8]> for Outgoing<'a> {
+    impl AsRef<[u8]> for Outgoing<'_> {
         fn as_ref(&self) -> &[u8] {
             self.0
         }
