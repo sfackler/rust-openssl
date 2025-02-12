@@ -148,7 +148,7 @@ impl<'a> Encrypter<'a> {
     /// This corresponds to [`EVP_PKEY_CTX_set_rsa_oaep_md`].
     ///
     /// [`EVP_PKEY_CTX_set_rsa_oaep_md`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_set_rsa_oaep_md.html
-    #[cfg(any(ossl102, libressl310))]
+    #[cfg(any(ossl102, libressl310, boringssl))]
     pub fn set_rsa_oaep_md(&mut self, md: MessageDigest) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_oaep_md(
@@ -352,7 +352,7 @@ impl<'a> Decrypter<'a> {
     /// This corresponds to [`EVP_PKEY_CTX_set_rsa_oaep_md`].
     ///
     /// [`EVP_PKEY_CTX_set_rsa_oaep_md`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_set_rsa_oaep_md.html
-    #[cfg(any(ossl102, libressl310))]
+    #[cfg(any(ossl102, libressl310, boringssl))]
     pub fn set_rsa_oaep_md(&mut self, md: MessageDigest) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_oaep_md(

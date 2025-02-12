@@ -238,6 +238,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_192_cfb1() as *mut _) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn aes_192_cfb128() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_192_cfb128() as *mut _) }
     }
@@ -295,6 +296,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_256_cfb1() as *mut _) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn aes_256_cfb128() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_256_cfb128() as *mut _) }
     }
@@ -345,12 +347,12 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_bf_ecb() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_BF"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_BF", boringssl)))]
     pub fn bf_cfb64() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_bf_cfb64() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_BF"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_BF", boringssl)))]
     pub fn bf_ofb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_bf_ofb() as *mut _) }
     }
@@ -395,102 +397,102 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_rc4() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia128_cfb128() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_camellia_128_cfb128() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia128_ecb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_camellia_128_ecb() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia128_cbc() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_camellia_128_cbc() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia128_ofb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_camellia_128_ofb() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia192_cfb128() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_camellia_192_cfb128() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia192_ecb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_camellia_192_ecb() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia192_cbc() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_camellia_192_cbc() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia192_ofb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_camellia_192_ofb() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia256_cfb128() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_camellia_256_cfb128() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia256_ecb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_camellia_256_ecb() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia256_cbc() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_camellia_256_cbc() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia256_ofb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_camellia_256_ofb() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAST"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAST", boringssl)))]
     pub fn cast5_cfb64() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_cast5_cfb64() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAST"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAST", boringssl)))]
     pub fn cast5_ecb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_cast5_ecb() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAST"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAST", boringssl)))]
     pub fn cast5_cbc() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_cast5_cbc() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAST"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAST", boringssl)))]
     pub fn cast5_ofb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_cast5_ofb() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_IDEA", boringssl)))]
     pub fn idea_cfb64() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_idea_cfb64() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_IDEA", boringssl)))]
     pub fn idea_ecb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_idea_ecb() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_IDEA", boringssl)))]
     pub fn idea_cbc() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_idea_cbc() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_IDEA", boringssl)))]
     pub fn idea_ofb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_idea_ofb() as *mut _) }
     }
@@ -505,22 +507,22 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_chacha20_poly1305() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", boringssl)))]
     pub fn seed_cbc() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_seed_cbc() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", boringssl)))]
     pub fn seed_cfb128() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_seed_cfb128() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", boringssl)))]
     pub fn seed_ecb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_seed_ecb() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", boringssl)))]
     pub fn seed_ofb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_seed_ofb() as *mut _) }
     }

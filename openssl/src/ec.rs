@@ -195,7 +195,7 @@ impl EcGroupRef {
     /// a term in the polynomial.  It will be set to 3 `1`s or 5 `1`s depending on
     /// using a trinomial or pentanomial.
     #[corresponds(EC_GROUP_get_curve_GF2m)]
-    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_EC2M", boringssl)))]
     pub fn components_gf2m(
         &self,
         p: &mut BigNumRef,
@@ -586,7 +586,7 @@ impl EcPointRef {
     /// Places affine coordinates of a curve over a binary field in the provided
     /// `x` and `y` `BigNum`s
     #[corresponds(EC_POINT_get_affine_coordinates_GF2m)]
-    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_EC2M", boringssl)))]
     pub fn affine_coordinates_gf2m(
         &self,
         group: &EcGroupRef,
@@ -1008,6 +1008,20 @@ impl EcKey<Private> {
         private_key_from_der,
         EcKey<Private>,
         ffi::d2i_ECPrivateKey
+    }
+
+    /// Decodes a DER-encoded elliptic curve private key structure for the specified curve.
+    #[corresponds(EC_KEY_parse_private_key)]
+    #[cfg(boringssl)]
+    pub fn private_key_from_der_for_group(
+        der: &[u8],
+        group: &EcGroupRef,
+    ) -> Result<EcKey<Private>, ErrorStack> {
+        unsafe {
+            let mut cbs = ffi::CBS { data: der.as_ptr(), len: der.len() };
+            cvt_p(ffi::EC_KEY_parse_private_key(&mut cbs as *mut ffi::CBS, group.as_ptr()))
+                .map(|p| EcKey::from_ptr(p))
+        }
     }
 }
 

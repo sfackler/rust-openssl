@@ -114,6 +114,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_cfb1()) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn aes_128_cfb128() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_cfb128()) }
     }
@@ -159,6 +160,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_192_cfb1()) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn aes_192_cfb128() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_192_cfb128()) }
     }
@@ -209,6 +211,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_cfb1()) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn aes_256_cfb128() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_cfb128()) }
     }
@@ -247,12 +250,12 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_bf_ecb()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_BF"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_BF", boringssl)))]
     pub fn bf_cfb64() -> Cipher {
         unsafe { Cipher(ffi::EVP_bf_cfb64()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_BF"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_BF", boringssl)))]
     pub fn bf_ofb() -> Cipher {
         unsafe { Cipher(ffi::EVP_bf_ofb()) }
     }
@@ -297,82 +300,82 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_rc4()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia_128_cbc() -> Cipher {
         unsafe { Cipher(ffi::EVP_camellia_128_cbc()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia_128_ecb() -> Cipher {
         unsafe { Cipher(ffi::EVP_camellia_128_ecb()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia_128_ofb() -> Cipher {
         unsafe { Cipher(ffi::EVP_camellia_128_ofb()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia_128_cfb128() -> Cipher {
         unsafe { Cipher(ffi::EVP_camellia_128_cfb128()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia_192_cbc() -> Cipher {
         unsafe { Cipher(ffi::EVP_camellia_192_cbc()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia_192_ecb() -> Cipher {
         unsafe { Cipher(ffi::EVP_camellia_192_ecb()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia_192_ofb() -> Cipher {
         unsafe { Cipher(ffi::EVP_camellia_192_ofb()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia_192_cfb128() -> Cipher {
         unsafe { Cipher(ffi::EVP_camellia_192_cfb128()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia_256_cbc() -> Cipher {
         unsafe { Cipher(ffi::EVP_camellia_256_cbc()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia_256_ecb() -> Cipher {
         unsafe { Cipher(ffi::EVP_camellia_256_ecb()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia_256_ofb() -> Cipher {
         unsafe { Cipher(ffi::EVP_camellia_256_ofb()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAMELLIA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAMELLIA", boringssl)))]
     pub fn camellia_256_cfb128() -> Cipher {
         unsafe { Cipher(ffi::EVP_camellia_256_cfb128()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAST"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAST", boringssl)))]
     pub fn cast5_cbc() -> Cipher {
         unsafe { Cipher(ffi::EVP_cast5_cbc()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAST"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAST", boringssl)))]
     pub fn cast5_ecb() -> Cipher {
         unsafe { Cipher(ffi::EVP_cast5_ecb()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAST"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAST", boringssl)))]
     pub fn cast5_ofb() -> Cipher {
         unsafe { Cipher(ffi::EVP_cast5_ofb()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_CAST"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_CAST", boringssl)))]
     pub fn cast5_cfb64() -> Cipher {
         unsafe { Cipher(ffi::EVP_cast5_cfb64()) }
     }
@@ -389,42 +392,42 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_chacha20_poly1305()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_IDEA", boringssl)))]
     pub fn idea_cbc() -> Cipher {
         unsafe { Cipher(ffi::EVP_idea_cbc()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_IDEA", boringssl)))]
     pub fn idea_ecb() -> Cipher {
         unsafe { Cipher(ffi::EVP_idea_ecb()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_IDEA", boringssl)))]
     pub fn idea_ofb() -> Cipher {
         unsafe { Cipher(ffi::EVP_idea_ofb()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_IDEA", boringssl)))]
     pub fn idea_cfb64() -> Cipher {
         unsafe { Cipher(ffi::EVP_idea_cfb64()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", boringssl)))]
     pub fn seed_cbc() -> Cipher {
         unsafe { Cipher(ffi::EVP_seed_cbc()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", boringssl)))]
     pub fn seed_cfb128() -> Cipher {
         unsafe { Cipher(ffi::EVP_seed_cfb128()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", boringssl)))]
     pub fn seed_ecb() -> Cipher {
         unsafe { Cipher(ffi::EVP_seed_ecb()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", boringssl)))]
     pub fn seed_ofb() -> Cipher {
         unsafe { Cipher(ffi::EVP_seed_ofb()) }
     }

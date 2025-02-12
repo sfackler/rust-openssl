@@ -188,7 +188,7 @@ impl Md {
         unsafe { MdRef::from_ptr(ffi::EVP_shake256() as *mut _) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_RMD160"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_RMD160", boringssl)))]
     #[inline]
     pub fn ripemd160() -> &'static MdRef {
         unsafe { MdRef::from_ptr(ffi::EVP_ripemd160() as *mut _) }
