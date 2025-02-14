@@ -41,12 +41,16 @@
 //! ```
 #![allow(clippy::missing_safety_doc)]
 use crate::bio::{MemBio, MemBioSlice};
+#[cfg(ossl300)]
+use crate::bn::BigNumRef;
 #[cfg(ossl110)]
 use crate::cipher::CipherRef;
 use crate::dh::Dh;
 use crate::dsa::Dsa;
 use crate::ec::EcKey;
 use crate::error::ErrorStack;
+#[cfg(ossl300)]
+use crate::ossl_param::{OsslParam, OsslParamRef};
 #[cfg(any(ossl110, boringssl, libressl370))]
 use crate::pkey_ctx::PkeyCtx;
 use crate::rsa::Rsa;
@@ -55,6 +59,8 @@ use crate::util::{invoke_passwd_cb, CallbackState};
 use crate::{cvt, cvt_p};
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
+#[cfg(ossl300)]
+use libc::c_char;
 use libc::{c_int, c_long};
 use openssl_macros::corresponds;
 use std::convert::{TryFrom, TryInto};
@@ -206,6 +212,36 @@ impl<T> PKeyRef<T> {
     #[corresponds(EVP_PKEY_size)]
     pub fn size(&self) -> usize {
         unsafe { ffi::EVP_PKEY_size(self.as_ptr()) as usize }
+    }
+
+    /// Sets a `BigNum` parameter to the given `PKey`
+    #[corresponds(EVP_PKEY_set_bn_param)]
+    #[cfg(ossl300)]
+    pub fn set_bn_param(&mut self, key: &str, bn: &BigNumRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_set_bn_param(
+                self.as_ptr(),
+                key.as_ptr() as *const c_char,
+                bn.as_ptr(),
+            ))
+            .map(|_| ())?
+        }
+        Ok(())
+    }
+
+    /// Creates a new `OsslParam` from `PKey<T>`.
+    #[corresponds(EVP_PKEY_todata)]
+    #[cfg(ossl300)]
+    pub fn todata(&self, selection: c_int) -> Result<&OsslParamRef, ErrorStack> {
+        unsafe {
+            let mut params: *mut ffi::OSSL_PARAM = ptr::null_mut();
+            cvt(ffi::EVP_PKEY_todata(
+                self.as_ptr(),
+                selection as c_int,
+                &mut params,
+            ))?;
+            Ok(OsslParamRef::from_ptr(params))
+        }
     }
 }
 
@@ -759,6 +795,23 @@ impl PKey<Private> {
             .map(|p| PKey::from_ptr(p))
         }
     }
+
+    /// Creates a new `PKey<Private>` from `OsslParam`.
+    #[corresponds(EVP_PKEY_fromdata)]
+    #[cfg(ossl300)]
+    pub fn fromdata(ctx: PkeyCtx<()>, params: OsslParam) -> Result<PKey<Private>, ErrorStack> {
+        unsafe {
+            let evp = cvt_p(ffi::EVP_PKEY_new())?;
+            let pkey = PKey::from_ptr(evp);
+            cvt(ffi::EVP_PKEY_fromdata(
+                ctx.as_ptr(),
+                &mut pkey.as_ptr(),
+                ffi::EVP_PKEY_PRIVATE_KEY,
+                params.as_ptr(),
+            ))?;
+            Ok(pkey)
+        }
+    }
 }
 
 impl PKey<Public> {
@@ -808,6 +861,23 @@ impl PKey<Public> {
                 bytes.len(),
             ))
             .map(|p| PKey::from_ptr(p))
+        }
+    }
+
+    /// Creates a new `PKey<Public>` from `OsslParam`.
+    #[corresponds(EVP_PKEY_fromdata)]
+    #[cfg(ossl300)]
+    pub fn fromdata(ctx: PkeyCtx<()>, params: OsslParam) -> Result<PKey<Public>, ErrorStack> {
+        unsafe {
+            let evp = cvt_p(ffi::EVP_PKEY_new())?;
+            let pkey = PKey::from_ptr(evp);
+            cvt(ffi::EVP_PKEY_fromdata(
+                ctx.as_ptr(),
+                &mut pkey.as_ptr(),
+                ffi::EVP_PKEY_PUBLIC_KEY,
+                params.as_ptr(),
+            ))?;
+            Ok(pkey)
         }
     }
 }
