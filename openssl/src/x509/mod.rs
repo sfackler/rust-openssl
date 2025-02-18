@@ -43,6 +43,8 @@ use openssl_macros::corresponds;
 #[cfg(any(ossl102, boringssl, libressl261))]
 pub mod verify;
 
+pub mod sbgp;
+
 pub mod extension;
 pub mod store;
 

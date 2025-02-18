@@ -34,6 +34,9 @@ pub use self::thread::*;
 pub use self::tls1::*;
 pub use self::types::*;
 pub use self::x509::*;
+#[cfg(ossl110)]
+#[cfg(not(OPENSSL_NO_RFC3779))]
+pub use self::x509_sbgp::*;
 pub use self::x509_vfy::*;
 pub use self::x509v3::*;
 
@@ -73,5 +76,8 @@ mod thread;
 mod tls1;
 mod types;
 mod x509;
+#[cfg(ossl110)]
+#[cfg(not(OPENSSL_NO_RFC3779))]
+mod x509_sbgp;
 mod x509_vfy;
 mod x509v3;
