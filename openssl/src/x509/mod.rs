@@ -9,7 +9,7 @@
 
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
-use libc::{c_int, c_long, c_uint, c_void};
+use libc::{c_int, c_long, c_uchar, c_uint, c_void};
 use std::cmp::{self, Ordering};
 use std::convert::{TryFrom, TryInto};
 use std::error::Error;
@@ -533,6 +533,15 @@ impl X509Ref {
         }
     }
 
+    #[corresponds(X509_get_X509_PUBKEY)]
+    #[cfg(ossl110)]
+    pub fn x509_pubkey(&self) -> Result<&X509PubkeyRef, ErrorStack> {
+        unsafe {
+            let key = cvt_p(ffi::X509_get_X509_PUBKEY(self.as_ptr()))?;
+            Ok(X509PubkeyRef::from_ptr(key))
+        }
+    }
+
     /// Returns a digest of the DER representation of the certificate.
     #[corresponds(X509_digest)]
     pub fn digest(&self, hash_type: MessageDigest) -> Result<DigestBytes, ErrorStack> {
@@ -557,6 +566,27 @@ impl X509Ref {
     #[deprecated(since = "0.10.9", note = "renamed to digest")]
     pub fn fingerprint(&self, hash_type: MessageDigest) -> Result<Vec<u8>, ErrorStack> {
         self.digest(hash_type).map(|b| b.to_vec())
+    }
+
+    /// Returns a digest of the DER representation of the public key in the certificate.
+    #[corresponds(X509_pubkey_digest)]
+    pub fn pubkey_digest(&self, hash_type: MessageDigest) -> Result<DigestBytes, ErrorStack> {
+        unsafe {
+            let mut digest = DigestBytes {
+                buf: [0; ffi::EVP_MAX_MD_SIZE as usize],
+                len: ffi::EVP_MAX_MD_SIZE as usize,
+            };
+            let mut len = ffi::EVP_MAX_MD_SIZE as c_uint;
+            cvt(ffi::X509_pubkey_digest(
+                self.as_ptr(),
+                hash_type.as_ptr(),
+                digest.buf.as_mut_ptr() as *mut _,
+                &mut len,
+            ))?;
+            digest.len = len as usize;
+
+            Ok(digest)
+        }
     }
 
     /// Returns the certificate's Not After validity period.
@@ -1349,6 +1379,97 @@ impl fmt::Debug for X509NameEntryRef {
     }
 }
 
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::X509_PUBKEY;
+    fn drop = ffi::X509_PUBKEY_free;
+
+    /// The SubjectPublicKeyInfo of an `X509` certificate.
+    pub struct X509Pubkey;
+    /// Reference to `X509Pubkey`.
+    pub struct X509PubkeyRef;
+}
+
+impl X509Pubkey {
+    from_der! {
+        /// Deserializes a DER-encoded X509 SubjectPublicKeyInfo.
+        ///
+        /// This corresponds to [`d2i_X509_PUBKEY`].
+        ///
+        /// [`d2i_X509_PUBKEY`]: https://www.openssl.org/docs/manmaster/crypto/d2i_X509_PUBKEY.html
+        from_der,
+        X509Pubkey,
+        ffi::d2i_X509_PUBKEY
+    }
+
+    /// Build a X509Pubkey from the public key.
+    ///
+    /// This corresponds to [`X509_PUBKEY_set`].
+    ///
+    /// [`X509_PUBKEY_set`]: https://www.openssl.org/docs/manmaster/crypto/X509_PUBKEY_set.html
+    pub fn from_pubkey<T>(key: &PKeyRef<T>) -> Result<Self, ErrorStack>
+    where
+        T: HasPublic,
+    {
+        let mut p = ptr::null_mut();
+        unsafe {
+            cvt(ffi::X509_PUBKEY_set(&mut p as *mut _, key.as_ptr()))?;
+        }
+        Ok(X509Pubkey(p))
+    }
+}
+
+impl X509PubkeyRef {
+    /// Copies the X509 SubjectPublicKeyInfo to a new `X509Pubkey`.
+    #[corresponds(X509_PUBKEY_dup)]
+    #[cfg(ossl300)]
+    pub fn to_owned(&self) -> Result<X509Pubkey, ErrorStack> {
+        unsafe { cvt_p(ffi::X509_PUBKEY_dup(self.as_ptr())).map(|n| X509Pubkey::from_ptr(n)) }
+    }
+
+    to_der! {
+        /// Serializes the X509 SubjectPublicKeyInfo to DER-encoded.
+        ///
+        /// This corresponds to [`i2d_X509_PUBKEY`].
+        ///
+        /// [`i2d_X509_PUBKEY`]: https://www.openssl.org/docs/manmaster/crypto/i2d_X509_PUBKEY.html
+        to_der,
+        ffi::i2d_X509_PUBKEY
+    }
+
+    /// Returns the public key of the X509 SubjectPublicKeyInfo.
+    ///
+    /// This corresponds to [`X509_PUBKEY_get"]
+    ///
+    /// [`X509_PUBKEY_get`]: https://www.openssl.org/docs/manmaster/crypto/X509_PUBKEY_get.html
+    pub fn public_key(&self) -> Result<PKey<Public>, ErrorStack> {
+        unsafe {
+            let key = cvt_p(ffi::X509_PUBKEY_get(self.as_ptr()))?;
+            Ok(PKey::from_ptr(key))
+        }
+    }
+
+    /// Get the encoded bytes of the X509 SubjectPublicKeyInfo.
+    ///
+    /// This corresponds to ['X509_PUBKEY_get0_param']
+    ///
+    /// ['X509_PUBKEY_get0_param']: https://www.openssl.org/docs/man3.0/man3/X509_PUBKEY_get0_param.html
+    pub fn encoded_bytes(&self) -> Result<&[u8], ErrorStack> {
+        unsafe {
+            let mut pk = ptr::null_mut() as *const c_uchar;
+            let mut pkt_len: c_int = 0;
+            cvt(ffi::X509_PUBKEY_get0_param(
+                ptr::null_mut(),
+                &mut pk as *mut _,
+                &mut pkt_len as *mut _,
+                ptr::null_mut(),
+                self.as_ptr(),
+            ))?;
+
+            Ok(slice::from_raw_parts(pk, pkt_len as usize))
+        }
+    }
+}
+
 /// A builder used to construct an `X509Req`.
 pub struct X509ReqBuilder(X509Req);
 
@@ -1549,6 +1670,19 @@ impl X509ReqRef {
         unsafe {
             let key = cvt_p(ffi::X509_REQ_get_pubkey(self.as_ptr()))?;
             Ok(PKey::from_ptr(key))
+        }
+    }
+
+    /// Returns the X509Pubkey of the certificate request.
+    ///
+    /// This corresponds to [`X509_REQ_get_X509_PUBKEY"]
+    ///
+    /// [`X509_REQ_get_X509_PUBKEY`]: https://www.openssl.org/docs/manmaster/crypto/X509_REQ_get_X509_PUBKEY.html
+    #[cfg(ossl110)]
+    pub fn x509_pubkey(&self) -> Result<&X509PubkeyRef, ErrorStack> {
+        unsafe {
+            let key = cvt_p(ffi::X509_REQ_get_X509_PUBKEY(self.as_ptr()))?;
+            Ok(X509PubkeyRef::from_ptr(key))
         }
     }
 

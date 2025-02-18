@@ -360,6 +360,8 @@ pub enum X509_LOOKUP_METHOD {}
 
 pub enum X509_NAME {}
 
+pub enum X509_PUBKEY {}
+
 cfg_if! {
     if #[cfg(any(ossl110, libressl270))] {
         pub enum X509_STORE {}
