@@ -1009,6 +1009,29 @@ impl EcKey<Private> {
         EcKey<Private>,
         ffi::d2i_ECPrivateKey
     }
+
+    /// Decodes a DER-encoded elliptic curve private key structure for the specified curve.
+    #[corresponds(EC_KEY_parse_private_key)]
+    #[cfg(boringssl)]
+    pub fn private_key_from_der_for_group(
+        der: &[u8],
+        group: &EcGroupRef,
+    ) -> Result<EcKey<Private>, ErrorStack> {
+        unsafe {
+            let mut cbs = ffi::CBS {
+                data: der.as_ptr(),
+                len: der.len(),
+            };
+            let p = cvt_p(ffi::EC_KEY_parse_private_key(
+                &mut cbs as *mut ffi::CBS,
+                group.as_ptr(),
+            ))?;
+            if ffi::CBS_len(p) != 0 {
+                todo!()
+            }
+            Ok(EcKey::from_ptr(p))
+        }
+    }
 }
 
 impl<T> Clone for EcKey<T> {
