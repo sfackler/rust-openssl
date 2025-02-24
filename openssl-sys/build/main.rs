@@ -302,7 +302,7 @@ See rust-openssl documentation for more information:
         let openssl_prefix = "RUST_VERSION_OPENSSL_";
         let new_openssl_prefix = "RUST_VERSION_NEW_OPENSSL_";
         let libressl_prefix = "RUST_VERSION_LIBRESSL_";
-        let boringsl_prefix = "RUST_OPENSSL_IS_BORINGSSL";
+        let boringssl_prefix = "RUST_OPENSSL_IS_BORINGSSL";
         let conf_prefix = "RUST_CONF_";
         if let Some(version) = line.strip_prefix(openssl_prefix) {
             openssl_version = Some(parse_version(version));
@@ -312,7 +312,7 @@ See rust-openssl documentation for more information:
             libressl_version = Some(parse_version(version));
         } else if let Some(conf) = line.strip_prefix(conf_prefix) {
             enabled.push(conf);
-        } else if line.starts_with(boringsl_prefix) {
+        } else if line.starts_with(boringssl_prefix) {
             is_boringssl = true;
         }
     }
