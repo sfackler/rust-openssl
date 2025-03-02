@@ -6,7 +6,6 @@
     non_upper_case_globals,
     unused_imports
 )]
-#![cfg_attr(feature = "unstable_boringssl", allow(ambiguous_glob_reexports))]
 #![doc(html_root_url = "https://docs.rs/openssl-sys/0.9")]
 #![recursion_limit = "128"] // configure fixed limit across all rust versions
 
@@ -15,21 +14,19 @@ pub use libc::c_int;
 
 #[cfg(feature = "unstable_boringssl")]
 extern crate bssl_sys;
-#[cfg(feature = "unstable_boringssl")]
-pub use bssl_sys::*;
 
-#[cfg(all(boringssl, not(feature = "unstable_boringssl")))]
+#[cfg(boringssl)]
 #[path = "."]
 mod boringssl {
+    #[cfg(feature = "unstable_boringssl")]
+    pub use bssl_sys::*;
+    #[cfg(not(feature = "unstable_boringssl"))]
     include!(concat!(env!("OUT_DIR"), "/bindgen.rs"));
 
-    pub fn init() {
-        unsafe {
-            CRYPTO_library_init();
-        }
-    }
+    // BoringSSL does not require initialization.
+    pub fn init() {}
 }
-#[cfg(all(boringssl, not(feature = "unstable_boringssl")))]
+#[cfg(boringssl)]
 pub use boringssl::*;
 
 #[cfg(openssl)]
