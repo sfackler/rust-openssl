@@ -161,7 +161,7 @@ pub mod dsa;
 pub mod ec;
 pub mod ecdsa;
 pub mod encrypt;
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 pub mod envelope;
 pub mod error;
 pub mod ex_data;
@@ -179,7 +179,7 @@ pub mod nid;
 pub mod ocsp;
 pub mod pkcs12;
 pub mod pkcs5;
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 pub mod pkcs7;
 pub mod pkey;
 pub mod pkey_ctx;
@@ -197,14 +197,14 @@ pub mod symm;
 pub mod version;
 pub mod x509;
 
-#[cfg(boringssl)]
+#[cfg(any(boringssl, awslc))]
 type LenType = libc::size_t;
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 type LenType = libc::c_int;
 
-#[cfg(boringssl)]
+#[cfg(any(boringssl, awslc))]
 type SLenType = libc::ssize_t;
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 type SLenType = libc::c_int;
 
 #[inline]

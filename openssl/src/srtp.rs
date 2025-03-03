@@ -46,10 +46,10 @@ impl SrtpProfileId {
         SrtpProfileId(ffi::SRTP_AES128_F8_SHA1_32 as c_ulong);
     pub const SRTP_NULL_SHA1_80: SrtpProfileId = SrtpProfileId(ffi::SRTP_NULL_SHA1_80 as c_ulong);
     pub const SRTP_NULL_SHA1_32: SrtpProfileId = SrtpProfileId(ffi::SRTP_NULL_SHA1_32 as c_ulong);
-    #[cfg(any(boringssl, ossl110))]
+    #[cfg(any(boringssl, ossl110, awslc))]
     pub const SRTP_AEAD_AES_128_GCM: SrtpProfileId =
         SrtpProfileId(ffi::SRTP_AEAD_AES_128_GCM as c_ulong);
-    #[cfg(any(boringssl, ossl110))]
+    #[cfg(any(boringssl, ossl110, awslc))]
     pub const SRTP_AEAD_AES_256_GCM: SrtpProfileId =
         SrtpProfileId(ffi::SRTP_AEAD_AES_256_GCM as c_ulong);
 

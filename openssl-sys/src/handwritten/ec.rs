@@ -103,7 +103,7 @@ extern "C" {
 
     pub fn EC_POINT_dup(p: *const EC_POINT, group: *const EC_GROUP) -> *mut EC_POINT;
 
-    #[cfg(any(ossl111, boringssl, libressl350))]
+    #[cfg(any(ossl111, boringssl, libressl350, awslc))]
     pub fn EC_POINT_get_affine_coordinates(
         group: *const EC_GROUP,
         p: *const EC_POINT,

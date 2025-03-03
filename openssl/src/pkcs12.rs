@@ -6,7 +6,7 @@ use std::ffi::CString;
 use std::ptr;
 
 use crate::error::ErrorStack;
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 use crate::hash::MessageDigest;
 use crate::nid::Nid;
 use crate::pkey::{HasPrivate, PKey, PKeyRef, Private};
@@ -102,7 +102,7 @@ impl Pkcs12 {
             nid_cert: Nid::UNDEF,
             iter: ffi::PKCS12_DEFAULT_ITER,
             mac_iter: ffi::PKCS12_DEFAULT_ITER,
-            #[cfg(not(boringssl))]
+            #[cfg(not(any(boringssl, awslc)))]
             mac_md: None,
         }
     }
@@ -132,7 +132,7 @@ pub struct Pkcs12Builder {
     iter: c_int,
     mac_iter: c_int,
     // FIXME remove
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     mac_md: Option<MessageDigest>,
 }
 
@@ -194,7 +194,7 @@ impl Pkcs12Builder {
     }
 
     /// MAC message digest type
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn mac_md(&mut self, md: MessageDigest) -> &mut Self {
         self.mac_md = Some(md);
         self
@@ -257,7 +257,7 @@ impl Pkcs12Builder {
             ))
             .map(Pkcs12)?;
 
-            #[cfg(not(boringssl))]
+            #[cfg(not(any(boringssl, awslc)))]
             // BoringSSL does not support overriding the MAC and will always
             // use SHA-1
             {

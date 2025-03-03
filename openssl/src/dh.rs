@@ -269,7 +269,7 @@ where
 }
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl270, boringssl))] {
+    if #[cfg(any(ossl110, libressl270, boringssl, awslc))] {
         use ffi::{DH_set0_pqg, DH_get0_pqg, DH_get0_key, DH_set0_key};
     } else {
         #[allow(bad_style)]
@@ -334,7 +334,7 @@ cfg_if! {
 mod tests {
     use crate::bn::BigNum;
     use crate::dh::Dh;
-    #[cfg(all(not(boringssl), ossl110))]
+    #[cfg(all(not(any(boringssl, awslc)), ossl110))]
     use crate::pkey::PKey;
     use crate::ssl::{SslContext, SslMethod};
 
@@ -385,7 +385,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(all(not(boringssl), ossl110))]
+    #[cfg(all(not(any(boringssl, awslc)), ossl110))]
     fn test_from_dhx_serializes_q() {
         let p = BigNum::from_hex_str("00ad107e1e9123a9d0d660faa79559c51fa20d64e5683b9fd1b54b1597b61d0a75e6fa141df95a56dbaf9a3c407ba1df15eb3d688a309c180e1de6b85a1274a0a66d3f8152ad6ac2129037c9edefda4df8d91e8fef55b7394b7ad5b7d0b6c12207c9f98d11ed34dbf6c6ba0b2c8bbc27be6a00e0a0b9c49708b3bf8a317091883681286130bc8985db1602e714415d9330278273c7de31efdc7310f7121fd5a07415987d9adc0a486dcdf93acc44328387315d75e198c641a480cd86a1b9e587e8be60e69cc928b2b9c52172e413042e9b23f10b0e16e79763c9b53dcf4ba80a29e3fb73c16b8e75b97ef363e2ffa31f71cf9de5384e71b81c0ac4dffe0c10e64f").unwrap();
         let g = BigNum::from_hex_str("00ac4032ef4f2d9ae39df30b5c8ffdac506cdebe7b89998caf74866a08cfe4ffe3a6824a4e10b9a6f0dd921f01a70c4afaab739d7700c29f52c57db17c620a8652be5e9001a8d66ad7c17669101999024af4d027275ac1348bb8a762d0521bc98ae247150422ea1ed409939d54da7460cdb5f6c6b250717cbef180eb34118e98d119529a45d6f834566e3025e316a330efbb77a86f0c1ab15b051ae3d428c8f8acb70a8137150b8eeb10e183edd19963ddd9e263e4770589ef6aa21e7f5f2ff381b539cce3409d13cd566afbb48d6c019181e1bcfe94b30269edfe72fe9b6aa4bd7b5a0f1c71cfff4c19c418e1f6ec017981bc087f2a7065b384b890d3191f2bfa").unwrap();

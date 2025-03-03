@@ -8,7 +8,7 @@ foreign_type_and_impl_send_sync! {
     pub struct ConfRef;
 }
 
-#[cfg(not(any(boringssl, libressl400)))]
+#[cfg(not(any(boringssl, libressl400, awslc)))]
 mod methods {
     use super::Conf;
     use crate::cvt_p;
@@ -61,5 +61,5 @@ mod methods {
         }
     }
 }
-#[cfg(not(any(boringssl, libressl400)))]
+#[cfg(not(any(boringssl, libressl400, awslc)))]
 pub use methods::*;

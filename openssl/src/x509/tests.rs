@@ -6,21 +6,21 @@ use crate::hash::MessageDigest;
 use crate::nid::Nid;
 use crate::pkey::{PKey, Private};
 use crate::rsa::Rsa;
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 use crate::ssl::SslFiletype;
 use crate::stack::Stack;
 use crate::x509::extension::{
     AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, KeyUsage, SubjectAlternativeName,
     SubjectKeyIdentifier,
 };
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 use crate::x509::store::X509Lookup;
 use crate::x509::store::X509StoreBuilder;
-#[cfg(any(ossl102, boringssl, libressl261))]
+#[cfg(any(ossl102, boringssl, libressl261, awslc))]
 use crate::x509::verify::{X509VerifyFlags, X509VerifyParam};
-#[cfg(any(ossl102, boringssl))]
+#[cfg(any(ossl102, boringssl, awslc))]
 use crate::x509::X509PurposeId;
-#[cfg(any(ossl102, boringssl, libressl261))]
+#[cfg(any(ossl102, boringssl, libressl261, awslc))]
 use crate::x509::X509PurposeRef;
 #[cfg(ossl110)]
 use crate::x509::{CrlReason, X509Builder};
@@ -31,7 +31,7 @@ use crate::x509::{
 #[cfg(ossl110)]
 use foreign_types::ForeignType;
 use hex::{self, FromHex};
-#[cfg(any(ossl102, boringssl, libressl261))]
+#[cfg(any(ossl102, boringssl, libressl261, awslc))]
 use libc::time_t;
 
 use super::{AuthorityInformationAccess, CertificateIssuer, ReasonCode};
@@ -58,10 +58,10 @@ fn test_debug() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
     let debugged = format!("{:#?}", cert);
-    #[cfg(boringssl)]
-    assert!(debugged.contains(r#"serial_number: "8771f7bdee982fa5""#));
-    #[cfg(not(boringssl))]
-    assert!(debugged.contains(r#"serial_number: "8771F7BDEE982FA5""#));
+    assert!(
+        debugged.contains(r#"serial_number: "8771F7BDEE982FA5""#)
+            || debugged.contains(r#"serial_number: "8771f7bdee982fa5""#)
+    );
     assert!(debugged.contains(r#"signature_algorithm: sha256WithRSAEncryption"#));
     assert!(debugged.contains(r#"countryName = "AU""#));
     assert!(debugged.contains(r#"stateOrProvinceName = "Some-State""#));
@@ -172,7 +172,7 @@ fn test_subject_alt_name() {
 }
 
 #[test]
-#[cfg(any(ossl110, boringssl))]
+#[cfg(any(ossl110, boringssl, awslc))]
 fn test_retrieve_pathlen() {
     let cert = include_bytes!("../../test/root-ca.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -188,7 +188,7 @@ fn test_retrieve_pathlen() {
 }
 
 #[test]
-#[cfg(any(ossl110, boringssl))]
+#[cfg(any(ossl110, boringssl, awslc))]
 fn test_subject_key_id() {
     let cert = include_bytes!("../../test/certv3.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -201,7 +201,7 @@ fn test_subject_key_id() {
 }
 
 #[test]
-#[cfg(any(ossl110, boringssl))]
+#[cfg(any(ossl110, boringssl, awslc))]
 fn test_authority_key_id() {
     let cert = include_bytes!("../../test/certv3.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -557,7 +557,7 @@ fn test_verify_fails() {
 }
 
 #[test]
-#[cfg(any(ossl102, boringssl, libressl261))]
+#[cfg(any(ossl102, boringssl, libressl261, awslc))]
 fn test_verify_fails_with_crl_flag_set_and_no_crl() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -584,7 +584,7 @@ fn test_verify_fails_with_crl_flag_set_and_no_crl() {
 }
 
 #[test]
-#[cfg(any(ossl102, boringssl, libressl261))]
+#[cfg(any(ossl102, boringssl, libressl261, awslc))]
 fn test_verify_cert_with_purpose() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -611,7 +611,7 @@ fn test_verify_cert_with_purpose() {
 }
 
 #[test]
-#[cfg(any(ossl102, boringssl, libressl261))]
+#[cfg(any(ossl102, boringssl, libressl261, awslc))]
 fn test_verify_cert_with_wrong_purpose_fails() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -836,7 +836,7 @@ fn test_name_cmp() {
 }
 
 #[test]
-#[cfg(any(boringssl, ossl110, libressl270))]
+#[cfg(any(boringssl, ossl110, libressl270, awslc))]
 fn test_name_to_owned() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -846,7 +846,7 @@ fn test_name_to_owned() {
 }
 
 #[test]
-#[cfg(any(ossl102, boringssl, libressl261))]
+#[cfg(any(ossl102, boringssl, libressl261, awslc))]
 fn test_verify_param_set_time_fails_verification() {
     const TEST_T_2030: time_t = 1893456000;
 
@@ -877,7 +877,7 @@ fn test_verify_param_set_time_fails_verification() {
 }
 
 #[test]
-#[cfg(any(ossl102, boringssl, libressl261))]
+#[cfg(any(ossl102, boringssl, libressl261, awslc))]
 fn test_verify_param_set_time() {
     const TEST_T_2020: time_t = 1577836800;
 
@@ -901,7 +901,7 @@ fn test_verify_param_set_time() {
 }
 
 #[test]
-#[cfg(any(ossl102, boringssl, libressl261))]
+#[cfg(any(ossl102, boringssl, libressl261, awslc))]
 fn test_verify_param_set_depth() {
     let cert = include_bytes!("../../test/leaf.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -928,7 +928,7 @@ fn test_verify_param_set_depth() {
 }
 
 #[test]
-#[cfg(any(ossl102, boringssl, libressl261))]
+#[cfg(any(ossl102, boringssl, libressl261, awslc))]
 #[allow(clippy::bool_to_int_with_if)]
 fn test_verify_param_set_depth_fails_verification() {
     let cert = include_bytes!("../../test/leaf.pem");
@@ -944,7 +944,11 @@ fn test_verify_param_set_depth_fails_verification() {
     store_bldr.add_cert(ca).unwrap();
     let mut verify_params = X509VerifyParam::new().unwrap();
     // OpenSSL 1.1.0+ considers the root certificate to not be part of the chain, while 1.0.2 and LibreSSL do
-    let expected_depth = if cfg!(any(ossl110, boringssl)) { 0 } else { 1 };
+    let expected_depth = if cfg!(any(ossl110, boringssl, awslc)) {
+        0
+    } else {
+        1
+    };
     verify_params.set_depth(expected_depth);
     store_bldr.set_param(&verify_params).unwrap();
     let store = store_bldr.build();
@@ -970,7 +974,7 @@ fn test_verify_param_set_depth_fails_verification() {
 }
 
 #[test]
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 fn test_load_cert_file() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -1003,7 +1007,7 @@ fn test_verify_param_auth_level() {
 }
 
 #[test]
-#[cfg(any(ossl102, boringssl))]
+#[cfg(any(ossl102, boringssl, awslc))]
 fn test_set_purpose() {
     let cert = include_bytes!("../../test/leaf.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -1028,7 +1032,7 @@ fn test_set_purpose() {
 }
 
 #[test]
-#[cfg(any(ossl102, boringssl))]
+#[cfg(any(ossl102, boringssl, awslc))]
 fn test_set_purpose_fails_verification() {
     let cert = include_bytes!("../../test/leaf.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -1081,7 +1085,7 @@ fn test_add_name_entry() {
 }
 
 #[test]
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 fn test_load_crl_file_fail() {
     let mut store_bldr = X509StoreBuilder::new().unwrap();
     let lookup = store_bldr.add_lookup(X509Lookup::file()).unwrap();
