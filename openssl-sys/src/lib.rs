@@ -42,6 +42,8 @@ mod openssl {
     pub use self::bio::*;
     pub use self::bn::*;
     pub use self::cms::*;
+    #[cfg(ossl300)]
+    pub use self::core_dispatch::*;
     pub use self::crypto::*;
     pub use self::dtls1::*;
     pub use self::ec::*;
@@ -72,6 +74,8 @@ mod openssl {
     mod bio;
     mod bn;
     mod cms;
+    #[cfg(ossl300)]
+    mod core_dispatch;
     mod crypto;
     mod dtls1;
     mod ec;
