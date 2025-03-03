@@ -23,7 +23,11 @@
 //! # Examples
 
 #![cfg_attr(
-    all(not(boringssl), not(awslc), not(osslconf = "OPENSSL_NO_DEPRECATED_3_0")),
+    all(
+        not(boringssl),
+        not(awslc),
+        not(osslconf = "OPENSSL_NO_DEPRECATED_3_0")
+    ),
     doc = r#"\
 ## AES IGE
 ```rust

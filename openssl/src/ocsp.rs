@@ -169,7 +169,7 @@ impl OcspBasicResponseRef {
                 self.as_ptr(),
                 certs.as_ptr(),
                 store.as_ptr(),
-                flags.bits().try_into().map_err(|_|ErrorStack::get())?,
+                flags.bits().try_into().map_err(|_| ErrorStack::get())?,
             ))
             .map(|_| ())
         }

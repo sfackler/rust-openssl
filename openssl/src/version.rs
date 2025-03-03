@@ -119,7 +119,7 @@ fn test_versions() {
     fn expected_name() -> &'static str {
         "LibreSSL"
     }
-    #[cfg(any(boringssl))]
+    #[cfg(boringssl)]
     fn expected_name() -> &'static str {
         "BoringSSL"
     }
