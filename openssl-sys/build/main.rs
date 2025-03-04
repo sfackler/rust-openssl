@@ -79,6 +79,15 @@ fn check_ssl_kind() {
         println!("cargo:rustc-cfg=awslc");
         println!("cargo:awslc=true");
 
+        // The aws-lc-sys and aws-lc-fips-sys crate use a link name that embeds
+        // the version number of crate. Examples (crate-name => links name):
+        //   * aws-lc-sys => aws_lc_0_26_0
+        //   * aws-lc-fips-sys => aws_lc_fips_0_13_3
+        // This is done to avoid issues if the cargo dependency graph for an application
+        // were to resolve to multiple versions for the same crate.
+        //
+        // Due to this we need to determine what version of the AWS-LC has been selected (fips or non-fips)
+        // and then need to parse out the pieces we are interested in ignoring the version componenet of the name.
         let env_var_prefix = match (is_aws_lc, is_aws_lc_fips) {
             (true, false) => "DEP_AWS_LC_",
             (false, true) => "DEP_AWS_LC_FIPS_",
@@ -98,6 +107,7 @@ fn check_ssl_kind() {
         }
         let version = version.expect("aws-lc version detected");
 
+        // Read the OpenSSL configuration statements and emit rust-cfg for each.
         if let Ok(vars) = std::env::var(format!("{env_var_prefix}{version}_CONF")) {
             for var in vars.split(',') {
                 println!("cargo:rustc-cfg=osslconf=\"{var}\"");
@@ -105,6 +115,8 @@ fn check_ssl_kind() {
             println!("cargo:conf={vars}");
         }
 
+        // Emit the include header directory from the aws-lc(-fips)-sys crate so that it can be used if needed
+        // by crates consuming openssl-sys.
         if let Ok(val) = std::env::var(format!("{env_var_prefix}{version}_INCLUDE")) {
             println!("cargo:include={val}");
         }
