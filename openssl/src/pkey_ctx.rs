@@ -148,7 +148,7 @@ impl<T> PkeyCtx<T> {
 
 impl PkeyCtx<()> {
     /// Creates a new pkey context for the specified algorithm ID.
-    #[corresponds(EVP_PKEY_new_id)]
+    #[corresponds(EVP_PKEY_CTX_new_id)]
     #[inline]
     pub fn new_id(id: Id) -> Result<Self, ErrorStack> {
         unsafe {
