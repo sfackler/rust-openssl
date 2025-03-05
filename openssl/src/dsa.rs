@@ -7,7 +7,7 @@
 
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 use libc::c_int;
 use std::fmt;
 use std::mem;
@@ -186,9 +186,9 @@ where
         }
     }
 }
-#[cfg(boringssl)]
+#[cfg(any(boringssl, awslc))]
 type BitType = libc::c_uint;
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 type BitType = c_int;
 
 impl Dsa<Params> {
@@ -315,7 +315,7 @@ impl<T> fmt::Debug for Dsa<T> {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl273, boringssl))] {
+    if #[cfg(any(ossl110, libressl273, boringssl, awslc))] {
         use ffi::{DSA_get0_key, DSA_get0_pqg, DSA_set0_key, DSA_set0_pqg};
     } else {
         #[allow(bad_style)]
@@ -494,7 +494,7 @@ impl DsaSigRef {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl273, boringssl))] {
+    if #[cfg(any(ossl110, libressl273, boringssl, awslc))] {
         use ffi::{DSA_SIG_set0, DSA_SIG_get0};
     } else {
         #[allow(bad_style)]
@@ -533,11 +533,11 @@ cfg_if! {
 mod test {
     use super::*;
     use crate::bn::BigNumContext;
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     use crate::hash::MessageDigest;
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     use crate::pkey::PKey;
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     use crate::sign::{Signer, Verifier};
 
     #[test]
@@ -607,7 +607,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_signature() {
         const TEST_DATA: &[u8] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         let dsa_ref = Dsa::generate(1024).unwrap();
@@ -648,7 +648,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_signature_der() {
         use std::convert::TryInto;
 

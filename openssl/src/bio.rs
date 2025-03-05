@@ -67,14 +67,14 @@ impl MemBio {
         }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub unsafe fn from_ptr(bio: *mut ffi::BIO) -> MemBio {
         MemBio(bio)
     }
 }
 
 cfg_if! {
-    if #[cfg(any(ossl102, boringssl))] {
+    if #[cfg(any(ossl102, boringssl, awslc))] {
         use ffi::BIO_new_mem_buf;
     } else {
         #[allow(bad_style)]

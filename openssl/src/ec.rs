@@ -30,7 +30,7 @@ use crate::{cvt, cvt_n, cvt_p, init};
 use openssl_macros::corresponds;
 
 cfg_if! {
-    if #[cfg(not(boringssl))] {
+    if #[cfg(not(any(boringssl, awslc)))] {
         use std::ffi::CString;
         use crate::string::OpensslString;
     }
@@ -473,7 +473,7 @@ impl EcPointRef {
 
     /// Serializes the point to a hexadecimal string representation.
     #[corresponds(EC_POINT_point2hex)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn to_hex_str(
         &self,
         group: &EcGroupRef,
@@ -519,7 +519,7 @@ impl EcPointRef {
     /// Places affine coordinates of a curve over a prime field in the provided
     /// `x` and `y` `BigNum`s.
     #[corresponds(EC_POINT_get_affine_coordinates)]
-    #[cfg(any(ossl111, boringssl, libressl350))]
+    #[cfg(any(ossl111, boringssl, libressl350, awslc))]
     pub fn affine_coordinates(
         &self,
         group: &EcGroupRef,
@@ -662,7 +662,7 @@ impl EcPoint {
 
     /// Creates point from a hexadecimal string representation
     #[corresponds(EC_POINT_hex2point)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn from_hex_str(
         group: &EcGroupRef,
         s: &str,
@@ -1171,7 +1171,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn point_hex_str() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let key = EcKey::generate(&group).unwrap();
@@ -1260,7 +1260,7 @@ mod test {
         assert!(ec_key.check_key().is_ok());
     }
 
-    #[cfg(any(ossl111, boringssl, libressl350))]
+    #[cfg(any(ossl111, boringssl, libressl350, awslc))]
     #[test]
     fn get_affine_coordinates() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
@@ -1336,7 +1336,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(any(boringssl, ossl111, libressl350))]
+    #[cfg(any(boringssl, ossl111, libressl350, awslc))]
     fn asn1_flag() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let flag = group.asn1_flag();

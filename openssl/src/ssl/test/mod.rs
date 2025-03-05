@@ -17,7 +17,7 @@ use std::time::Duration;
 use crate::dh::Dh;
 use crate::error::ErrorStack;
 use crate::hash::MessageDigest;
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 use crate::ocsp::{OcspResponse, OcspResponseStatus};
 use crate::pkey::{Id, PKey};
 use crate::srtp::SrtpProfileId;
@@ -264,7 +264,7 @@ fn set_ctx_options() {
 }
 
 #[test]
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 fn clear_ctx_options() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_options(SslOptions::ALL);
@@ -309,17 +309,19 @@ fn pending() {
 
 #[test]
 fn state() {
+    const EXPECTED_STATE_STRING_LONG: &str = "SSL negotiation finished successfully";
+
     let server = Server::builder().build();
 
     let s = server.client().connect();
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     assert_eq!(s.ssl().state_string().trim(), "SSLOK");
     #[cfg(boringssl)]
     assert_eq!(s.ssl().state_string(), "!!!!!!");
-    assert_eq!(
-        s.ssl().state_string_long(),
-        "SSL negotiation finished successfully"
-    );
+    #[cfg(awslc)]
+    assert_eq!(s.ssl().state_string(), EXPECTED_STATE_STRING_LONG);
+
+    assert_eq!(s.ssl().state_string_long(), EXPECTED_STATE_STRING_LONG);
 }
 
 // when a connection uses ECDHE P-384 key exchange, then the temp key APIs
@@ -502,7 +504,7 @@ fn test_connect_with_srtp_ssl() {
 /// Tests that when the `SslStream` is created as a server stream, the protocols
 /// are correctly advertised to the client.
 #[test]
-#[cfg(any(ossl102, libressl261, boringssl))]
+#[cfg(any(ossl102, libressl261, boringssl, awslc))]
 fn test_alpn_server_advertise_multiple() {
     let mut server = Server::builder();
     server.ctx().set_alpn_select_callback(|_, client| {
@@ -517,7 +519,7 @@ fn test_alpn_server_advertise_multiple() {
 }
 
 #[test]
-#[cfg(any(ossl110, boringssl))]
+#[cfg(any(ossl110, boringssl, awslc))]
 fn test_alpn_server_select_none_fatal() {
     let mut server = Server::builder();
     server.ctx().set_alpn_select_callback(|_, client| {
@@ -533,7 +535,7 @@ fn test_alpn_server_select_none_fatal() {
 }
 
 #[test]
-#[cfg(any(ossl102, libressl261, boringssl))]
+#[cfg(any(ossl102, libressl261, boringssl, awslc))]
 fn test_alpn_server_select_none() {
     static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
@@ -552,7 +554,7 @@ fn test_alpn_server_select_none() {
 }
 
 #[test]
-#[cfg(any(boringssl, ossl102, libressl261))]
+#[cfg(any(boringssl, ossl102, libressl261, awslc))]
 fn test_alpn_server_unilateral() {
     let server = Server::builder().build();
 
@@ -967,7 +969,7 @@ fn cert_store() {
 }
 
 #[test]
-#[cfg_attr(any(all(libressl321, not(libressl340)), boringssl), ignore)]
+#[cfg_attr(any(all(libressl321, not(libressl340)), boringssl, awslc), ignore)]
 fn tmp_dh_callback() {
     static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
@@ -1015,7 +1017,7 @@ fn tmp_ecdh_callback() {
 }
 
 #[test]
-#[cfg_attr(any(all(libressl321, not(libressl340)), boringssl), ignore)]
+#[cfg_attr(any(all(libressl321, not(libressl340)), boringssl, awslc), ignore)]
 fn tmp_dh_callback_ssl() {
     static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
@@ -1094,7 +1096,7 @@ fn active_session() {
 }
 
 #[test]
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 fn status_callbacks() {
     static CALLED_BACK_SERVER: AtomicBool = AtomicBool::new(false);
     static CALLED_BACK_CLIENT: AtomicBool = AtomicBool::new(false);
@@ -1460,7 +1462,7 @@ fn psk_ciphers() {
 
     let mut client = server.client();
     // This test relies on TLS 1.2 suites
-    #[cfg(any(boringssl, ossl111))]
+    #[cfg(any(boringssl, ossl111, awslc))]
     client.ctx().set_options(super::SslOptions::NO_TLSV1_3);
     client.ctx().set_cipher_list(CIPHER).unwrap();
     client

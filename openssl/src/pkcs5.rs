@@ -1,13 +1,13 @@
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 use libc::c_int;
 use std::convert::TryInto;
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 use std::ptr;
 
 use crate::cvt;
 use crate::error::ErrorStack;
 use crate::hash::MessageDigest;
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 use crate::symm::Cipher;
 use openssl_macros::corresponds;
 
@@ -29,7 +29,7 @@ pub struct KeyIvPair {
 /// `pbkdf2_hmac` or another more modern key derivation algorithm.
 #[corresponds(EVP_BytesToKey)]
 #[allow(clippy::useless_conversion)]
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 pub fn bytes_to_key(
     cipher: Cipher,
     digest: MessageDigest,
@@ -115,7 +115,7 @@ pub fn pbkdf2_hmac(
 ///
 /// Requires OpenSSL 1.1.0 or newer.
 #[corresponds(EVP_PBE_scrypt)]
-#[cfg(all(any(ossl110, boringssl), not(osslconf = "OPENSSL_NO_SCRYPT")))]
+#[cfg(all(any(ossl110, boringssl, awslc), not(osslconf = "OPENSSL_NO_SCRYPT")))]
 #[allow(clippy::useless_conversion)]
 pub fn scrypt(
     pass: &[u8],
@@ -147,7 +147,7 @@ pub fn scrypt(
 #[cfg(test)]
 mod tests {
     use crate::hash::MessageDigest;
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     use crate::symm::Cipher;
 
     // Test vectors from
@@ -249,7 +249,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn bytes_to_key() {
         let salt = [16_u8, 34_u8, 19_u8, 23_u8, 141_u8, 4_u8, 207_u8, 221_u8];
 
@@ -286,7 +286,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(any(ossl110, boringssl))]
+    #[cfg(any(ossl110, boringssl, awslc))]
     fn scrypt() {
         let pass = "pleaseletmein";
         let salt = "SodiumChloride";
