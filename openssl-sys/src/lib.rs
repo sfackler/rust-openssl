@@ -29,20 +29,27 @@ mod boringssl {
 #[cfg(boringssl)]
 pub use boringssl::*;
 
-#[cfg(any(feature = "aws-lc", feature = "aws-lc-fips-sys"))]
-mod aws_lc {
-    #[cfg(feature = "aws-lc-fips")]
-    extern crate aws_lc_fips_sys as aws_lc;
-    #[cfg(feature = "aws-lc")]
-    extern crate aws_lc_sys as aws_lc;
-    pub use aws_lc::*;
+#[cfg(feature = "aws-lc-fips")]
+extern crate aws_lc_fips_sys;
+#[cfg(feature = "aws-lc")]
+extern crate aws_lc_sys;
 
-    // TODO: AWS-LC doesn't currently expose this in it's public headers
-    extern "C" {
-        pub fn OCSP_ONEREQ_free(r: *mut OCSP_ONEREQ);
-    }
+#[cfg(awslc)]
+#[path = "."]
+mod aws_lc {
+    #[cfg(feature = "aws-lc")]
+    pub use aws_lc_sys::*;
+
+    #[cfg(feature = "aws-lc-fips-sys")]
+    pub use aws_lc_fips_sys::*;
+
+    #[cfg(not(any(feature = "aws-lc", feature = "aws-lc-fips-sys")))]
+    include!(concat!(env!("OUT_DIR"), "/bindgen.rs"));
+
+    // AWS-LC does not require initialization.
+    pub fn init() {}
 }
-#[cfg(any(feature = "aws-lc", feature = "aws-lc-fips-sys"))]
+#[cfg(awslc)]
 pub use aws_lc::*;
 
 #[cfg(openssl)]
