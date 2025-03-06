@@ -186,6 +186,8 @@ pub mod pkcs7;
 pub mod pkey;
 pub mod pkey_ctx;
 #[cfg(ossl300)]
+pub mod pkey_ecdsa;
+#[cfg(ossl300)]
 pub mod pkey_rsa;
 #[cfg(ossl300)]
 pub mod provider;
