@@ -74,32 +74,24 @@ fn check_ssl_kind() {
     }
 
     let is_aws_lc = cfg!(feature = "aws-lc");
-    let is_aws_lc_fips = cfg!(feature = "aws-lc-fips");
 
-    if is_aws_lc || is_aws_lc_fips {
+    if is_aws_lc {
         println!("cargo:rustc-cfg=awslc");
         println!("cargo:awslc=true");
 
-        // The aws-lc-sys and aws-lc-fips-sys crate use a link name that embeds
+        // The aws-lc-sys crate uses a link name that embeds
         // the version number of crate. Examples (crate-name => links name):
         //   * aws-lc-sys => aws_lc_0_26_0
-        //   * aws-lc-fips-sys => aws_lc_fips_0_13_3
         // This is done to avoid issues if the cargo dependency graph for an application
         // were to resolve to multiple versions for the same crate.
         //
         // Due to this we need to determine what version of the AWS-LC has been selected (fips or non-fips)
         // and then need to parse out the pieces we are interested in ignoring the version componenet of the name.
-        let env_var_prefix = match (is_aws_lc, is_aws_lc_fips) {
-            (true, false) => "DEP_AWS_LC_",
-            (false, true) => "DEP_AWS_LC_FIPS_",
-            _ => {
-                panic!("aws-lc and aws-lc-fips are mutually exclusive features!");
-            }
-        };
+        const AWS_LC_ENV_VAR_PREFIX: &str = "DEP_AWS_LC_";
 
         let mut version = None;
         for (name, _) in std::env::vars() {
-            if let Some(name) = name.strip_prefix(env_var_prefix) {
+            if let Some(name) = name.strip_prefix(AWS_LC_ENV_VAR_PREFIX) {
                 if let Some(name) = name.strip_suffix("_INCLUDE") {
                     version = Some(name.to_owned());
                     break;
@@ -109,7 +101,7 @@ fn check_ssl_kind() {
         let version = version.expect("aws-lc version detected");
 
         // Read the OpenSSL configuration statements and emit rust-cfg for each.
-        if let Ok(vars) = std::env::var(format!("{env_var_prefix}{version}_CONF")) {
+        if let Ok(vars) = std::env::var(format!("{AWS_LC_ENV_VAR_PREFIX}{version}_CONF")) {
             for var in vars.split(',') {
                 println!("cargo:rustc-cfg=osslconf=\"{var}\"");
             }
@@ -118,7 +110,7 @@ fn check_ssl_kind() {
 
         // Emit the include header directory from the aws-lc(-fips)-sys crate so that it can be used if needed
         // by crates consuming openssl-sys.
-        if let Ok(val) = std::env::var(format!("{env_var_prefix}{version}_INCLUDE")) {
+        if let Ok(val) = std::env::var(format!("{AWS_LC_ENV_VAR_PREFIX}{version}_INCLUDE")) {
             println!("cargo:include={val}");
         }
 
@@ -355,6 +347,7 @@ See rust-openssl documentation for more information:
     let mut libressl_version = None;
     let mut is_boringssl = false;
     let mut is_awslc = false;
+    let mut bindgen_symbol_prefix: Option<String> = None;
     for line in expanded.lines() {
         let line = line.trim();
 
@@ -364,6 +357,7 @@ See rust-openssl documentation for more information:
         let boringssl_prefix = "RUST_OPENSSL_IS_BORINGSSL";
         let awslc_prefix = "RUST_OPENSSL_IS_AWSLC";
         let conf_prefix = "RUST_CONF_";
+        let symbol_prefix = "RUST_BINDGEN_SYMBOL_PREFIX_";
         if let Some(version) = line.strip_prefix(openssl_prefix) {
             openssl_version = Some(parse_version(version));
         } else if let Some(version) = line.strip_prefix(new_openssl_prefix) {
@@ -376,6 +370,9 @@ See rust-openssl documentation for more information:
             is_boringssl = true;
         } else if line.starts_with(awslc_prefix) {
             is_awslc = true;
+        } else if line.starts_with(symbol_prefix) {
+            let sym_prefix = String::from(line.strip_prefix(symbol_prefix).unwrap());
+            bindgen_symbol_prefix = Some(sym_prefix);
         }
     }
 
@@ -394,7 +391,7 @@ See rust-openssl documentation for more information:
     if is_awslc {
         println!("cargo:rustc-cfg=awslc");
         println!("cargo:awslc=true");
-        run_bindgen::run_awslc(include_dirs);
+        run_bindgen::run_awslc(include_dirs, bindgen_symbol_prefix);
         return Version::AwsLc;
     }
 

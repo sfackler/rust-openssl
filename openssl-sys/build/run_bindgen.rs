@@ -222,7 +222,33 @@ pub fn run_boringssl(include_dirs: &[PathBuf]) {
 }
 
 #[cfg(feature = "bindgen")]
-pub fn run_awslc(include_dirs: &[PathBuf]) {
+mod bindgen_options {
+    use bindgen::callbacks::{ItemInfo, ParseCallbacks};
+
+    #[derive(Debug)]
+    pub struct StripPrefixCallback {
+        remove_prefix: Option<String>,
+    }
+
+    impl StripPrefixCallback {
+        pub fn new(prefix: &str) -> StripPrefixCallback {
+            StripPrefixCallback {
+                remove_prefix: Some(prefix.to_string()),
+            }
+        }
+    }
+
+    impl ParseCallbacks for StripPrefixCallback {
+        fn generated_name_override(&self, item_info: ItemInfo<'_>) -> Option<String> {
+            self.remove_prefix
+                .as_ref()
+                .and_then(|s| item_info.name.strip_prefix(s.as_str()).map(String::from))
+        }
+    }
+}
+
+#[cfg(feature = "bindgen")]
+pub fn run_awslc(include_dirs: &[PathBuf], symbol_prefix: Option<String>) {
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
 
     fs::File::create(out_dir.join("awslc_static_wrapper.h"))
@@ -242,12 +268,13 @@ pub fn run_awslc(include_dirs: &[PathBuf]) {
         .wrap_static_fns(true)
         .wrap_static_fns_path(out_dir.join("awslc_static_wrapper").display().to_string())
         .layout_tests(false)
-        .header(
-            out_dir
-                .join("awslc_static_wrapper.h")
-                .display()
-                .to_string(),
-        );
+        .header(out_dir.join("awslc_static_wrapper.h").display().to_string());
+
+    if let Some(prefix) = symbol_prefix {
+        use bindgen_options::StripPrefixCallback;
+        let callback = StripPrefixCallback::new(prefix.as_str());
+        builder = builder.parse_callbacks(Box::from(callback));
+    }
 
     for include_dir in include_dirs {
         builder = builder
@@ -268,7 +295,12 @@ pub fn run_awslc(include_dirs: &[PathBuf]) {
 }
 
 #[cfg(not(feature = "bindgen"))]
-pub fn run_awslc(include_dirs: &[PathBuf]) {
+pub fn run_awslc(include_dirs: &[PathBuf], symbol_prefix: Option<String>) {
+    if symbol_prefix.is_some() {
+        panic!("aws-lc installation has prefixed symbols, but bindgen-cli does not support removing prefixes. \
+        Enable the bindgen crate feature to support this installation.")
+    }
+
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
 
     fs::File::create(out_dir.join("awslc_static_wrapper.h"))
@@ -290,7 +322,6 @@ pub fn run_awslc(include_dirs: &[PathBuf]) {
         .arg("--default-macro-constant-type=signed")
         .arg("--rustified-enum=point_conversion_form_t")
         .arg(r"--allowlist-file=.*(/|\\)openssl((/|\\)[^/\\]+)+\.h")
-        .arg("--experimental")
         .arg("--wrap-static-fns")
         .arg("--wrap-static-fns-path")
         .arg(out_dir.join("awslc_static_wrapper").display().to_string())
