@@ -632,7 +632,12 @@ impl Crypter {
         ctx.set_key_length(key.len())?;
 
         if let (Some(iv), Some(iv_len)) = (iv, t.iv_len()) {
-            if iv.len() != iv_len {
+            if iv.len() != iv_len
+                || matches!(
+                    t.nid(),
+                    Nid::AES_128_CCM | Nid::AES_192_CCM | Nid::AES_256_CCM
+                )
+            {
                 ctx.set_iv_length(iv.len())?;
             }
         }
@@ -1538,6 +1543,35 @@ mod tests {
         )
         .unwrap();
         assert_eq!(pt, hex::encode(out));
+    }
+
+    #[test]
+    #[cfg(not(boringssl))]
+    fn test_aes256_ccm_12_byte_nonce() {
+        // This tests that using an IV with the recommended length of 12 bytes
+        // works as expected.
+        let cipher = Cipher::aes_256_ccm();
+        assert_eq!(cipher.iv_len(), Some(12));
+
+        let key = Vec::from_hex("7f4af6765cad1d511db07e33aaafd57646ec279db629048aa6770af24849aa0d")
+            .unwrap();
+        let nonce = Vec::from_hex("dde2a362ce81b2b6913abc30").unwrap();
+        assert_eq!(nonce.len(), 12);
+        let aad = Vec::from_hex("404f5df97ece7431987bc098cce994fc3c063b519ffa47b0365226a0015ef695")
+            .unwrap();
+
+        let pt = Vec::from_hex("7ebef26bf4ecf6f0ebb2eb860edbf900f27b75b4a6340fdb").unwrap();
+        let ct = Vec::from_hex("9dc19f567998982177db86a985eeff5002df9c7812687fc2").unwrap();
+        let tag = Vec::from_hex("54f3a6a0ab9c4161e57cc1c4").unwrap();
+
+        let mut actual_tag = [0; 12];
+        let out = encrypt_aead(cipher, &key, Some(&nonce), &aad, &pt, &mut actual_tag).unwrap();
+
+        assert_eq!(ct, out);
+        assert_eq!(tag, actual_tag);
+
+        let out = decrypt_aead(cipher, &key, Some(&nonce), &aad, &ct, &tag).unwrap();
+        assert_eq!(pt, out);
     }
 
     #[test]
