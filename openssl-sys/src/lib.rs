@@ -41,8 +41,18 @@ mod aws_lc {
     #[cfg(not(feature = "aws-lc"))]
     include!(concat!(env!("OUT_DIR"), "/bindgen.rs"));
 
+    use libc::{c_char, c_void, c_long};
+
     // AWS-LC does not require initialization.
-    pub fn init() {}
+    pub fn init() {
+        unsafe { CRYPTO_library_init() }
+    }
+
+    // BIO_get_mem_data is a C preprocessor macro by definition
+    #[allow(non_snake_case, clippy::not_unsafe_ptr_arg_deref)]
+    pub fn BIO_get_mem_data(b: *mut BIO, pp: *mut *mut c_char) -> c_long {
+        unsafe { BIO_ctrl(b, BIO_CTRL_INFO, 0, pp.cast::<c_void>()) }
+    }
 }
 #[cfg(awslc)]
 pub use aws_lc::*;
