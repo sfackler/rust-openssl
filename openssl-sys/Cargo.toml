@@ -18,7 +18,7 @@ rust-version = "1.63.0"
 [features]
 vendored = ['openssl-src']
 unstable_boringssl = ['bssl-sys']
-aws-lc = ['aws-lc-sys']
+aws-lc = ['dep:aws-lc-sys']
 
 [dependencies]
 libc = "0.2"
