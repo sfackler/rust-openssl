@@ -41,7 +41,7 @@ mod aws_lc {
     #[cfg(not(feature = "aws-lc"))]
     include!(concat!(env!("OUT_DIR"), "/bindgen.rs"));
 
-    use libc::{c_char, c_void, c_long};
+    use libc::{c_char, c_long, c_void};
 
     // AWS-LC does not require initialization.
     pub fn init() {
