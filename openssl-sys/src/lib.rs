@@ -43,7 +43,6 @@ mod aws_lc {
 
     use libc::{c_char, c_long, c_void};
 
-    // AWS-LC does not require initialization.
     pub fn init() {
         unsafe { CRYPTO_library_init() }
     }
