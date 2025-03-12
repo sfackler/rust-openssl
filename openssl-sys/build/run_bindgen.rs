@@ -42,7 +42,7 @@ const INCLUDES: &str = "
 #endif
 
 #if !(defined(LIBRESSL_VERSION_NUMBER) || defined(OPENSSL_IS_BORINGSSL) || defined(OPENSSL_IS_AWSLC))
-#include <openssl/cmsrc/ssl/mod.rss.h>
+#include <openssl/cms.h>
 #endif
 
 #if !(defined(OPENSSL_IS_BORINGSSL) || defined(OPENSSL_IS_AWSLC))
