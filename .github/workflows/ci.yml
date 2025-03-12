@@ -72,6 +72,8 @@ jobs:
           restore-keys: |
             index-${{ runner.os }}-
       - run: cargo generate-lockfile
+      - run: |
+          cargo update -p once_cell --precise 1.20.3
       - uses: actions/cache@v4
         with:
           path: ~/.cargo/registry/cache
