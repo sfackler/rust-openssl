@@ -533,11 +533,11 @@ cfg_if! {
 mod test {
     use super::*;
     use crate::bn::BigNumContext;
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     use crate::hash::MessageDigest;
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     use crate::pkey::PKey;
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     use crate::sign::{Signer, Verifier};
 
     #[test]
@@ -607,7 +607,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     fn test_signature() {
         const TEST_DATA: &[u8] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         let dsa_ref = Dsa::generate(1024).unwrap();
@@ -648,7 +648,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     fn test_signature_der() {
         use std::convert::TryInto;
 

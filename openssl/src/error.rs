@@ -238,7 +238,7 @@ impl Error {
 
     /// Returns the raw OpenSSL error constant for the library reporting the
     /// error.
-    // On BoringSSL ERR_GET_{LIB,FUNC,REASON} are `unsafe`, but on
+    // On AWS-LC and BoringSSL ERR_GET_{LIB,FUNC,REASON} are `unsafe`, but on
     // OpenSSL/LibreSSL they're safe.
     #[allow(unused_unsafe)]
     pub fn library_code(&self) -> libc::c_int {
@@ -263,7 +263,7 @@ impl Error {
     }
 
     /// Returns the raw OpenSSL error constant for the reason for the error.
-    // On BoringSSL ERR_GET_{LIB,FUNC,REASON} are `unsafe`, but on
+    // On AWS-LC and BoringSSL ERR_GET_{LIB,FUNC,REASON} are `unsafe`, but on
     // OpenSSL/LibreSSL they're safe.
     #[allow(unused_unsafe)]
     pub fn reason_code(&self) -> libc::c_int {
@@ -310,7 +310,7 @@ impl fmt::Debug for Error {
 }
 
 impl fmt::Display for Error {
-    // On BoringSSL ERR_GET_{LIB,FUNC,REASON} are `unsafe`, but on
+    // On AWS-LC and BoringSSL ERR_GET_{LIB,FUNC,REASON} are `unsafe`, but on
     // OpenSSL/LibreSSL they're safe.
     #[allow(unused_unsafe)]
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -593,7 +593,7 @@ unsafe fn EVP_DigestVerifyFinal(
 #[cfg(test)]
 mod test {
     use hex::{self, FromHex};
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     use std::iter;
 
     use crate::ec::{EcGroup, EcKey};
@@ -601,7 +601,7 @@ mod test {
     use crate::nid::Nid;
     use crate::pkey::PKey;
     use crate::rsa::{Padding, Rsa};
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, awslc))]
     use crate::sign::RsaPssSaltlen;
     use crate::sign::{Signer, Verifier};
 
@@ -657,7 +657,7 @@ mod test {
         assert!(!verifier.verify(&Vec::from_hex(SIGNATURE).unwrap()).unwrap());
     }
 
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     fn test_hmac(ty: MessageDigest, tests: &[(Vec<u8>, Vec<u8>, Vec<u8>)]) {
         for (key, data, res) in tests.iter() {
             let pkey = PKey::hmac(key).unwrap();
@@ -668,7 +668,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     fn hmac_md5() {
         // test vectors from RFC 2202
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] = [
@@ -715,7 +715,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     fn hmac_sha1() {
         // test vectors from RFC 2202
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] = [
@@ -806,7 +806,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, awslc))]
     fn rsa_sign_verify() {
         let key = include_bytes!("../test/rsa.pem");
         let private_key = Rsa::private_key_from_pem(key).unwrap();
