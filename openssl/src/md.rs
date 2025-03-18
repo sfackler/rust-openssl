@@ -117,7 +117,7 @@ impl Md {
     }
 
     #[inline]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn null() -> &'static MdRef {
         unsafe { MdRef::from_ptr(ffi::EVP_md_null() as *mut _) }
     }

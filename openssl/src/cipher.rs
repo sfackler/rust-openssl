@@ -17,7 +17,7 @@ use std::ops::{Deref, DerefMut};
 use std::ptr;
 
 cfg_if! {
-    if #[cfg(any(boringssl, ossl110, libressl273))] {
+    if #[cfg(any(boringssl, ossl110, libressl273, awslc))] {
         use ffi::{EVP_CIPHER_block_size, EVP_CIPHER_iv_length, EVP_CIPHER_key_length};
     } else {
         use libc::c_int;
@@ -161,12 +161,12 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_cbc() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn aes_128_xts() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_xts() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn aes_256_xts() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_256_xts() as *mut _) }
     }
@@ -175,17 +175,17 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_ctr() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn aes_128_cfb1() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_cfb1() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn aes_128_cfb128() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_cfb128() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn aes_128_cfb8() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_cfb8() as *mut _) }
     }
@@ -194,7 +194,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_gcm() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn aes_128_ccm() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_ccm() as *mut _) }
     }
@@ -233,7 +233,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_192_ctr() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn aes_192_cfb1() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_192_cfb1() as *mut _) }
     }
@@ -242,7 +242,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_192_cfb128() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn aes_192_cfb8() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_192_cfb8() as *mut _) }
     }
@@ -251,7 +251,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_192_gcm() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn aes_192_ccm() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_192_ccm() as *mut _) }
     }
@@ -290,7 +290,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_256_ctr() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn aes_256_cfb1() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_256_cfb1() as *mut _) }
     }
@@ -299,7 +299,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_256_cfb128() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn aes_256_cfb8() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_256_cfb8() as *mut _) }
     }
@@ -308,7 +308,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_256_gcm() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn aes_256_ccm() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_256_ccm() as *mut _) }
     }
@@ -375,17 +375,17 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_des_ede3_cbc() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn des_ede3_cfb8() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_des_ede3_cfb8() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn des_ede3_cfb64() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_des_ede3_cfb64() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn des_ede3_ofb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_des_ede3_ofb() as *mut _) }
     }
