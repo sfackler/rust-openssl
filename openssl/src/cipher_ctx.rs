@@ -903,7 +903,7 @@ mod test {
         ctx.cipher_update_vec(&ct, &mut buf).unwrap();
         // Some older libraries don't support calling EVP_CipherFinal/EVP_DecryptFinal for CCM
         // https://wiki.openssl.org/index.php/EVP_Authenticated_Encryption_and_Decryption#Authenticated_Decryption_using_CCM_mode
-        #[cfg(any(libressl410, ossl111, awslc, boringssl))]
+        #[cfg(any(ossl111, awslc, boringssl))]
         ctx.cipher_final_vec(&mut buf).unwrap();
 
         assert_eq!(buf, pt);
