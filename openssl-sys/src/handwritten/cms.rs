@@ -62,4 +62,17 @@ extern "C" {
         out: *mut BIO,
         flags: c_uint,
     ) -> c_int;
+
+}
+
+cfg_if! {
+    if #[cfg(ossl111)] {
+        extern "C" {
+            pub fn CMS_get0_type(cms: *const CMS_ContentInfo) -> *const ASN1_OBJECT;
+        }
+    } else {
+        extern "C" {
+            pub fn CMS_get0_type(cms: *mut CMS_ContentInfo) -> *const ASN1_OBJECT;
+        }
+    }
 }
