@@ -271,9 +271,6 @@ impl Pkcs12Builder {
                 cvt(ffi::PKCS12_set_mac(
                     pkcs12.as_ptr(),
                     pass,
-                    // -1 could be passed in for the password length in OpenSSL,
-                    // but AWS-LC does not support that at this time.
-                    // We know the length so explicitly provide it.
                     pass_len.try_into().unwrap(),
                     ptr::null_mut(),
                     0,
