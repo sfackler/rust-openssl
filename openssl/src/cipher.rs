@@ -166,7 +166,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_xts() as *mut _) }
     }
 
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     pub fn aes_256_xts() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_256_xts() as *mut _) }
     }
@@ -175,17 +175,17 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_ctr() as *mut _) }
     }
 
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     pub fn aes_128_cfb1() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_cfb1() as *mut _) }
     }
 
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     pub fn aes_128_cfb128() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_cfb128() as *mut _) }
     }
 
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     pub fn aes_128_cfb8() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_cfb8() as *mut _) }
     }
@@ -194,7 +194,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_gcm() as *mut _) }
     }
 
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     pub fn aes_128_ccm() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_ccm() as *mut _) }
     }
@@ -233,7 +233,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_192_ctr() as *mut _) }
     }
 
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     pub fn aes_192_cfb1() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_192_cfb1() as *mut _) }
     }
@@ -242,7 +242,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_192_cfb128() as *mut _) }
     }
 
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     pub fn aes_192_cfb8() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_192_cfb8() as *mut _) }
     }
@@ -251,7 +251,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_192_gcm() as *mut _) }
     }
 
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     pub fn aes_192_ccm() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_192_ccm() as *mut _) }
     }
@@ -290,7 +290,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_256_ctr() as *mut _) }
     }
 
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     pub fn aes_256_cfb1() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_256_cfb1() as *mut _) }
     }
@@ -299,7 +299,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_256_cfb128() as *mut _) }
     }
 
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     pub fn aes_256_cfb8() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_256_cfb8() as *mut _) }
     }
@@ -308,7 +308,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_256_gcm() as *mut _) }
     }
 
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     pub fn aes_256_ccm() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_256_ccm() as *mut _) }
     }
@@ -500,7 +500,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_chacha20() as *mut _) }
     }
 
-    #[cfg(all(any(ossl110, libressl360), not(osslconf = "OPENSSL_NO_CHACHA")))]
+    #[cfg(all(any(ossl110, libressl360, awslc), not(osslconf = "OPENSSL_NO_CHACHA")))]
     pub fn chacha20_poly1305() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_chacha20_poly1305() as *mut _) }
     }

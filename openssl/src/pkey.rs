@@ -81,7 +81,7 @@ impl Id {
     pub const RSA: Id = Id(ffi::EVP_PKEY_RSA);
     #[cfg(any(ossl111, libressl310, boringssl, awslc))]
     pub const RSA_PSS: Id = Id(ffi::EVP_PKEY_RSA_PSS);
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     pub const HMAC: Id = Id(ffi::EVP_PKEY_HMAC);
     #[cfg(not(any(boringssl, awslc)))]
     pub const CMAC: Id = Id(ffi::EVP_PKEY_CMAC);
@@ -384,15 +384,31 @@ impl<T> fmt::Debug for PKey<T> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         let alg = match self.id() {
             Id::RSA => "RSA",
-            #[cfg(not(any(boringssl, awslc)))]
+            #[cfg(any(ossl111, libressl310, boringssl, awslc))]
+            Id::RSA_PSS => "RSA-PSS",
+            #[cfg(not(boringssl))]
             Id::HMAC => "HMAC",
+            #[cfg(not(any(boringssl, awslc)))]
+            Id::CMAC => "CMAC",
             Id::DSA => "DSA",
             Id::DH => "DH",
+            #[cfg(ossl110)]
+            Id::DHX => "DHX",
             Id::EC => "EC",
             #[cfg(ossl111)]
+            Id::SM2 => "SM2",
+            #[cfg(any(ossl110, boringssl, libressl360, awslc))]
+            Id::HKDF => "HKDF",
+            #[cfg(any(ossl111, boringssl, libressl370, awslc))]
             Id::ED25519 => "Ed25519",
             #[cfg(ossl111)]
             Id::ED448 => "Ed448",
+            #[cfg(any(ossl111, boringssl, libressl370, awslc))]
+            Id::X25519 => "X25519",
+            #[cfg(ossl111)]
+            Id::X448 => "X448",
+            #[cfg(ossl111)]
+            Id::POLY1305 => "POLY1305",
             _ => "unknown",
         };
         fmt.debug_struct("PKey").field("algorithm", &alg).finish()
@@ -433,7 +449,7 @@ impl<T> PKey<T> {
 
     /// Creates a new `PKey` containing a Diffie-Hellman key.
     #[corresponds(EVP_PKEY_set1_DH)]
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     pub fn from_dh(dh: Dh<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
@@ -478,15 +494,19 @@ impl PKey<Private> {
     ///
     /// To compute HMAC values, use the `sign` module.
     #[corresponds(EVP_PKEY_new_mac_key)]
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     pub fn hmac(key: &[u8]) -> Result<PKey<Private>, ErrorStack> {
+        #[cfg(awslc)]
+        let key_len = key.len();
+        #[cfg(not(awslc))]
+        let key_len = key.len() as c_int;
         unsafe {
             assert!(key.len() <= c_int::MAX as usize);
             let key = cvt_p(ffi::EVP_PKEY_new_mac_key(
                 ffi::EVP_PKEY_HMAC,
                 ptr::null_mut(),
                 key.as_ptr() as *const _,
-                key.len() as c_int,
+                key_len,
             ))?;
             Ok(PKey::from_ptr(key))
         }
@@ -877,7 +897,7 @@ impl<T> TryFrom<PKey<T>> for Dsa<T> {
     }
 }
 
-#[cfg(not(any(boringssl, awslc)))]
+#[cfg(not(boringssl))]
 impl<T> TryFrom<Dh<T>> for PKey<T> {
     type Error = ErrorStack;
 
@@ -898,7 +918,7 @@ impl<T> TryFrom<PKey<T>> for Dh<T> {
 mod tests {
     use std::convert::TryInto;
 
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     use crate::dh::Dh;
     use crate::dsa::Dsa;
     use crate::ec::EcKey;
@@ -909,7 +929,7 @@ mod tests {
 
     use super::*;
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, awslc))]
     use crate::rand::rand_bytes;
 
     #[test]
@@ -1023,7 +1043,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     fn test_dh_accessor() {
         let dh = include_bytes!("../test/dhparams.pem");
         let dh = Dh::params_from_pem(dh).unwrap();
@@ -1082,7 +1102,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(any(boringssl, awslc)))]
+    #[cfg(not(boringssl))]
     fn test_dh_conversion() {
         let dh_params = include_bytes!("../test/dhparams.pem");
         let dh_params = Dh::params_from_pem(dh_params).unwrap();
@@ -1156,7 +1176,7 @@ mod tests {
         test_raw_private_key(PKey::generate_ed448, Id::ED448);
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, awslc))]
     #[test]
     fn test_raw_hmac() {
         let mut test_bytes = vec![0u8; 32];
@@ -1169,7 +1189,7 @@ mod tests {
         assert_eq!(key_bytes, test_bytes);
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, awslc))]
     #[test]
     fn test_raw_key_fail() {
         // Getting a raw byte representation will not work with Nist curves
