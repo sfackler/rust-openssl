@@ -824,7 +824,7 @@ mod tests {
         #[cfg(ossl111)]
         assert_eq!(MessageDigest::shake_256().size(), 32);
         #[cfg(awslc)]
-        assert_eq!(MessageDigest::shake_128().size(), 0);
+        assert_eq!(MessageDigest::shake_256().size(), 0);
         assert_eq!(
             MessageDigest::shake_256().type_().as_raw(),
             Nid::SHAKE256.as_raw()
