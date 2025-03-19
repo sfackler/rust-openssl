@@ -23,6 +23,7 @@ use std::convert::TryInto;
 use std::error;
 use std::ffi::CStr;
 use std::fmt;
+use std::fmt::Formatter;
 use std::io;
 use std::ptr;
 use std::str;
@@ -396,6 +397,49 @@ cfg_if! {
                 }
             }
         }
+    }
+}
+
+pub enum X509D2iError {
+    InternalOpenSSLError(ErrorStack),
+    ExtensionNotFoundError,
+    ExtensionAmbiguousError,
+}
+
+impl X509D2iError {
+    pub fn internal_openssl_error(error: ErrorStack) -> Self {
+        Self::InternalOpenSSLError(error)
+    }
+
+    pub fn extension_not_found_error() -> Self {
+        Self::ExtensionNotFoundError
+    }
+
+    pub fn extension_ambiguous_error() -> Self {
+        Self::ExtensionAmbiguousError
+    }
+
+    fn format(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InternalOpenSSLError(stack) =>
+                write!(fmt, "Error: Could not get X509 extension; {}", stack),
+            Self::ExtensionNotFoundError =>
+                write!(fmt, "Error: Could not get X509 extension; Reason: Could not find any matching extension."),
+            Self::ExtensionAmbiguousError =>
+                write!(fmt, "Error: Could not get X509 extension; Reason: Tried to read an extension, but found multiple."),
+        }
+    }
+}
+
+impl fmt::Debug for X509D2iError {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
+        self.format(fmt)
+    }
+}
+
+impl fmt::Display for X509D2iError {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
+        self.format(fmt)
     }
 }
 
