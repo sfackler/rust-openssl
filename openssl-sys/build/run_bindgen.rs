@@ -322,6 +322,7 @@ pub fn run_awslc(include_dirs: &[PathBuf], symbol_prefix: Option<String>) {
         .arg("--default-macro-constant-type=signed")
         .arg("--rustified-enum=point_conversion_form_t")
         .arg(r"--allowlist-file=.*(/|\\)openssl((/|\\)[^/\\]+)+\.h")
+        .arg("--experimental")
         .arg("--wrap-static-fns")
         .arg("--wrap-static-fns-path")
         .arg(out_dir.join("awslc_static_wrapper").display().to_string())
