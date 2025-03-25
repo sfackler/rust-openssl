@@ -67,6 +67,8 @@ let cmac_key = ctx.keygen().unwrap();
 #[cfg(not(any(boringssl, awslc)))]
 use crate::cipher::CipherRef;
 use crate::error::ErrorStack;
+#[cfg(ossl300)]
+use crate::lib_ctx::LibCtxRef;
 use crate::md::MdRef;
 use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Private};
 use crate::rsa::Padding;
@@ -81,6 +83,8 @@ use openssl_macros::corresponds;
 use std::convert::TryFrom;
 #[cfg(ossl320)]
 use std::ffi::CStr;
+#[cfg(ossl300)]
+use std::ffi::CString;
 use std::ptr;
 
 /// HKDF modes of operation.
@@ -153,6 +157,26 @@ impl PkeyCtx<()> {
     pub fn new_id(id: Id) -> Result<Self, ErrorStack> {
         unsafe {
             let ptr = cvt_p(ffi::EVP_PKEY_CTX_new_id(id.as_raw(), ptr::null_mut()))?;
+            Ok(PkeyCtx::from_ptr(ptr))
+        }
+    }
+
+    /// Creates a new pkey context from the algorithm name.
+    #[corresponds(EVP_PKEY_CTX_new_from_name)]
+    #[cfg(ossl300)]
+    pub fn new_from_name(
+        libctx: Option<&LibCtxRef>,
+        name: &str,
+        propquery: Option<&str>,
+    ) -> Result<Self, ErrorStack> {
+        unsafe {
+            let propquery = propquery.map(|s| CString::new(s).unwrap());
+            let name = CString::new(name).unwrap();
+            let ptr = cvt_p(ffi::EVP_PKEY_CTX_new_from_name(
+                libctx.map_or(ptr::null_mut(), ForeignTypeRef::as_ptr),
+                name.as_ptr(),
+                propquery.map_or(ptr::null_mut(), |s| s.as_ptr()),
+            ))?;
             Ok(PkeyCtx::from_ptr(ptr))
         }
     }
@@ -756,6 +780,20 @@ impl<T> PkeyCtxRef<T> {
         Ok(())
     }
 
+    /// Generates a new public/private keypair.
+    ///
+    /// New OpenSSL 3.0 function, that should do the same thing as keygen()
+    #[corresponds(EVP_PKEY_generate)]
+    #[cfg(ossl300)]
+    #[inline]
+    pub fn generate(&mut self) -> Result<PKey<Private>, ErrorStack> {
+        unsafe {
+            let mut key = ptr::null_mut();
+            cvt(ffi::EVP_PKEY_generate(self.as_ptr(), &mut key))?;
+            Ok(PKey::from_ptr(key))
+        }
+    }
+
     /// Gets the nonce type for a private key context.
     ///
     /// The nonce for DSA and ECDSA can be either random (the default) or deterministic (as defined by RFC 6979).
@@ -779,6 +817,14 @@ impl<T> PkeyCtxRef<T> {
             ))?;
         }
         Ok(NonceType(nonce_type))
+    }
+
+    /// Initializes a conversion from `OsslParam` to `PKey` on given `PkeyCtx`.
+    #[corresponds(EVP_PKEY_fromdata_init)]
+    #[cfg(ossl300)]
+    pub fn fromdata_init(&mut self) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::EVP_PKEY_fromdata_init(self.as_ptr()))? };
+        Ok(())
     }
 }
 
@@ -1106,5 +1152,15 @@ mxJ7imIrEg9nIQ==
         ctx.sign_to_vec(&hashed_input, &mut output).unwrap();
         assert_eq!(output, expected_output);
         assert!(ErrorStack::get().errors().is_empty());
+    }
+
+    #[test]
+    #[cfg(ossl300)]
+    fn test_pkeyctx_from_name() {
+        let lib_ctx = crate::lib_ctx::LibCtx::new().unwrap();
+        let _: PkeyCtx<()> = PkeyCtx::new_from_name(Some(lib_ctx.as_ref()), "RSA", None).unwrap();
+
+        /* no libctx is ok */
+        let _: PkeyCtx<()> = PkeyCtx::new_from_name(None, "RSA", None).unwrap();
     }
 }
