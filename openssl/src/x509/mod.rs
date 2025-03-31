@@ -1874,7 +1874,7 @@ impl X509Crl {
             }
 
             cfg_if!(
-                if #[cfg(any(ossl110, libressl270, boringssl))] {
+                if #[cfg(any(ossl110, libressl270, boringssl, awslc))] {
                     cvt(ffi::X509_CRL_set1_lastUpdate(crl.as_ptr(), Asn1Time::now()?.as_ptr())).map(|_| ())?
                 } else {
                     cvt(ffi::X509_CRL_set_lastUpdate(crl.as_ptr(), Asn1Time::now()?.as_ptr())).map(|_| ())?
@@ -1896,7 +1896,7 @@ impl X509Crl {
     pub fn set_last_update(&mut self, seconds_from_now: Option<i32>) -> Result<(), ErrorStack> {
         let time = Asn1Time::seconds_from_now(seconds_from_now.unwrap_or(0) as c_long)?;
         cfg_if!(
-        if #[cfg(any(ossl110, libressl270, boringssl))] {
+        if #[cfg(any(ossl110, libressl270, boringssl, awslc))] {
                 unsafe {
                     cvt(ffi::X509_CRL_set1_lastUpdate(self.as_ptr(), time.as_ptr())).map(|_| ())?
                 };
@@ -1912,7 +1912,7 @@ impl X509Crl {
 
     pub fn set_next_update_from_now(&mut self, seconds_from_now: i32) -> Result<(), ErrorStack> {
         cfg_if!(
-        if #[cfg(any(ossl110, libressl270, boringssl))] {
+        if #[cfg(any(ossl110, libressl270, boringssl, awslc))] {
                 unsafe {
                     cvt(ffi::X509_CRL_set1_nextUpdate(
                         self.as_ptr(),
