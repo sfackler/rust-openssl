@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [v0.9.106] - 2025-02-15
+
+### Added
+
+* Support building with `OPENSSL_NO_RC2`.
+* Exposed `EVP_rc2_cbc` and `EVP_rc2_40_cbc`.
+
 ## [v0.9.105] - 2025-02-02
 
 ### Added
@@ -629,7 +636,9 @@ Fixed builds against OpenSSL built with `no-cast`.
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.104..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.106..master
+[v0.9.106]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.105...openssl-sys-v0.9.106
+[v0.9.105]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.104...openssl-sys-v0.9.105
 [v0.9.104]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.103...openssl-sys-v0.9.104
 [v0.9.103]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.102...openssl-sys-v0.9.103
 [v0.9.102]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.101...openssl-sys-v0.9.102

@@ -46,20 +46,20 @@ use foreign_types::{ForeignType, ForeignTypeRef};
 use std::mem;
 
 use crate::error::ErrorStack;
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 use crate::ssl::SslFiletype;
 #[cfg(ossl300)]
 use crate::stack::Stack;
 use crate::stack::StackRef;
 use crate::util::ForeignTypeRefExt;
-#[cfg(any(ossl102, boringssl, libressl261))]
+#[cfg(any(ossl102, boringssl, libressl261, awslc))]
 use crate::x509::verify::{X509VerifyFlags, X509VerifyParamRef};
 use crate::x509::{X509Object, X509PurposeId, X509};
 use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 use std::ffi::CString;
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 use std::path::Path;
 
 foreign_type_and_impl_send_sync! {
@@ -123,7 +123,7 @@ impl X509StoreBuilderRef {
 
     /// Sets certificate chain validation related flags.
     #[corresponds(X509_STORE_set_flags)]
-    #[cfg(any(ossl102, boringssl, libressl261))]
+    #[cfg(any(ossl102, boringssl, libressl261, awslc))]
     pub fn set_flags(&mut self, flags: X509VerifyFlags) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_STORE_set_flags(self.as_ptr(), flags.bits())).map(|_| ()) }
     }
@@ -137,7 +137,7 @@ impl X509StoreBuilderRef {
 
     /// Sets certificate chain validation related parameters.
     #[corresponds[X509_STORE_set1_param]]
-    #[cfg(any(ossl102, boringssl, libressl261))]
+    #[cfg(any(ossl102, boringssl, libressl261, awslc))]
     pub fn set_param(&mut self, param: &X509VerifyParamRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_STORE_set1_param(self.as_ptr(), param.as_ptr())).map(|_| ()) }
     }
@@ -170,7 +170,7 @@ impl X509Lookup<HashDir> {
     }
 }
 
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 impl X509LookupRef<HashDir> {
     /// Specifies a directory from which certificates and CRLs will be loaded
     /// on-demand. Must be used with `X509Lookup::hash_dir`.
@@ -202,7 +202,7 @@ impl X509Lookup<File> {
     }
 }
 
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 impl X509LookupRef<File> {
     /// Specifies a file from which certificates will be loaded
     #[corresponds(X509_load_cert_file)]
@@ -284,7 +284,7 @@ impl X509StoreRef {
 }
 
 cfg_if! {
-    if #[cfg(any(boringssl, ossl110, libressl270))] {
+    if #[cfg(any(boringssl, ossl110, libressl270, awslc))] {
         use ffi::X509_STORE_get0_objects;
     } else {
         #[allow(bad_style)]

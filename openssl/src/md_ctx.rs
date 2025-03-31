@@ -52,7 +52,7 @@
 //!
 
 #![cfg_attr(
-    not(boringssl),
+    not(any(boringssl, awslc)),
     doc = r#"\
 Compute and verify an HMAC-SHA256
 
@@ -93,7 +93,7 @@ use std::convert::TryFrom;
 use std::ptr;
 
 cfg_if! {
-    if #[cfg(any(ossl110, boringssl, libressl382))] {
+    if #[cfg(any(ossl110, boringssl, libressl382, awslc))] {
         use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
     } else {
         use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
@@ -258,7 +258,7 @@ impl MdCtxRef {
     /// Requires OpenSSL 1.1.1 or newer.
     #[corresponds(EVP_DigestFinalXOF)]
     #[inline]
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, awslc))]
     pub fn digest_final_xof(&mut self, out: &mut [u8]) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_DigestFinalXOF(

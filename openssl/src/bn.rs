@@ -37,18 +37,15 @@ use crate::{cvt, cvt_n, cvt_p, LenType};
 use openssl_macros::corresponds;
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl350))] {
+    if #[cfg(any(ossl110, libressl350, awslc))] {
         use ffi::{
-            BN_get_rfc2409_prime_1024, BN_get_rfc2409_prime_768, BN_get_rfc3526_prime_1536,
-            BN_get_rfc3526_prime_2048, BN_get_rfc3526_prime_3072, BN_get_rfc3526_prime_4096,
+            BN_get_rfc3526_prime_1536, BN_get_rfc3526_prime_2048, BN_get_rfc3526_prime_3072, BN_get_rfc3526_prime_4096,
             BN_get_rfc3526_prime_6144, BN_get_rfc3526_prime_8192, BN_is_negative,
         };
     } else if #[cfg(boringssl)] {
         use ffi::BN_is_negative;
     } else {
         use ffi::{
-            get_rfc2409_prime_1024 as BN_get_rfc2409_prime_1024,
-            get_rfc2409_prime_768 as BN_get_rfc2409_prime_768,
             get_rfc3526_prime_1536 as BN_get_rfc3526_prime_1536,
             get_rfc3526_prime_2048 as BN_get_rfc3526_prime_2048,
             get_rfc3526_prime_3072 as BN_get_rfc3526_prime_3072,
@@ -61,6 +58,19 @@ cfg_if! {
         unsafe fn BN_is_negative(bn: *const ffi::BIGNUM) -> c_int {
             (*bn).neg
         }
+    }
+}
+
+cfg_if! {
+    if #[cfg(any(ossl110, libressl350))] {
+        use ffi::{
+            BN_get_rfc2409_prime_1024, BN_get_rfc2409_prime_768
+        };
+    } else if #[cfg(not(any(boringssl, awslc)))] {
+        use ffi::{
+            get_rfc2409_prime_1024 as BN_get_rfc2409_prime_1024,
+            get_rfc2409_prime_768 as BN_get_rfc2409_prime_768,
+        };
     }
 }
 
@@ -337,14 +347,14 @@ impl BigNumRef {
 
     /// Returns `true` is `self` is even.
     #[corresponds(BN_is_even)]
-    #[cfg(any(ossl110, boringssl, libressl350))]
+    #[cfg(any(ossl110, boringssl, libressl350, awslc))]
     pub fn is_even(&self) -> bool {
         !self.is_odd()
     }
 
     /// Returns `true` is `self` is odd.
     #[corresponds(BN_is_odd)]
-    #[cfg(any(ossl110, boringssl, libressl350))]
+    #[cfg(any(ossl110, boringssl, libressl350, awslc))]
     pub fn is_odd(&self) -> bool {
         unsafe { ffi::BN_is_odd(self.as_ptr()) == 1 }
     }
@@ -847,7 +857,7 @@ impl BigNumRef {
     /// assert_eq!(&bn_vec, &[0, 0, 0x45, 0x43]);
     /// ```
     #[corresponds(BN_bn2binpad)]
-    #[cfg(any(ossl110, libressl340, boringssl))]
+    #[cfg(any(ossl110, libressl340, boringssl, awslc))]
     pub fn to_vec_padded(&self, pad_to: i32) -> Result<Vec<u8>, ErrorStack> {
         let mut v = Vec::with_capacity(pad_to as usize);
         unsafe {
@@ -986,7 +996,7 @@ impl BigNum {
     ///
     /// [`RFC 2409`]: https://tools.ietf.org/html/rfc2409#page-21
     #[corresponds(BN_get_rfc2409_prime_768)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn get_rfc2409_prime_768() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -1000,7 +1010,7 @@ impl BigNum {
     ///
     /// [`RFC 2409`]: https://tools.ietf.org/html/rfc2409#page-21
     #[corresponds(BN_get_rfc2409_prime_1024)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn get_rfc2409_prime_1024() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -1509,7 +1519,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(any(ossl110, boringssl, libressl350))]
+    #[cfg(any(ossl110, boringssl, libressl350, awslc))]
     fn test_odd_even() {
         let a = BigNum::from_u32(17).unwrap();
         let b = BigNum::from_u32(18).unwrap();

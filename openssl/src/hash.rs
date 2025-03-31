@@ -44,7 +44,7 @@ use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
 
 cfg_if! {
-    if #[cfg(any(ossl110, boringssl, libressl382))] {
+    if #[cfg(any(ossl110, boringssl, libressl382, awslc))] {
         use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
     } else {
         use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
@@ -123,32 +123,32 @@ impl MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha512()) }
     }
 
-    #[cfg(any(ossl111, libressl380))]
+    #[cfg(any(ossl111, libressl380, awslc))]
     pub fn sha3_224() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha3_224()) }
     }
 
-    #[cfg(any(ossl111, libressl380))]
+    #[cfg(any(ossl111, libressl380, awslc))]
     pub fn sha3_256() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha3_256()) }
     }
 
-    #[cfg(any(ossl111, libressl380))]
+    #[cfg(any(ossl111, libressl380, awslc))]
     pub fn sha3_384() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha3_384()) }
     }
 
-    #[cfg(any(ossl111, libressl380))]
+    #[cfg(any(ossl111, libressl380, awslc))]
     pub fn sha3_512() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha3_512()) }
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, awslc))]
     pub fn shake_128() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_shake128()) }
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, awslc))]
     pub fn shake_256() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_shake256()) }
     }
@@ -323,9 +323,9 @@ impl Hasher {
             self.init()?;
         }
         unsafe {
-            #[cfg(not(boringssl))]
+            #[cfg(not(any(boringssl, awslc)))]
             let mut len = ffi::EVP_MAX_MD_SIZE;
-            #[cfg(boringssl)]
+            #[cfg(any(boringssl, awslc))]
             let mut len = ffi::EVP_MAX_MD_SIZE as u32;
             let mut buf = [0; ffi::EVP_MAX_MD_SIZE as usize];
             cvt(ffi::EVP_DigestFinal_ex(
@@ -343,7 +343,7 @@ impl Hasher {
 
     /// Writes the hash of the data into the supplied buf and resets the XOF hasher.
     /// The hash will be as long as the buf.
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, awslc))]
     pub fn finish_xof(&mut self, buf: &mut [u8]) -> Result<(), ErrorStack> {
         if self.state == Finalized {
             self.init()?;
@@ -481,7 +481,7 @@ pub fn hash(t: MessageDigest, data: &[u8]) -> Result<DigestBytes, ErrorStack> {
 /// assert_eq!(buf, spec);
 /// ```
 ///
-#[cfg(ossl111)]
+#[cfg(any(ossl111, awslc))]
 pub fn hash_xof(t: MessageDigest, data: &[u8], buf: &mut [u8]) -> Result<(), ErrorStack> {
     let mut h = Hasher::new(t)?;
     h.update(data)?;
@@ -500,7 +500,7 @@ mod tests {
         assert_eq!(hex::encode(res), hashtest.1);
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, awslc))]
     fn hash_xof_test(hashtype: MessageDigest, hashtest: &(&str, &str)) {
         let expected = Vec::from_hex(hashtest.1).unwrap();
         let mut buf = vec![0; expected.len()];
@@ -701,7 +701,7 @@ mod tests {
         );
     }
 
-    #[cfg(any(ossl111, libressl380))]
+    #[cfg(any(ossl111, libressl380, awslc))]
     #[test]
     fn test_sha3_224() {
         let tests = [(
@@ -721,7 +721,7 @@ mod tests {
         );
     }
 
-    #[cfg(any(ossl111, libressl380))]
+    #[cfg(any(ossl111, libressl380, awslc))]
     #[test]
     fn test_sha3_256() {
         let tests = [(
@@ -741,7 +741,7 @@ mod tests {
         );
     }
 
-    #[cfg(any(ossl111, libressl380))]
+    #[cfg(any(ossl111, libressl380, awslc))]
     #[test]
     fn test_sha3_384() {
         let tests = [("416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
@@ -761,7 +761,7 @@ mod tests {
         );
     }
 
-    #[cfg(any(ossl111, libressl380))]
+    #[cfg(any(ossl111, libressl380, awslc))]
     #[test]
     fn test_sha3_512() {
         let tests = [("416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
@@ -781,7 +781,7 @@ mod tests {
         );
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, awslc))]
     #[test]
     fn test_shake_128() {
         let tests = [(
@@ -796,14 +796,17 @@ mod tests {
         }
 
         assert_eq!(MessageDigest::shake_128().block_size(), 168);
+        #[cfg(ossl111)]
         assert_eq!(MessageDigest::shake_128().size(), 16);
+        #[cfg(awslc)]
+        assert_eq!(MessageDigest::shake_128().size(), 0);
         assert_eq!(
             MessageDigest::shake_128().type_().as_raw(),
             Nid::SHAKE128.as_raw()
         );
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, awslc))]
     #[test]
     fn test_shake_256() {
         let tests = [(
@@ -818,7 +821,10 @@ mod tests {
         }
 
         assert_eq!(MessageDigest::shake_256().block_size(), 136);
+        #[cfg(ossl111)]
         assert_eq!(MessageDigest::shake_256().size(), 32);
+        #[cfg(awslc)]
+        assert_eq!(MessageDigest::shake_256().size(), 0);
         assert_eq!(
             MessageDigest::shake_256().type_().as_raw(),
             Nid::SHAKE256.as_raw()
