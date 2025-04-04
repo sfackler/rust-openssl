@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [v0.9.107] - 2025-04-04
+
+### Added
+
+* Support for building with AWS-LC.
+
 ## [v0.9.106] - 2025-02-15
 
 ### Added
@@ -636,7 +642,8 @@ Fixed builds against OpenSSL built with `no-cast`.
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.106..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.107..master
+[v0.9.107]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.106...openssl-sys-v0.9.107
 [v0.9.106]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.105...openssl-sys-v0.9.106
 [v0.9.105]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.104...openssl-sys-v0.9.105
 [v0.9.104]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.103...openssl-sys-v0.9.104
