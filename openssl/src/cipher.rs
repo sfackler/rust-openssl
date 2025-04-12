@@ -17,7 +17,7 @@ use std::ops::{Deref, DerefMut};
 use std::ptr;
 
 cfg_if! {
-    if #[cfg(any(boringssl, ossl110, libressl273))] {
+    if #[cfg(any(boringssl, ossl110, libressl273, awslc))] {
         use ffi::{EVP_CIPHER_block_size, EVP_CIPHER_iv_length, EVP_CIPHER_key_length};
     } else {
         use libc::c_int;
@@ -146,7 +146,7 @@ impl Cipher {
             let ptr = cvt_p(ffi::EVP_CIPHER_fetch(
                 ctx.map_or(ptr::null_mut(), ForeignTypeRef::as_ptr),
                 algorithm.as_ptr(),
-                properties.map_or(ptr::null_mut(), |s| s.as_ptr()),
+                properties.as_ref().map_or(ptr::null_mut(), |s| s.as_ptr()),
             ))?;
 
             Ok(Cipher::from_ptr(ptr))
@@ -161,7 +161,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_cbc() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn aes_128_xts() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_aes_128_xts() as *mut _) }
     }
@@ -375,17 +375,17 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_des_ede3_cbc() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn des_ede3_cfb8() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_des_ede3_cfb8() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn des_ede3_cfb64() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_des_ede3_cfb64() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn des_ede3_ofb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_des_ede3_ofb() as *mut _) }
     }
@@ -500,7 +500,7 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_chacha20() as *mut _) }
     }
 
-    #[cfg(all(any(ossl110, libressl360), not(osslconf = "OPENSSL_NO_CHACHA")))]
+    #[cfg(all(any(ossl110, libressl360, awslc), not(osslconf = "OPENSSL_NO_CHACHA")))]
     pub fn chacha20_poly1305() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_chacha20_poly1305() as *mut _) }
     }
@@ -593,5 +593,17 @@ impl CipherRef {
     #[corresponds(EVP_CIPHER_block_size)]
     pub fn block_size(&self) -> usize {
         unsafe { EVP_CIPHER_block_size(self.as_ptr()) as usize }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    #[cfg(ossl300)]
+    use super::Cipher;
+
+    #[test]
+    #[cfg(ossl300)]
+    fn test_cipher_fetch_properties() {
+        assert!(Cipher::fetch(None, "AES-128-GCM", Some("provider=gibberish")).is_err());
     }
 }

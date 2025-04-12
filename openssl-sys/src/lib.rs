@@ -6,7 +6,6 @@
     non_upper_case_globals,
     unused_imports
 )]
-#![cfg_attr(feature = "unstable_boringssl", allow(ambiguous_glob_reexports))]
 #![doc(html_root_url = "https://docs.rs/openssl-sys/0.9")]
 #![recursion_limit = "128"] // configure fixed limit across all rust versions
 
@@ -15,22 +14,47 @@ pub use libc::c_int;
 
 #[cfg(feature = "unstable_boringssl")]
 extern crate bssl_sys;
-#[cfg(feature = "unstable_boringssl")]
-pub use bssl_sys::*;
 
-#[cfg(all(boringssl, not(feature = "unstable_boringssl")))]
+#[cfg(boringssl)]
 #[path = "."]
 mod boringssl {
+    #[cfg(feature = "unstable_boringssl")]
+    pub use bssl_sys::*;
+    #[cfg(not(feature = "unstable_boringssl"))]
     include!(concat!(env!("OUT_DIR"), "/bindgen.rs"));
 
+    // BoringSSL does not require initialization.
+    pub fn init() {}
+}
+#[cfg(boringssl)]
+pub use boringssl::*;
+
+#[cfg(feature = "aws-lc")]
+extern crate aws_lc_sys;
+
+#[cfg(awslc)]
+#[path = "."]
+mod aws_lc {
+    #[cfg(feature = "aws-lc")]
+    pub use aws_lc_sys::*;
+
+    #[cfg(not(feature = "aws-lc"))]
+    include!(concat!(env!("OUT_DIR"), "/bindgen.rs"));
+
+    use libc::{c_char, c_long, c_void};
+
     pub fn init() {
-        unsafe {
-            CRYPTO_library_init();
-        }
+        unsafe { CRYPTO_library_init() }
+    }
+
+    // BIO_get_mem_data is a C preprocessor macro by definition
+    #[allow(non_snake_case, clippy::not_unsafe_ptr_arg_deref)]
+    pub fn BIO_get_mem_data(b: *mut BIO, pp: *mut *mut c_char) -> c_long {
+        unsafe { BIO_ctrl(b, BIO_CTRL_INFO, 0, pp.cast::<c_void>()) }
     }
 }
-#[cfg(all(boringssl, not(feature = "unstable_boringssl")))]
-pub use boringssl::*;
+#[cfg(awslc)]
+pub use aws_lc::*;
 
 #[cfg(openssl)]
 #[path = "."]

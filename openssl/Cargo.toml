@@ -1,6 +1,6 @@
 [package]
 name = "openssl"
-version = "0.10.70"
+version = "0.10.72"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "Apache-2.0"
 description = "OpenSSL bindings"
@@ -21,6 +21,7 @@ v111 = []
 vendored = ['ffi/vendored']
 bindgen = ['ffi/bindgen']
 unstable_boringssl = ["ffi/unstable_boringssl"]
+aws-lc = ["ffi/aws-lc"]
 default = []
 
 [dependencies]
@@ -31,7 +32,7 @@ libc = "0.2"
 once_cell = "1.5.2"
 
 openssl-macros = { version = "0.1.1", path = "../openssl-macros" }
-ffi = { package = "openssl-sys", version = "0.9.105", path = "../openssl-sys" }
+ffi = { package = "openssl-sys", version = "0.9.107", path = "../openssl-sys" }
 
 [dev-dependencies]
 hex = "0.4"

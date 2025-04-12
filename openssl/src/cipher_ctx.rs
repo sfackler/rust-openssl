@@ -52,7 +52,7 @@
 
 use crate::cipher::CipherRef;
 use crate::error::ErrorStack;
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 use crate::pkey::{HasPrivate, HasPublic, PKey, PKeyRef};
 use crate::{cvt, cvt_p};
 #[cfg(ossl102)]
@@ -202,7 +202,7 @@ impl CipherCtxRef {
     /// Panics if `pub_keys` is not the same size as `encrypted_keys`, the IV buffer is smaller than the cipher's IV
     /// size, or if an IV is provided before the cipher.
     #[corresponds(EVP_SealInit)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn seal_init<T>(
         &mut self,
         type_: Option<&CipherRef>,
@@ -259,7 +259,7 @@ impl CipherCtxRef {
     /// Panics if the IV buffer is smaller than the cipher's required IV size or if the IV is provided before the
     /// cipher.
     #[corresponds(EVP_OpenInit)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn open_init<T>(
         &mut self,
         type_: Option<&CipherRef>,
@@ -329,7 +329,7 @@ impl CipherCtxRef {
     /// Panics if the context has not been initialized with a cipher or if the buffer is smaller than the cipher's key
     /// length.
     #[corresponds(EVP_CIPHER_CTX_rand_key)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn rand_key(&self, buf: &mut [u8]) -> Result<(), ErrorStack> {
         assert!(buf.len() >= self.key_length());
 
@@ -728,11 +728,11 @@ impl CipherCtxRef {
 mod test {
     use super::*;
     use crate::{cipher::Cipher, rand::rand_bytes};
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     use std::slice;
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn seal_open() {
         let private_pem = include_bytes!("../test/rsa.pem");
         let public_pem = include_bytes!("../test/rsa.pem.pub");
@@ -809,8 +809,173 @@ mod test {
         aes_128_cbc(cipher);
     }
 
+    #[cfg(not(boringssl))]
+    #[test]
+    fn default_aes_128_ccm() {
+        // from https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/mac/ccmtestvectors.zip
+        let cipher = Cipher::aes_128_ccm();
+        aes_ccm(
+            cipher,
+            "26511fb51fcfa75cb4b44da75a6e5a0e",
+            "ea98ec44f5a86715014783172e",
+            "4da40b80579c1d9a5309f7efecb7c059a2f914511ca5fc10",
+            "e4692b9f06b666c7451b146c8aeb07a6e30c629d28065c3dde5940325b14b810",
+            "1bf0ba0ebb20d8edba59f29a9371750c9c714078f73c335d",
+            "2f1322ac69b848b001476323aed84c47",
+        );
+    }
+
+    #[cfg(not(boringssl))]
+    #[test]
+    fn default_aes_192_ccm() {
+        // from https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/mac/ccmtestvectors.zip
+        let cipher = Cipher::aes_192_ccm();
+        aes_ccm(
+            cipher,
+            "26511fb51fcfa75cb4b44da75a6e5a0eb8d9c8f3b906f886",
+            "ea98ec44f5a86715014783172e",
+            "4da40b80579c1d9a5309f7efecb7c059a2f914511ca5fc10",
+            "e4692b9f06b666c7451b146c8aeb07a6e30c629d28065c3dde5940325b14b810",
+            "30c154c616946eccc2e241d336ad33720953e449a0e6b0f0",
+            "dbf8e9464909bdf337e48093c082a10b",
+        );
+    }
+
+    #[cfg(not(boringssl))]
+    #[test]
+    fn default_aes_256_ccm() {
+        // from https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/mac/ccmtestvectors.zip
+        let cipher = Cipher::aes_256_ccm();
+        aes_ccm(
+            cipher,
+            "314a202f836f9f257e22d8c11757832ae5131d357a72df88f3eff0ffcee0da4e",
+            "3542fbe0f59a6d5f3abf619b7d",
+            "c5b3d71312ea14f2f8fae5bd1a453192b6604a45db75c5ed",
+            "dd4531f158a2fa3bc8a339f770595048f4a42bc1b03f2e824efc6ba4985119d8",
+            "39c2e8f6edfe663b90963b98eb79e2d4f7f28a5053ae8881",
+            "567a6b4426f1667136bed4a5e32a2bc1",
+        );
+    }
+
+    #[cfg(not(boringssl))]
+    fn aes_ccm(
+        cipher: &CipherRef,
+        key: &'static str,
+        iv: &'static str,
+        pt: &'static str,
+        aad: &'static str,
+        ct: &'static str,
+        tag: &'static str,
+    ) {
+        let key = hex::decode(key).unwrap();
+        let iv = hex::decode(iv).unwrap();
+        let pt = hex::decode(pt).unwrap();
+        let ct = hex::decode(ct).unwrap();
+        let aad = hex::decode(aad).unwrap();
+        let tag = hex::decode(tag).unwrap();
+
+        let mut ctx = CipherCtx::new().unwrap();
+
+        ctx.encrypt_init(Some(cipher), None, None).unwrap();
+        ctx.set_iv_length(iv.len()).unwrap();
+        ctx.set_tag_length(tag.len()).unwrap();
+        ctx.encrypt_init(None, Some(&key), Some(&iv)).unwrap();
+        ctx.set_data_len(pt.len()).unwrap();
+
+        let mut buf = vec![];
+        ctx.cipher_update(&aad, None).unwrap();
+        ctx.cipher_update_vec(&pt, &mut buf).unwrap();
+        ctx.cipher_final_vec(&mut buf).unwrap();
+        assert_eq!(buf, ct);
+
+        let mut out_tag = vec![0u8; tag.len()];
+        ctx.tag(&mut out_tag).unwrap();
+        assert_eq!(tag, out_tag);
+
+        ctx.decrypt_init(Some(cipher), None, None).unwrap();
+        ctx.set_iv_length(iv.len()).unwrap();
+        ctx.set_tag(&tag).unwrap();
+        ctx.decrypt_init(None, Some(&key), Some(&iv)).unwrap();
+        ctx.set_data_len(pt.len()).unwrap();
+
+        let mut buf = vec![];
+        ctx.cipher_update(&aad, None).unwrap();
+        ctx.cipher_update_vec(&ct, &mut buf).unwrap();
+        // Some older libraries don't support calling EVP_CipherFinal/EVP_DecryptFinal for CCM
+        // https://wiki.openssl.org/index.php/EVP_Authenticated_Encryption_and_Decryption#Authenticated_Decryption_using_CCM_mode
+        #[cfg(any(ossl111, awslc, boringssl))]
+        ctx.cipher_final_vec(&mut buf).unwrap();
+
+        assert_eq!(buf, pt);
+    }
+
+    #[cfg(not(any(boringssl, awslc)))]
+    #[test]
+    fn default_aes_128_xts() {
+        // https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/XTSTestVectors.zip
+        let cipher = Cipher::aes_128_xts();
+        aes_xts(
+            cipher,
+            "a1b90cba3f06ac353b2c343876081762090923026e91771815f29dab01932f2f",
+            "4faef7117cda59c66e4b92013e768ad5",
+            "ebabce95b14d3c8d6fb350390790311c",
+            "778ae8b43cb98d5a825081d5be471c63",
+        );
+    }
+
+    #[cfg(not(boringssl))]
+    #[test]
+    fn default_aes_256_xts() {
+        // https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/XTSTestVectors.zip
+        let cipher = Cipher::aes_256_xts();
+        aes_xts(cipher, "1ea661c58d943a0e4801e42f4b0947149e7f9f8e3e68d0c7505210bd311a0e7cd6e13ffdf2418d8d1911c004cda58da3d619b7e2b9141e58318eea392cf41b08", "adf8d92627464ad2f0428e84a9f87564", "2eedea52cd8215e1acc647e810bbc3642e87287f8d2e57e36c0a24fbc12a202e", "cbaad0e2f6cea3f50b37f934d46a9b130b9d54f07e34f36af793e86f73c6d7db");
+    }
+
+    #[cfg(not(boringssl))]
+    fn aes_xts(
+        cipher: &CipherRef,
+        key: &'static str,
+        i: &'static str,
+        pt: &'static str,
+        ct: &'static str,
+    ) {
+        let key = hex::decode(key).unwrap();
+        let i = hex::decode(i).unwrap();
+        let pt = hex::decode(pt).unwrap();
+        let ct = hex::decode(ct).unwrap();
+
+        let mut ctx = CipherCtx::new().unwrap();
+        ctx.encrypt_init(Some(cipher), Some(&key), Some(&i))
+            .unwrap();
+        let mut buf = vec![];
+        ctx.cipher_update_vec(&pt, &mut buf).unwrap();
+        ctx.cipher_final_vec(&mut buf).unwrap();
+
+        assert_eq!(ct, buf);
+
+        ctx.decrypt_init(Some(cipher), Some(&key), Some(&i))
+            .unwrap();
+        let mut buf = vec![];
+        ctx.cipher_update_vec(&ct, &mut buf).unwrap();
+        ctx.cipher_final_vec(&mut buf).unwrap();
+
+        assert_eq!(pt, buf);
+    }
+
     #[test]
     fn test_stream_ciphers() {
+        #[cfg(not(boringssl))]
+        {
+            test_stream_cipher(Cipher::aes_128_cfb1());
+            test_stream_cipher(Cipher::aes_128_cfb8());
+            test_stream_cipher(Cipher::aes_128_cfb128());
+            test_stream_cipher(Cipher::aes_192_cfb1());
+            test_stream_cipher(Cipher::aes_192_cfb8());
+            test_stream_cipher(Cipher::aes_192_cfb128());
+            test_stream_cipher(Cipher::aes_256_cfb1());
+            test_stream_cipher(Cipher::aes_256_cfb8());
+            test_stream_cipher(Cipher::aes_256_cfb128());
+        }
         test_stream_cipher(Cipher::aes_192_ctr());
         test_stream_cipher(Cipher::aes_256_ctr());
     }

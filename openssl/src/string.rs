@@ -80,13 +80,13 @@ impl fmt::Debug for OpensslStringRef {
 }
 
 #[inline]
-#[cfg(not(boringssl))]
+#[cfg(not(any(boringssl, awslc)))]
 unsafe fn free(buf: *mut c_char) {
     ffi::OPENSSL_free(buf as *mut c_void);
 }
 
 #[inline]
-#[cfg(boringssl)]
+#[cfg(any(boringssl, awslc))]
 unsafe fn free(buf: *mut c_char) {
     ffi::CRYPTO_free(
         buf as *mut c_void,

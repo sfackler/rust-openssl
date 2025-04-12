@@ -11,6 +11,7 @@ fn main() {
 
     println!("cargo:rustc-check-cfg=cfg(libressl)");
     println!("cargo:rustc-check-cfg=cfg(boringssl)");
+    println!("cargo:rustc-check-cfg=cfg(awslc)");
 
     println!("cargo:rustc-check-cfg=cfg(libressl250)");
     println!("cargo:rustc-check-cfg=cfg(libressl251)");
@@ -32,6 +33,7 @@ fn main() {
     println!("cargo:rustc-check-cfg=cfg(libressl382)");
     println!("cargo:rustc-check-cfg=cfg(libressl390)");
     println!("cargo:rustc-check-cfg=cfg(libressl400)");
+    println!("cargo:rustc-check-cfg=cfg(libressl410)");
 
     println!("cargo:rustc-check-cfg=cfg(ossl101)");
     println!("cargo:rustc-check-cfg=cfg(ossl102)");
@@ -51,6 +53,10 @@ fn main() {
 
     if env::var("DEP_OPENSSL_BORINGSSL").is_ok() {
         println!("cargo:rustc-cfg=boringssl");
+    }
+
+    if env::var("DEP_OPENSSL_AWSLC").is_ok() {
+        println!("cargo:rustc-cfg=awslc");
     }
 
     if let Ok(v) = env::var("DEP_OPENSSL_LIBRESSL_VERSION_NUMBER") {
@@ -115,6 +121,9 @@ fn main() {
         }
         if version >= 0x4_00_00_00_0 {
             println!("cargo:rustc-cfg=libressl400");
+        }
+        if version >= 0x4_01_00_00_0 {
+            println!("cargo:rustc-cfg=libressl410");
         }
     }
 

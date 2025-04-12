@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+## [v0.10.72] - 2025-04-04
+
+### Fixed
+
+* Fixed use-after-free in `Md::fetch` and `Cipher::fetch` when `properties` is `Some(...)`. In practice this use-after-free most likely resulted in OpenSSL treating the `properties` as `b""`.
+
+### Added
+
+* Support for building with AWS-LC.
+
+## [v0.10.71] - 2025-02-15
+
+### Added
+
+* Added `Cipher::rc2_cbc` and `Cipher::rc2_40_cbc`.
+
 ## [v0.10.70] - 2025-02-02
 
 ### Fixed
@@ -953,7 +969,11 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.68...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.72...master
+[v0.10.72]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.71...openssl-v0.10.72
+[v0.10.71]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.70...openssl-v0.10.71
+[v0.10.70]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.69...openssl-v0.10.70
+[v0.10.69]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.68...openssl-v0.10.69
 [v0.10.68]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.67...openssl-v0.10.68
 [v0.10.67]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.66...openssl-v0.10.67
 [v0.10.66]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.65...openssl-v0.10.66

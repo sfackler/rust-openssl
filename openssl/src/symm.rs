@@ -100,7 +100,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_cbc()) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn aes_128_xts() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_xts()) }
     }
@@ -172,7 +172,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_192_gcm()) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn aes_192_ccm() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_192_ccm()) }
     }
@@ -277,17 +277,17 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_des_ede3_ecb()) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn des_ede3_cfb64() -> Cipher {
         unsafe { Cipher(ffi::EVP_des_ede3_cfb64()) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn des_ede3_cfb8() -> Cipher {
         unsafe { Cipher(ffi::EVP_des_ede3_cfb8()) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub fn des_ede3_ofb() -> Cipher {
         unsafe { Cipher(ffi::EVP_des_ede3_ofb()) }
     }
@@ -384,7 +384,7 @@ impl Cipher {
     }
 
     /// Requires OpenSSL 1.1.0 or newer.
-    #[cfg(all(any(ossl110, libressl360), not(osslconf = "OPENSSL_NO_CHACHA")))]
+    #[cfg(all(any(ossl110, libressl360, awslc), not(osslconf = "OPENSSL_NO_CHACHA")))]
     pub fn chacha20_poly1305() -> Cipher {
         unsafe { Cipher(ffi::EVP_chacha20_poly1305()) }
     }
@@ -509,13 +509,13 @@ impl Cipher {
     }
 
     /// Determines whether the cipher is using CCM mode
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn is_ccm(self) -> bool {
         // NOTE: OpenSSL returns pointers to static structs, which makes this work as expected
         self == Cipher::aes_128_ccm() || self == Cipher::aes_256_ccm()
     }
 
-    #[cfg(boringssl)]
+    #[cfg(any(boringssl, awslc))]
     fn is_ccm(self) -> bool {
         false
     }
@@ -916,7 +916,7 @@ pub fn decrypt_aead(
 }
 
 cfg_if! {
-    if #[cfg(any(boringssl, ossl110, libressl273))] {
+    if #[cfg(any(boringssl, ossl110, libressl273, awslc))] {
         use ffi::{EVP_CIPHER_block_size, EVP_CIPHER_iv_length, EVP_CIPHER_key_length};
     } else {
         use crate::LenType;
@@ -1062,7 +1062,7 @@ mod tests {
         }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn cipher_test_nopad(ciphertype: super::Cipher, pt: &str, ct: &str, key: &str, iv: &str) {
         let pt = Vec::from_hex(pt).unwrap();
         let ct = Vec::from_hex(ct).unwrap();
@@ -1108,7 +1108,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_aes256_xts() {
         // Test case 174 from
         // http://csrc.nist.gov/groups/STM/cavp/documents/aes/XTSTestVectors.zip
@@ -1136,7 +1136,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_aes128_cfb1() {
         // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
 
@@ -1149,7 +1149,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_aes128_cfb128() {
         let pt = "6bc1bee22e409f96e93d7e117393172a";
         let ct = "3b3fd92eb72dad20333449f8e83cfb4a";
@@ -1160,7 +1160,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_aes128_cfb8() {
         let pt = "6bc1bee22e409f96e93d7e117393172aae2d";
         let ct = "3b79424c9c0dd436bace9e0ed4586a4f32b9";
@@ -1195,7 +1195,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_aes192_cfb1() {
         // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
 
@@ -1208,7 +1208,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_aes192_cfb128() {
         // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
 
@@ -1221,7 +1221,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_aes192_cfb8() {
         // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
 
@@ -1246,7 +1246,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_aes256_cfb1() {
         let pt = "6bc1";
         let ct = "9029";
@@ -1257,7 +1257,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_aes256_cfb128() {
         let pt = "6bc1bee22e409f96e93d7e117393172a";
         let ct = "dc7e84bfda79164b7ecd8486985d3860";
@@ -1268,7 +1268,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_aes256_cfb8() {
         let pt = "6bc1bee22e409f96e93d7e117393172aae2d";
         let ct = "dc1f1a8520a64db55fcc8ac554844e889700";
@@ -1292,7 +1292,7 @@ mod tests {
 
     #[test]
     #[cfg_attr(ossl300, ignore)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_bf_cbc() {
         #[cfg(ossl300)]
         let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
@@ -1309,7 +1309,7 @@ mod tests {
 
     #[test]
     #[cfg_attr(ossl300, ignore)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_bf_ecb() {
         #[cfg(ossl300)]
         let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
@@ -1324,7 +1324,7 @@ mod tests {
 
     #[test]
     #[cfg_attr(ossl300, ignore)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_bf_cfb64() {
         #[cfg(ossl300)]
         let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
@@ -1339,7 +1339,7 @@ mod tests {
 
     #[test]
     #[cfg_attr(ossl300, ignore)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_bf_ofb() {
         #[cfg(ossl300)]
         let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
@@ -1399,7 +1399,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_des_ede3_cfb64() {
         let pt = "2b1773784b5889dc788477367daa98ad";
         let ct = "6f2867cfefda048a4046ef7e556c7132";
@@ -1446,7 +1446,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_aes128_ccm() {
         let key = "3ee186594f110fb788a8bf8aa8be5d4a";
         let nonce = "44f705d52acf27b7f17196aa9b";
@@ -1483,7 +1483,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_aes128_ccm_verify_fail() {
         let key = "3ee186594f110fb788a8bf8aa8be5d4a";
         let nonce = "44f705d52acf27b7f17196aa9b";
@@ -1504,7 +1504,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_aes256_ccm() {
         let key = "7f4af6765cad1d511db07e33aaafd57646ec279db629048aa6770af24849aa0d";
         let nonce = "dde2a362ce81b2b6913abc3095";
@@ -1541,7 +1541,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     fn test_aes256_ccm_verify_fail() {
         let key = "7f4af6765cad1d511db07e33aaafd57646ec279db629048aa6770af24849aa0d";
         let nonce = "dde2a362ce81b2b6913abc3095";
@@ -1633,7 +1633,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(any(ossl110, libressl360))]
+    #[cfg(any(ossl110, libressl360, awslc))]
     fn test_chacha20_poly1305() {
         let key = "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f";
         let iv = "070000004041424344454647";

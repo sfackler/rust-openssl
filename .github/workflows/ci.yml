@@ -72,6 +72,8 @@ jobs:
           restore-keys: |
             index-${{ runner.os }}-
       - run: cargo generate-lockfile
+      - run: |
+          cargo update -p once_cell --precise 1.20.3
       - uses: actions/cache@v4
         with:
           path: ~/.cargo/registry/cache
@@ -149,10 +151,16 @@ jobs:
             - true
             - false
           library:
+            - name: aws-lc
+              version: v1.48.2
+            - name: aws-lc
+              version: vendored
             - name: boringssl
               version: e23fe9b6eecc10e4f9ea1f0027fea5eaee7bd6b6
             - name: openssl
               version: vendored
+            - name: openssl
+              version: 3.5.0
             - name: openssl
               version: 3.4.0
             - name: openssl
@@ -274,18 +282,25 @@ jobs:
               url="https://boringssl.googlesource.com/boringssl/+archive/${{ matrix.library.version }}.tar.gz"
               tar_flags=""
               ;;
+            "aws-lc")
+              url="https://github.com/aws/aws-lc/archive/refs/tags/${{ matrix.library.version }}.tar.gz"
+              tar_flags="--strip-components=1"
+              ;;
             esac
 
             case "${{ matrix.target}}" in
             "x86_64-unknown-linux-gnu")
+              CPU=x86_64
               OS_COMPILER=linux-x86_64
               OS_FLAGS=""
               ;;
             "i686-unknown-linux-gnu")
+              CPU=i686
               OS_COMPILER=linux-elf
               OS_FLAGS="-m32 -msse2"
               ;;
             "arm-unknown-linux-gnueabihf")
+              CPU=armv4
               OS_COMPILER=linux-armv4
               OS_FLAGS=""
               export AR=arm-linux-gnueabihf-ar
@@ -315,7 +330,7 @@ jobs:
               cd build
 
               echo "set(CMAKE_SYSTEM_NAME Linux)" > toolchain.cmake
-              echo "set(CMAKE_SYSTEM_PROCESSOR $cpu)" >> toolchain.cmake
+              echo "set(CMAKE_SYSTEM_PROCESSOR $CPU)" >> toolchain.cmake
               echo "set(triple ${{ matrix.target }})" >> toolchain.cmake
               echo 'set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} '$OS_FLAGS '" CACHE STRING "c++ flags")' >> toolchain.cmake
               echo 'set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   '$OS_FLAGS '" CACHE STRING "c flags")' >> toolchain.cmake
@@ -328,6 +343,22 @@ jobs:
               # Copy stuff around so it's all as the build system expects.
               cp -r ../rust/ "$OPENSSL_DIR/rust"
               cp -r ./ "$OPENSSL_DIR/build"
+              ;;
+            "aws-lc")
+              mkdir build
+              cd build
+
+              echo "set(CMAKE_SYSTEM_NAME Linux)" > toolchain.cmake
+              echo "set(CMAKE_SYSTEM_PROCESSOR $CPU)" >> toolchain.cmake
+              echo "set(triple ${{ matrix.target }})" >> toolchain.cmake
+              echo 'set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} '$OS_FLAGS '" CACHE STRING "c++ flags")' >> toolchain.cmake
+              echo 'set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   '$OS_FLAGS '" CACHE STRING "c flags")' >> toolchain.cmake
+              echo 'set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} '$OS_FLAGS '" CACHE STRING "asm flags")' >> toolchain.cmake
+
+              cmake .. -DCMAKE_INSTALL_PREFIX="${OPENSSL_DIR}" -DCMAKE_TOOLCHAIN_FILE=toolchain.cmake
+              make -j "$(nproc)"
+              make install
+              ;;
             esac
 
           if: matrix.library.version != 'vendored' && !steps.openssl-cache.outputs.cache-hit
@@ -357,11 +388,11 @@ jobs:
             if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
               features="--features vendored"
             fi
-            if [[ "${{ matrix.bindgen }}" == "true" && "${{ matrix.library.name }}" != "boringssl" ]]; then
+            if [[ "${{ matrix.bindgen }}" == "true" ]]; then
               features="$features --features bindgen"
             fi
             cargo run --manifest-path=systest/Cargo.toml --target ${{ matrix.target }} $features
-          if: matrix.library.name != 'boringssl'
+          if: ${{ !(matrix.library.name == 'boringssl' || matrix.library.name == 'aws-lc') }}
         - name: Test openssl
           run: |
             if [[ "${{ matrix.library.name }}" == "boringssl" && "${{ matrix.bindgen }}" != "true" ]]; then
@@ -369,7 +400,11 @@ jobs:
               BORINGSSL_BUILD_DIR="$OPENSSL_DIR/build/"
             fi
             if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
-              features="--features vendored"
+              if [[ "${{ matrix.library.name }}" == "aws-lc" ]]; then
+                features="--features aws-lc"
+              else
+                features="--features vendored"
+              fi
             fi
             if [[ "${{ matrix.bindgen }}" == "true" ]]; then
               features="$features --features bindgen"
@@ -384,4 +419,4 @@ jobs:
               features="$features --features openssl-sys/bindgen"
             fi
             cargo test --manifest-path=openssl-errors/Cargo.toml --target ${{ matrix.target }} $features
-          if: matrix.library.name != 'boringssl'
+          if: ${{ !(matrix.library.name == 'boringssl' || matrix.library.name == 'aws-lc') }}
