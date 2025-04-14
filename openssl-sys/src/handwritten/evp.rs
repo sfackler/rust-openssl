@@ -649,6 +649,34 @@ extern "C" {
         sig: *const c_uchar,
         siglen: size_t,
     ) -> c_int;
+
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_encapsulate_init(
+        ctx: *mut EVP_PKEY_CTX,
+        params: *const OSSL_PARAM,
+    ) -> c_int;
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_encapsulate(
+        ctx: *mut EVP_PKEY_CTX,
+        wrappedkey: *mut c_uchar,
+        wrappedkeylen: *mut size_t,
+        genkey: *mut c_uchar,
+        genkeylen: *mut size_t,
+    ) -> c_int;
+
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_decapsulate_init(
+        ctx: *mut EVP_PKEY_CTX,
+        params: *const OSSL_PARAM,
+    ) -> c_int;
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_decapsulate(
+        ctx: *mut EVP_PKEY_CTX,
+        genkey: *mut c_uchar,
+        genkeylen: *mut size_t,
+        wrappedkey: *const c_uchar,
+        wrappedkeylen: size_t,
+    ) -> c_int;
 }
 
 const_ptr_api! {
