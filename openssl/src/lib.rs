@@ -185,6 +185,8 @@ pub mod pkcs5;
 pub mod pkcs7;
 pub mod pkey;
 pub mod pkey_ctx;
+#[cfg(ossl350)]
+pub mod pkey_ml_kem;
 #[cfg(ossl300)]
 pub mod provider;
 pub mod rand;
