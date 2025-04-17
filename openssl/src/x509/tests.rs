@@ -25,7 +25,8 @@ use crate::x509::X509PurposeRef;
 #[cfg(ossl110)]
 use crate::x509::{CrlReason, X509Builder};
 use crate::x509::{
-    CrlStatus, X509Crl, X509Extension, X509Name, X509Req, X509StoreContext, X509VerifyResult, X509,
+    CrlStatus, X509Crl, X509Extension, X509Name, X509NamePrintFlags, X509Req, X509StoreContext,
+    X509VerifyResult, X509,
 };
 
 #[cfg(ossl110)]
@@ -1195,4 +1196,85 @@ fn test_store_all_certificates() {
     };
 
     assert_eq!(store.all_certificates().len(), 1);
+}
+
+#[test]
+fn test_name_format() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    const EXPECTED_OUTPUT: &[(&str, X509NamePrintFlags, &str)] = &[
+        (
+            "RFC2253",
+            X509NamePrintFlags::RFC2253,
+            "CN=foobar.com,O=Internet Widgits Pty Ltd,ST=Some-State,C=AU",
+        ),
+        (
+            "ONELINE",
+            X509NamePrintFlags::ONELINE,
+            "C = AU, ST = Some-State, O = Internet Widgits Pty Ltd, CN = foobar.com",
+        ),
+        (
+            "MULTILINE",
+            X509NamePrintFlags::MULTILINE,
+            concat!(
+                "countryName               = AU\n",
+                "stateOrProvinceName       = Some-State\n",
+                "organizationName          = Internet Widgits Pty Ltd\n",
+                "commonName                = foobar.com"
+            ),
+        ),
+    ];
+
+    for (desc, flags, output) in EXPECTED_OUTPUT {
+        let rdn = cert.subject_name().format(0, *flags).unwrap();
+        assert_eq!(
+            rdn, *output,
+            "output for flags == X509NamePrintFlags::{} did not match expected",
+            *desc
+        );
+    }
+
+    const EXPECTED_COMPAT_OUTPUT: &[u8] =
+        b"C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, CN=foobar.com";
+
+    let rdn = cert
+        .subject_name()
+        .format_bytes(0, X509NamePrintFlags::COMPAT)
+        .unwrap();
+    assert_eq!(
+        rdn, EXPECTED_COMPAT_OUTPUT,
+        // Surrounding linefeeds make the error message much clearer to read on the console
+        "\noutput for flags == X509NamePrintFlags::COMPAT did not match expected:\n  left: {:?}\n  right: {:?}\n",
+        String::from_utf8_lossy(&rdn),
+        String::from_utf8_lossy(EXPECTED_COMPAT_OUTPUT),
+    );
+
+    let emoji_cert = include_bytes!("../../test/emoji_cert.pem");
+    let emoji_cert = X509::from_pem(emoji_cert).unwrap();
+
+    const EXPECTED_EMOJI_OUTPUT: &str =
+        "CN=www.example.com,O=\u{1f980}\u{1f9ea}\u{1f44d},ST=YY,C=XX";
+
+    let rdn = emoji_cert
+        .subject_name()
+        .format(0, X509NamePrintFlags::RFC2253)
+        .unwrap();
+    assert_eq!(
+        rdn, EXPECTED_EMOJI_OUTPUT,
+        "formatting of cert name with Unicode Emoji failed"
+    );
+
+    const EXPECTED_ESCAPED_OUTPUT: &[u8] =
+        br#"CN=www.example.com,O=\F0\9F\A6\80\F0\9F\A7\AA\F0\9F\91\8D,ST=YY,C=XX"#;
+
+    let rdn = emoji_cert
+        .subject_name()
+        .format_bytes(0, X509NamePrintFlags::RFC2253)
+        .unwrap();
+    let _ = String::from_utf8(rdn.clone()).expect("OpenSSL escaping of Unicode bytes failed");
+    assert_eq!(
+        &rdn, EXPECTED_ESCAPED_OUTPUT,
+        "formatting of cert name with Unicode Emoji did not escape bytes as expected"
+    );
 }
