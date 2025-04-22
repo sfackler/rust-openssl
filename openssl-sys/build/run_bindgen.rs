@@ -1,16 +1,16 @@
 #[cfg(feature = "bindgen")]
+use bindgen::callbacks::IntKind;
+#[cfg(feature = "bindgen")]
 use bindgen::callbacks::{MacroParsingBehavior, ParseCallbacks};
 #[cfg(feature = "bindgen")]
 use bindgen::{MacroTypeVariation, RustTarget};
+#[cfg(feature = "bindgen")]
+use once_cell::sync::OnceCell;
 use std::io::Write;
 use std::path::PathBuf;
 #[cfg(not(feature = "bindgen"))]
 use std::process;
 use std::{env, fs};
-#[cfg(feature = "bindgen")]
-use once_cell::sync::OnceCell;
-#[cfg(feature = "bindgen")]
-use bindgen::callbacks::IntKind;
 
 const INCLUDES: &str = "
 #include <openssl/aes.h>
@@ -78,7 +78,6 @@ const INCLUDES: &str = "
 #endif
 ";
 
-
 #[cfg(feature = "bindgen")]
 static MACRO_PREFIX_KIND: OnceCell<Vec<(regex::Regex, IntKind)>> = OnceCell::new();
 
@@ -96,7 +95,8 @@ fn setup_prefix_kind() {
 fn match_prefix_kine(name: &str) -> Option<IntKind> {
     let kinds = MACRO_PREFIX_KIND.get()?;
 
-    kinds.iter()
+    kinds
+        .iter()
         .find(|&(re, _)| re.is_match(name))
         .map(|(_, kind)| *kind)
 }
@@ -380,13 +380,13 @@ impl ParseCallbacks for OpensslCallbacks {
     fn will_parse_macro(&self, name: &str) -> MacroParsingBehavior {
         if let Some(_) = match_prefix_kine(name) {
             MacroParsingBehavior::Default
-        }else {
+        } else {
             MacroParsingBehavior::Ignore
         }
     }
     fn int_macro(&self, name: &str, _value: i64) -> Option<IntKind> {
         if let Some(kind) = match_prefix_kine(name) {
-            return Some(kind)
+            return Some(kind);
         }
         // auto
         None
