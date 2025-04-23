@@ -220,6 +220,22 @@ where
         Ok(())
     }
 
+    /// Prepares the context for signature verification over a message
+    /// using the public key.
+    #[corresponds(EVP_PKEY_verify_message_init)]
+    #[inline]
+    pub fn verify_message_init(&mut self,
+                               algo: &mut crate::signature::Signature)
+                               -> Result<(), ErrorStack>
+    {
+        unsafe {
+            cvt(ffi::EVP_PKEY_verify_message_init(self.as_ptr(), algo.as_ptr(),
+                                                  ptr::null()))?;
+        }
+
+        Ok(())
+    }
+
     /// Prepares the context for signature recovery using the public key.
     #[corresponds(EVP_PKEY_verify_recover_init)]
     #[inline]
@@ -395,6 +411,20 @@ where
     pub fn sign_init(&mut self) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_sign_init(self.as_ptr()))?;
+        }
+
+        Ok(())
+    }
+
+    /// Prepares the context for signing a message using the private key.
+    #[corresponds(EVP_PKEY_sign_message_init)]
+    #[inline]
+    pub fn sign_message_init(&mut self, algo: &mut crate::signature::Signature)
+                             -> Result<(), ErrorStack>
+    {
+        unsafe {
+            cvt(ffi::EVP_PKEY_sign_message_init(self.as_ptr(), algo.as_ptr(),
+                                                ptr::null()))?;
         }
 
         Ok(())
