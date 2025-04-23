@@ -60,3 +60,28 @@ impl Clone for Signature {
         SignatureRef::to_owned(self)
     }
 }
+
+impl Signature {
+    /// Creates a new `Signature` for use with ML-DSA.
+    pub fn for_ml_dsa(variant: crate::pkey_ml_dsa::Variant)
+                      -> Result<Signature, ErrorStack>
+    {
+        unsafe {
+            Ok(Signature(cvt_p(ffi::EVP_SIGNATURE_fetch(
+                ptr::null_mut(), variant.as_cstr().as_ptr(), ptr::null()))?))
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_alloc_free() {
+        let sig =
+            Signature::for_ml_dsa(crate::pkey_ml_dsa::Variant::MlDsa44).unwrap();
+        drop(sig);
+    }
+}
