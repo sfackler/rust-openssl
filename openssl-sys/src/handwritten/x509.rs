@@ -489,6 +489,12 @@ const_ptr_api! {
         pub fn X509_NAME_entry_count(n: #[const_ptr_if(any(ossl110, libressl280))] X509_NAME) -> c_int;
         pub fn X509_NAME_get_index_by_NID(n: #[const_ptr_if(any(ossl300, libressl280))] X509_NAME, nid: c_int, last_pos: c_int) -> c_int;
         pub fn X509_NAME_get_entry(n: #[const_ptr_if(any(ossl110, libressl280))] X509_NAME, loc: c_int) -> *mut X509_NAME_ENTRY;
+        pub fn X509_NAME_print_ex(
+            out: *mut BIO,
+            n: #[const_ptr_if(any(ossl110, libressl280))] X509_NAME,
+            indent: c_int,
+            flags: c_ulong,
+        ) -> c_int;
         pub fn X509_NAME_add_entry_by_NID(
             x: *mut X509_NAME,
             field: c_int,

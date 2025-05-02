@@ -9,7 +9,7 @@
 
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
-use libc::{c_int, c_long, c_uint, c_void};
+use libc::{c_int, c_long, c_uint, c_ulong, c_void};
 use std::cmp::{self, Ordering};
 use std::convert::{TryFrom, TryInto};
 use std::error::Error;
@@ -1272,6 +1272,26 @@ impl X509NameRef {
 impl fmt::Debug for X509NameRef {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.debug_list().entries(self.entries()).finish()
+    }
+}
+
+impl fmt::Display for X509NameRef {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        const INDENT: i32 = 0;
+        const FLAGS: c_ulong = ffi::XN_FLAG_RFC2253 & !ffi::ASN1_STRFLGS_ESC_MSB;
+
+        unsafe {
+            let bio = crate::bio::MemBio::new()?;
+            cvt_n(ffi::X509_NAME_print_ex(
+                bio.as_ptr(),
+                self.as_ptr(),
+                INDENT,
+                FLAGS,
+            ))
+            .or(Err(fmt::Error))?;
+            let value = core::str::from_utf8_unchecked(bio.get_buf());
+            formatter.write_str(value)
+        }
     }
 }
 
