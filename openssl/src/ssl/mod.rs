@@ -69,9 +69,9 @@ use crate::ex_data::Index;
 use crate::hash::MessageDigest;
 #[cfg(any(ossl110, libressl270))]
 use crate::nid::Nid;
-use crate::pkey::{HasPrivate, PKeyRef, Params, Private};
 #[cfg(ossl300)]
-use crate::pkey::{PKey, Public};
+use crate::pkey::PKey;
+use crate::pkey::{HasPrivate, PKeyRef, Params, Private, Public};
 use crate::srtp::{SrtpProtectionProfile, SrtpProtectionProfileRef};
 use crate::ssl::bio::BioMethod;
 use crate::ssl::callbacks::*;
@@ -1781,6 +1781,93 @@ impl SslContextBuilder {
         unsafe { ffi::SSL_CTX_set_security_level(self.as_ptr(), level as c_int) }
     }
 
+    /// initialize the shared state required for DANE support.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[corresponds(SSL_CTX_dane_enable)]
+    #[cfg(ossl110)]
+    pub fn dane_enable(&mut self) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::SSL_CTX_dane_enable(self.as_ptr())).map(|_| ()) }
+    }
+
+    /// Adjust the supported digest algorithms.
+    /// This must be done before any SSL handles are created for the context.
+    ///
+    /// The mtype argument specifies a DANE TLSA matching type and the md argument
+    /// specifies the associated digest algorithm handle.
+    /// The ord argument specifies a strength ordinal.
+    ///
+    /// Algorithms with a larger strength ordinal are considered more secure.
+    ///
+    /// Strength ordinals are used to implement RFC7671 digest algorithm agility.
+    ///
+    /// Specifying None for the digest algorithm for a matching type disables
+    /// support for that matching type.
+    ///
+    /// Matching type Full(0) cannot be modified or disabled.
+    ///
+    /// By default, matching type SHA2-256(1) (see RFC7218 for definitions of
+    /// the DANE TLSA parameter acronyms) is mapped to EVP_sha256() with a strength
+    /// ordinal of 1 and matching type SHA2-512(2) is mapped to EVP_sha512()
+    /// with a strength ordinal of 2.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[corresponds(SSL_CTX_dane_mtype_set)]
+    #[cfg(ossl110)]
+    pub fn dane_mtype_set(
+        &mut self,
+        md: Option<crate::md::MdRef>,
+        mtype: DaneMatchType,
+        ord: u8,
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_CTX_dane_mtype_set(
+                self.as_ptr(),
+                md.map(|md| md.as_ptr()).unwrap_or(std::ptr::null_mut()),
+                mtype.as_raw(),
+                ord,
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Disable server name checks when authenticating via DANE-EE(3) TLSA
+    /// records. For some applications, primarily web browsers, it is not safe to disable name
+    /// checks due to "unknown key share" attacks, in which a malicious server can convince a
+    /// client that a connection to a victim server is instead a secure connection to the malicious
+    /// server. The malicious server may then be able to violate cross-origin scripting
+    /// restrictions. Thus, despite the text of RFC7671, name checks are by default enabled for
+    /// DANE-EE(3) TLSA records, and can be disabled in applications where it is safe to do so. In
+    /// particular, SMTP and XMPP clients should set this option as SRV and MX records already make
+    /// it possible for a remote domain to redirect client connections to any server of its choice,
+    /// and in any case SMTP and XMPP clients do not execute scripts downloaded from remote
+    /// servers.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[corresponds(SSL_CTX_dane_set_flags)]
+    #[cfg(ossl110)]
+    pub fn set_no_dane_ee_namechecks(&mut self) {
+        unsafe {
+            ffi::SSL_CTX_dane_set_flags(self.as_ptr(), ffi::DANE_FLAG_NO_DANE_EE_NAMECHECKS);
+        }
+    }
+
+    /// Enable server name checks when authenticating via DANE-EE(3) TLSA
+    /// records.
+    ///
+    /// This is the default state of the context.
+    ///
+    /// See `set_no_dane_ee_namechecks` for more information.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[corresponds(SSL_CTX_dane_set_flags)]
+    #[cfg(ossl110)]
+    pub fn set_dane_ee_namechecks(&mut self) {
+        unsafe {
+            ffi::SSL_CTX_dane_clear_flags(self.as_ptr(), ffi::DANE_FLAG_NO_DANE_EE_NAMECHECKS);
+        }
+    }
+
     /// Consumes the builder, returning a new `SslContext`.
     pub fn build(self) -> SslContext {
         self.0
@@ -2369,6 +2456,128 @@ impl Ssl {
     {
         SslStreamBuilder::new(self, stream).accept()
     }
+}
+
+/// Represents a TLSA selector as defined by
+/// <https://datatracker.ietf.org/doc/html/rfc7218#section-2.2>
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct DaneSelector(u8);
+
+impl DaneSelector {
+    // These constants are not defined in the openssl sources,
+    // but are defined by the DANE RFCs, so the numeric values
+    // are embedded here directly.
+    // <https://datatracker.ietf.org/doc/html/rfc7218#section-2.2>
+    /// Full Certificate
+    pub const CERT: DaneSelector = DaneSelector(0);
+    /// SubjectPublicKeyInfo
+    pub const SPKI: DaneSelector = DaneSelector(1);
+    /// Reserved for Private Use
+    pub const PRIV_SEL: DaneSelector = DaneSelector(255);
+
+    /// Constructs a `DaneSelector` from a raw OpenSSL value.
+    pub fn from_raw(value: u8) -> Self {
+        Self(value)
+    }
+
+    /// Returns the raw OpenSSL value represented by this type.
+    pub fn as_raw(&self) -> u8 {
+        self.0
+    }
+}
+
+/// Represents a TLSA Certificate Usage as defined by
+/// <https://datatracker.ietf.org/doc/html/rfc7218#section-2.1>
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct DaneUsage(u8);
+
+impl DaneUsage {
+    // These constants are not defined in the openssl sources,
+    // but are defined by the DANE RFCs, so the numeric values
+    // are embedded here directly.
+    // <https://datatracker.ietf.org/doc/html/rfc7218#section-2.1>
+    /// CA Constraint
+    pub const PKIX_TA: DaneUsage = DaneUsage(0);
+    /// Service certificate constraint
+    pub const PKIX_EE: DaneUsage = DaneUsage(1);
+    /// Trust anchor assertion
+    pub const DANE_TA: DaneUsage = DaneUsage(2);
+    /// Domain-issued certificate
+    pub const DANE_EE: DaneUsage = DaneUsage(3);
+    /// Reserved for private use
+    pub const PRIV_CERT: DaneUsage = DaneUsage(255);
+
+    /// Constructs a `DaneUsage` from a raw OpenSSL value.
+    pub fn from_raw(value: u8) -> Self {
+        Self(value)
+    }
+
+    /// Returns the raw OpenSSL value represented by this type.
+    pub fn as_raw(&self) -> u8 {
+        self.0
+    }
+}
+
+/// Represents a TLSA matching type as defined by
+/// <https://datatracker.ietf.org/doc/html/rfc7218#section-2.3>
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct DaneMatchType(u8);
+
+impl DaneMatchType {
+    // These constants are not defined in the openssl sources,
+    // but are defined by the DANE RFCs, so the numeric values
+    // are embedded here directly.
+    // <https://datatracker.ietf.org/doc/html/rfc7218#section-2.3>
+    /// No hash used
+    pub const FULL: DaneMatchType = DaneMatchType(0);
+    /// 256 bit hash by SHA2
+    pub const SHA2_256: DaneMatchType = DaneMatchType(1);
+    /// 512 bit hash by SHA2
+    pub const SHA2_512: DaneMatchType = DaneMatchType(2);
+    /// Reserved for private use
+    pub const PRIV_MATCH: DaneMatchType = DaneMatchType(255);
+
+    /// Constructs a `DaneMatchType` from a raw OpenSSL value.
+    pub fn from_raw(value: u8) -> Self {
+        Self(value)
+    }
+
+    /// Returns the raw OpenSSL value represented by this type.
+    pub fn as_raw(&self) -> u8 {
+        self.0
+    }
+}
+
+/// Returns information about the matched DANE trust-anchor
+pub struct DaneAuthority<'a> {
+    /// If a TLSA record matched a chain certificate, this holds
+    /// that certificate
+    pub cert: Option<&'a X509Ref>,
+
+    /// If no TLSA records directly matched any elements of the certificate chain,
+    /// but a DANE-TA(2) SPKI(1) Full(0) record provided the public key that signed
+    /// an element of the chain, then that key is returned here
+    pub pkey: Option<&'a PKeyRef<Public>>,
+
+    /// The match depth.
+    /// 0 if an EE TLSA record directly matched the leaf certificate, or a positive
+    /// number indicating the depth at which a TA record matched an issuer certificate.
+    pub depth: usize,
+}
+
+/// Represents the fields of the TLSA DNS record that matched the peer
+/// certificate chain when DANE verification was successful.
+#[derive(Debug, PartialEq, Eq)]
+pub struct DaneTlsaUsed<'a> {
+    pub usage: DaneUsage,
+    pub selector: DaneSelector,
+    pub mtype: DaneMatchType,
+
+    /// The binary data in wire form
+    pub data: &'a [u8],
+
+    /// The match depth
+    pub depth: usize,
 }
 
 impl fmt::Debug for SslRef {
@@ -3494,6 +3703,190 @@ impl SslRef {
                 Err(e) => Err(e),
             }
         }
+    }
+
+    /// Disable server name checks when authenticating via DANE-EE(3) TLSA
+    /// records. For some applications, primarily web browsers, it is not safe to disable name
+    /// checks due to "unknown key share" attacks, in which a malicious server can convince a
+    /// client that a connection to a victim server is instead a secure connection to the malicious
+    /// server. The malicious server may then be able to violate cross-origin scripting
+    /// restrictions. Thus, despite the text of RFC7671, name checks are by default enabled for
+    /// DANE-EE(3) TLSA records, and can be disabled in applications where it is safe to do so. In
+    /// particular, SMTP and XMPP clients should set this option as SRV and MX records already make
+    /// it possible for a remote domain to redirect client connections to any server of its choice,
+    /// and in any case SMTP and XMPP clients do not execute scripts downloaded from remote
+    /// servers.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[corresponds(SSL_dane_set_flags)]
+    #[cfg(ossl110)]
+    pub fn set_no_dane_ee_namechecks(&mut self) {
+        unsafe {
+            ffi::SSL_dane_set_flags(self.as_ptr(), ffi::DANE_FLAG_NO_DANE_EE_NAMECHECKS);
+        }
+    }
+
+    /// Enable server name checks when authenticating via DANE-EE(3) TLSA
+    /// records.
+    ///
+    /// This is the default state of the context.
+    ///
+    /// See `set_no_dane_ee_namechecks` for more information.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[corresponds(SSL_dane_set_flags)]
+    #[cfg(ossl110)]
+    pub fn set_dane_ee_namechecks(&mut self) {
+        unsafe {
+            ffi::SSL_dane_clear_flags(self.as_ptr(), ffi::DANE_FLAG_NO_DANE_EE_NAMECHECKS);
+        }
+    }
+
+    /// Adds name as an additional reference identifier that can match the peer's certificate. Any
+    /// previous names set via SSL_set1_host() or SSL_add1_host() are retained, no change is made
+    /// if name is NULL or empty. When multiple names are configured, the peer is considered
+    /// verified when any name matches. This function is required for DANE TLSA in the presence of
+    /// service name indirection via CNAME, MX or SRV records as specified in RFC7671, RFC7672 or
+    /// RFC7673.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[corresponds(SSL_add1_host)]
+    #[cfg(ossl110)]
+    pub fn add1_host(&mut self, hostname: &str) -> Result<(), ErrorStack> {
+        let cstr = CString::new(hostname).unwrap();
+        unsafe { cvt(ffi::SSL_add1_host(self.as_ptr(), cstr.as_ptr())).map(|_| ()) }
+    }
+
+    /// Must be called before the SSL handshake is initiated with SSL_connect(3)
+    /// if (and only if) you want to enable DANE for that connection.
+    ///
+    /// The connection must be associated with a DANE-enabled SSL context.
+    ///
+    /// The base_domain argument specifies the RFC7671 TLSA base domain,
+    /// which will be the primary peer reference identifier for certificate name checks.
+    ///
+    /// Additional server names can be specified via `add1_host`.
+    ///
+    /// The base_domain is used as the default SNI hint if none has yet been
+    /// specified via SSL_set_tlsext_host_name(3).
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[corresponds(SSL_dane_enable)]
+    #[cfg(ossl110)]
+    pub fn dane_enable(&mut self, base_domain: &str) -> Result<(), ErrorStack> {
+        let cstr = CString::new(base_domain).unwrap();
+        unsafe { cvt(ffi::SSL_dane_enable(self.as_ptr(), cstr.as_ptr())).map(|_| ()) }
+    }
+
+    /// May be called one or more times to load each of the TLSA records that apply
+    /// to the remote TLS peer.
+    ///
+    /// This must be done prior to the beginning of the SSL handshake.
+    ///
+    /// The arguments specify the fields of the TLSA record.
+    /// The data field is provided in binary (wire RDATA) form,
+    /// not the hexadecimal ASCII presentation form.
+    ///
+    /// Returns a boolean to indicate whether the record was usable or not.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[corresponds(SSL_dane_tlsa_add)]
+    #[cfg(ossl110)]
+    pub fn dane_tlsa_add(
+        &mut self,
+        usage: DaneUsage,
+        selector: DaneSelector,
+        mtype: DaneMatchType,
+        data: &[u8],
+    ) -> Result<bool, ErrorStack> {
+        let usable = unsafe {
+            cvt_n(ffi::SSL_dane_tlsa_add(
+                self.as_ptr(),
+                usage.as_raw(),
+                selector.as_raw(),
+                mtype.as_raw(),
+                data.as_ptr() as *const c_uchar,
+                data.len(),
+            ))
+        }?;
+
+        Ok(usable > 0)
+    }
+
+    /// Get more detailed information about the matched DANE trust-anchor after
+    /// successful connection completion.
+    ///
+    /// Returns an error if DANE verification failed or was not enabled.
+    ///
+    /// Returns a DaneAuthority struct on success.
+    ///
+    /// The complete verified chain can be retrieved via `verified_chain`.
+    /// The `depth` field is an index into this verified chain.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[corresponds(SSL_get0_dane_authority)]
+    #[cfg(ossl110)]
+    pub fn dane_authority(&self) -> Result<DaneAuthority<'_>, ErrorStack> {
+        let mut mcert = std::ptr::null_mut();
+        let mut mspki = std::ptr::null_mut();
+        let depth = unsafe {
+            cvt_n(ffi::SSL_get0_dane_authority(
+                self.as_ptr(),
+                &mut mcert,
+                &mut mspki,
+            ))?
+        } as usize;
+
+        let cert = if mcert.is_null() {
+            None
+        } else {
+            unsafe { Some(X509Ref::from_ptr(mcert)) }
+        };
+
+        let pkey = if mspki.is_null() {
+            None
+        } else {
+            unsafe { PKeyRef::from_const_ptr_opt(mspki) }
+        };
+
+        Ok(DaneAuthority { depth, cert, pkey })
+    }
+
+    /// Retrieve the fields of the TLSA record that matched the peer certificate chain.
+    ///
+    /// Returns an error if DANE verification failed or was not enabled.
+    ///
+    /// Returns a DaneTlsaUsed struct on success; the fields are populated with
+    /// the information from the TLSA record that matched the peer certificate chain.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[corresponds(SSL_get0_dane_tlsa)]
+    #[cfg(ossl110)]
+    pub fn dane_tlsa(&self) -> Result<DaneTlsaUsed<'_>, ErrorStack> {
+        let mut usage = 0;
+        let mut selector = 0;
+        let mut mtype = 0;
+        let mut data = std::ptr::null();
+        let mut dlen = 0;
+
+        let depth = unsafe {
+            cvt_n(ffi::SSL_get0_dane_tlsa(
+                self.as_ptr(),
+                &mut usage,
+                &mut selector,
+                &mut mtype,
+                &mut data,
+                &mut dlen,
+            ))?
+        } as usize;
+
+        Ok(DaneTlsaUsed {
+            usage: DaneUsage::from_raw(usage),
+            selector: DaneSelector::from_raw(selector),
+            mtype: DaneMatchType::from_raw(mtype),
+            depth,
+            data: unsafe { std::slice::from_raw_parts(data, dlen) },
+        })
     }
 }
 
