@@ -10,11 +10,13 @@ use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_uint;
 use std::ptr;
 
+use crate::asn1::Asn1ObjectRef;
 use crate::bio::{MemBio, MemBioSlice};
 use crate::error::ErrorStack;
 use crate::pkey::{HasPrivate, PKeyRef};
 use crate::stack::StackRef;
 use crate::symm::Cipher;
+use crate::util::ForeignTypeRefExt;
 use crate::x509::{store::X509StoreRef, X509Ref, X509};
 use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
@@ -273,6 +275,15 @@ impl CmsContentInfo {
             };
 
             Ok(())
+        }
+    }
+
+    #[corresponds(CMS_get0_type)]
+    pub fn get_type(&self) -> &Asn1ObjectRef {
+        unsafe {
+            let asn1_type = ffi::CMS_get0_type(self.as_ptr());
+
+            Asn1ObjectRef::from_const_ptr(asn1_type)
         }
     }
 }
