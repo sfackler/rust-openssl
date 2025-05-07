@@ -7,7 +7,7 @@ use std::env;
 mod cfgs;
 
 fn main() {
-    let mut cfg = ctest2::TestGenerator::new();
+    let mut cfg = ctest::TestGenerator::new();
     let target = env::var("TARGET").unwrap();
 
     if let Ok(out) = env::var("DEP_OPENSSL_INCLUDE") {
