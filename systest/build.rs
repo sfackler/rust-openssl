@@ -87,6 +87,7 @@ fn main() {
         }
         if version >= 0x30200000 {
             cfg.header("openssl/thread.h");
+            cfg.header("openssl/hpke.h");
         }
     }
 
