@@ -87,14 +87,23 @@ jobs:
 
   windows-vcpkg:
     name: windows-vcpkg
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        os:
+          - runner: windows-latest
+            arch: x64
+          - runner: windows-11-arm
+            arch: arm64
+    runs-on: ${{ matrix.os.runner }}
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        if: matrix.os.runner == 'windows-11-arm'
       - uses: sfackler/actions/rustup@master
       - run: echo "version=$(rustc --version)" >> $GITHUB_OUTPUT
         id: rust-version
       - run: echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - run: vcpkg install openssl:x64-windows-static-md
+      - run: vcpkg install openssl:${{ matrix.os.arch }}-windows-static-md
       - uses: actions/cache@v4
         with:
           path: ~/.cargo/registry/index
