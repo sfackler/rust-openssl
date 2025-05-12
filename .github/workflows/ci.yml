@@ -97,6 +97,8 @@ jobs:
     runs-on: ${{ matrix.os.runner }}
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        if: matrix.os.runner == 'windows-11-arm'
       - uses: sfackler/actions/rustup@master
       - run: echo "version=$(rustc --version)" >> $GITHUB_OUTPUT
         id: rust-version
