@@ -93,7 +93,7 @@ jobs:
           - runner: windows-latest
             arch: x64
           - runner: windows-11-arm
-            arch: aarch64
+            arch: arm64
     runs-on: ${{ matrix.os.runner }}
     steps:
       - uses: actions/checkout@v4
