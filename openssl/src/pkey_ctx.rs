@@ -223,6 +223,7 @@ where
 
     /// Prepares the context for signature verification over a message
     /// using the public key.
+    #[cfg(ossl340)]
     #[corresponds(EVP_PKEY_verify_message_init)]
     #[inline]
     pub fn verify_message_init(&mut self,
@@ -421,6 +422,7 @@ where
     }
 
     /// Prepares the context for signing a message using the private key.
+    #[cfg(ossl340)]
     #[corresponds(EVP_PKEY_sign_message_init)]
     #[inline]
     pub fn sign_message_init(&mut self, algo: &mut crate::signature::Signature)
