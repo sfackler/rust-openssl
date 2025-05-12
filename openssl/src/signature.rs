@@ -63,6 +63,7 @@ impl Clone for Signature {
 
 impl Signature {
     /// Creates a new `Signature` for use with ML-DSA.
+    #[cfg(ossl350)]
     pub fn for_ml_dsa(variant: crate::pkey_ml_dsa::Variant)
                       -> Result<Signature, ErrorStack>
     {
@@ -78,6 +79,7 @@ mod tests {
 
     use super::*;
 
+    #[cfg(ossl350)]
     #[test]
     fn test_alloc_free() {
         let sig =
