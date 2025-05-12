@@ -198,6 +198,7 @@ where
     }
 
     /// Prepares the context for encapsulateion using the public key.
+    #[cfg(ossl300)]
     #[corresponds(EVP_PKEY_encapsulate_init)]
     #[inline]
     pub fn encapsulate_init(&mut self) -> Result<(), ErrorStack> {
@@ -279,6 +280,7 @@ where
     }
 
     /// Performs a public key encapsulation operation.
+    #[cfg(ossl300)]
     #[corresponds(EVP_PKEY_encapsulate)]
     pub fn encapsulate(&mut self, wrappedkey: Option<&mut [u8]>, genkey: Option<&mut [u8]>)
                        -> Result<(usize, usize), ErrorStack>
@@ -299,6 +301,7 @@ where
     }
 
     /// Like [`Self::encapsulate`] but appends ciphertext and key to a [`Vec`].
+    #[cfg(ossl300)]
     pub fn encapsulate_to_vec(&mut self, wrappedkey: &mut Vec<u8>, genkey: &mut Vec<u8>)
                               -> Result<(usize, usize), ErrorStack>
     {
@@ -395,6 +398,7 @@ where
     }
 
     /// Prepares the context for decapsulation using the private key.
+    #[cfg(ossl300)]
     #[corresponds(EVP_PKEY_decapsulate_init)]
     #[inline]
     pub fn decapsulate_init(&mut self) -> Result<(), ErrorStack> {
@@ -475,6 +479,7 @@ where
     }
 
     /// Performs a decapsulation operation using the private key.
+    #[cfg(ossl300)]
     #[corresponds(EVP_PKEY_decapsulate)]
     pub fn decapsulate(&mut self, from: &[u8], to: Option<&mut [u8]>)
                        -> Result<usize, ErrorStack>
@@ -494,6 +499,7 @@ where
     }
 
     /// Like [`Self::decapsulate`] but appends plaintext to a [`Vec`].
+    #[cfg(ossl300)]
     pub fn decapsulate_to_vec(&mut self, from: &[u8], out: &mut Vec<u8>)
                               -> Result<usize, ErrorStack>
     {
