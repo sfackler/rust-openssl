@@ -151,7 +151,7 @@ pub struct PKeyMlDsaParams<T> {
 }
 
 impl<T> PKeyMlDsaParams<T> {
-    /// Creates a new `PKeyMlDsaParams` from existing ECDSA PKey. Internal.
+    /// Creates a new `PKeyMlDsaParams` from existing ML-DSA PKey. Internal.
     #[corresponds(EVP_PKEY_todata)]
     fn _new_from_pkey<S>(
         pkey: &PKey<S>,
@@ -169,7 +169,7 @@ impl<T> PKeyMlDsaParams<T> {
 }
 
 impl PKeyMlDsaParams<Public> {
-    /// Creates a new `PKeyMlDsaParams` from existing Public ECDSA PKey.
+    /// Creates a new `PKeyMlDsaParams` from existing Public ML-DSA PKey.
     #[corresponds(EVP_PKEY_todata)]
     pub fn from_pkey<S>(pkey: &PKey<S>) -> Result<PKeyMlDsaParams<Public>, ErrorStack> {
         Self::_new_from_pkey(pkey, ffi::EVP_PKEY_PUBLIC_KEY)
@@ -185,7 +185,7 @@ impl PKeyMlDsaParams<Public> {
 }
 
 impl PKeyMlDsaParams<Private> {
-    /// Creates a new `PKeyMlDsaParams` from existing Private ECDSA PKey.
+    /// Creates a new `PKeyMlDsaParams` from existing Private ML-DSA PKey.
     #[corresponds(EVP_PKEY_todata)]
     pub fn from_pkey(pkey: &PKey<Private>) -> Result<PKeyMlDsaParams<Private>, ErrorStack> {
         Self::_new_from_pkey(pkey, ffi::EVP_PKEY_KEYPAIR)
