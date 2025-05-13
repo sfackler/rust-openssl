@@ -66,10 +66,7 @@ impl<T> PKeyMlKemBuilder<T> {
 
     /// Creates a new `PKeyMlKemBuilder` to build ML-KEM private keys
     /// from a seed.
-    pub fn from_seed(
-        variant: Variant,
-        seed: &[u8],
-    ) -> Result<PKeyMlKemBuilder<T>, ErrorStack> {
+    pub fn from_seed(variant: Variant, seed: &[u8]) -> Result<PKeyMlKemBuilder<T>, ErrorStack> {
         let bld = OsslParamBuilder::new()?;
         bld.add_octet_string(OSSL_PKEY_PARAM_SEED, seed)?;
         Ok(PKeyMlKemBuilder::<T> {
@@ -82,8 +79,7 @@ impl<T> PKeyMlKemBuilder<T> {
     /// Build PKey. Internal.
     #[corresponds(EVP_PKEY_fromdata)]
     fn build_internal(self, selection: c_int) -> Result<PKey<T>, ErrorStack> {
-        let mut ctx = PkeyCtx::new_from_name(
-            None, self.variant.as_str(), None)?;
+        let mut ctx = PkeyCtx::new_from_name(None, self.variant.as_str(), None)?;
         ctx.fromdata_init()?;
         let params = self.bld.to_param()?;
         unsafe {
@@ -109,9 +105,7 @@ impl PKeyMlKemBuilder<Private> {
 
     /// Creates a new `PKeyRsaBuilder` to generate a new ML-KEM key
     /// pair.
-    pub fn new_generate(variant: Variant)
-                        -> Result<PKeyMlKemBuilder<Private>, ErrorStack>
-    {
+    pub fn new_generate(variant: Variant) -> Result<PKeyMlKemBuilder<Private>, ErrorStack> {
         let bld = OsslParamBuilder::new()?;
         Ok(PKeyMlKemBuilder::<Private> {
             bld,
@@ -122,8 +116,7 @@ impl PKeyMlKemBuilder<Private> {
 
     /// Generate an ML-KEM PKey.
     pub fn generate(self) -> Result<PKey<Private>, ErrorStack> {
-        let mut ctx = PkeyCtx::new_from_name(
-            None, self.variant.as_str(), None)?;
+        let mut ctx = PkeyCtx::new_from_name(None, self.variant.as_str(), None)?;
         ctx.keygen_init()?;
         let params = self.bld.to_param()?;
         unsafe {
@@ -149,9 +142,10 @@ pub struct PKeyMlKemParams<T> {
 impl<T> PKeyMlKemParams<T> {
     /// Creates a new `PKeyMlKemParams` from existing ML-KEM PKey. Internal.
     #[corresponds(EVP_PKEY_todata)]
-    fn _new_from_pkey<S>(pkey: &PKey<S>, selection: c_int)
-                         -> Result<PKeyMlKemParams<T>, ErrorStack>
-    {
+    fn _new_from_pkey<S>(
+        pkey: &PKey<S>,
+        selection: c_int,
+    ) -> Result<PKeyMlKemParams<T>, ErrorStack> {
         unsafe {
             let mut params: *mut ffi::OSSL_PARAM = ptr::null_mut();
             cvt(ffi::EVP_PKEY_todata(pkey.as_ptr(), selection, &mut params))?;
@@ -192,7 +186,9 @@ impl PKeyMlKemParams<Private> {
 
     /// Returns the private key.
     pub fn private_key(&self) -> Result<&[u8], ErrorStack> {
-        self.params.locate(OSSL_PKEY_PARAM_PRIV_KEY)?.get_octet_string()
+        self.params
+            .locate(OSSL_PKEY_PARAM_PRIV_KEY)?
+            .get_octet_string()
     }
 }
 
@@ -224,7 +220,8 @@ mod tests {
         let (mut wrappedkey, mut genkey0) = (vec![], vec![]);
         let mut ctx = PkeyCtx::new(&key).unwrap();
         ctx.encapsulate_init().unwrap();
-        ctx.encapsulate_to_vec(&mut wrappedkey, &mut genkey0).unwrap();
+        ctx.encapsulate_to_vec(&mut wrappedkey, &mut genkey0)
+            .unwrap();
 
         let mut genkey1 = vec![];
         let mut ctx = PkeyCtx::new(&key).unwrap();
@@ -234,16 +231,18 @@ mod tests {
         assert_eq!(genkey0, genkey1);
 
         // Encapsulate with a PKEY derived from the public parameters.
-        let public_params =
-            PKeyMlKemParams::<Public>::from_pkey(&key).unwrap();
-        let key_pub = PKeyMlKemBuilder::<Public>::new(
-            variant, public_params.public_key().unwrap(), None).unwrap()
-            .build().unwrap();
+        let public_params = PKeyMlKemParams::<Public>::from_pkey(&key).unwrap();
+        let key_pub =
+            PKeyMlKemBuilder::<Public>::new(variant, public_params.public_key().unwrap(), None)
+                .unwrap()
+                .build()
+                .unwrap();
 
         let (mut wrappedkey, mut genkey0) = (vec![], vec![]);
         let mut ctx = PkeyCtx::new(&key_pub).unwrap();
         ctx.encapsulate_init().unwrap();
-        ctx.encapsulate_to_vec(&mut wrappedkey, &mut genkey0).unwrap();
+        ctx.encapsulate_to_vec(&mut wrappedkey, &mut genkey0)
+            .unwrap();
 
         let mut genkey1 = vec![];
         let mut ctx = PkeyCtx::new(&key).unwrap();
@@ -255,9 +254,10 @@ mod tests {
         // Note that we can get the public parameter from the
         // PKeyMlKemParams::<Private> as well.  The same is not true
         // for ML-DSA, for example.
-        let private_params =
-            PKeyMlKemParams::<Private>::from_pkey(&key).unwrap();
-        assert_eq!(public_params.public_key().unwrap(),
-                   private_params.public_key().unwrap());
+        let private_params = PKeyMlKemParams::<Private>::from_pkey(&key).unwrap();
+        assert_eq!(
+            public_params.public_key().unwrap(),
+            private_params.public_key().unwrap()
+        );
     }
 }
