@@ -8,7 +8,11 @@
 //!
 //! Note, that this module is available only in OpenSSL 3.* and
 //! only internally for this crate!
-//!
+
+// Depending on which version of OpenSSL is used, and which algorithms
+// are exposed in the bindings, not all of these functions are used.
+#![allow(dead_code)]
+
 use crate::bn::{BigNum, BigNumRef};
 use crate::error::ErrorStack;
 use crate::util;
@@ -33,7 +37,6 @@ impl OsslParam {}
 
 impl OsslParamRef {
     /// Locates the `OsslParam` in the `OsslParam` array
-    #[allow(dead_code)]
     #[corresponds(OSSL_PARAM_locate)]
     pub fn locate(&self, key: &[u8]) -> Result<&OsslParamRef, ErrorStack> {
         unsafe {
@@ -46,7 +49,6 @@ impl OsslParamRef {
     }
 
     /// Get `BigNum` from the current `OsslParam`
-    #[allow(dead_code)]
     #[corresponds(OSSL_PARAM_get_BN)]
     pub fn get_bn(&self) -> Result<BigNum, ErrorStack> {
         unsafe {
@@ -57,7 +59,6 @@ impl OsslParamRef {
     }
 
     /// Get `&str` from the current `OsslParam`
-    #[allow(dead_code)]
     #[corresponds(OSSL_PARAM_get_utf8_string)]
     pub fn get_utf8_string(&self) -> Result<&str, ErrorStack> {
         unsafe {
@@ -68,7 +69,6 @@ impl OsslParamRef {
     }
 
     /// Get octet string (as `&[u8]) from the current `OsslParam`
-    #[allow(dead_code)]
     #[corresponds(OSSL_PARAM_get_octet_string)]
     pub fn get_octet_string(&self) -> Result<&[u8], ErrorStack> {
         unsafe {
@@ -121,7 +121,6 @@ impl OsslParamBuilderRef {
     /// Adds a `BigNum` to `OsslParamBuilder`.
     ///
     /// Note, that both key and bn need to exist until the `to_param` is called!
-    #[allow(dead_code)]
     #[corresponds(OSSL_PARAM_BLD_push_BN)]
     pub fn add_bn(&self, key: &[u8], bn: &BigNumRef) -> Result<(), ErrorStack> {
         unsafe {
@@ -137,7 +136,6 @@ impl OsslParamBuilderRef {
     /// Adds a utf8 string to `OsslParamBuilder`.
     ///
     /// Note, that both `key` and `buf` need to exist until the `to_param` is called!
-    #[allow(dead_code)]
     #[corresponds(OSSL_PARAM_BLD_push_utf8_string)]
     pub fn add_utf8_string(&self, key: &[u8], buf: &str) -> Result<(), ErrorStack> {
         unsafe {
