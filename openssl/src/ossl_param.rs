@@ -33,6 +33,7 @@ impl OsslParam {}
 
 impl OsslParamRef {
     /// Locates the `OsslParam` in the `OsslParam` array
+    #[allow(dead_code)]
     #[corresponds(OSSL_PARAM_locate)]
     pub fn locate(&self, key: &[u8]) -> Result<&OsslParamRef, ErrorStack> {
         unsafe {
@@ -67,6 +68,7 @@ impl OsslParamRef {
     }
 
     /// Get octet string (as `&[u8]) from the current `OsslParam`
+    #[allow(dead_code)]
     #[corresponds(OSSL_PARAM_get_octet_string)]
     pub fn get_octet_string(&self) -> Result<&[u8], ErrorStack> {
         unsafe {

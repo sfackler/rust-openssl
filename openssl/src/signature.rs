@@ -1,5 +1,10 @@
 //! Wraps `EVP_SIGNATURE` objects.
 
+// XXX: A number of imports is only used when ML-DSA is available.
+// Once support for universally available signature algorithms is
+// added, remove the following line.
+#[allow(unused_imports)]
+
 use crate::cvt_p;
 use crate::error::ErrorStack;
 use foreign_types::{ForeignType, ForeignTypeRef};
@@ -77,6 +82,13 @@ impl Signature {
 
 #[cfg(test)]
 mod tests {
+
+use std::fs::File;
+
+    // XXX: A number of imports is only used when ML-DSA is available.
+    // Once support for universally available signature algorithms is
+    // added, remove the following line.
+    #[allow(unused_imports)]
 
     use super::*;
 
