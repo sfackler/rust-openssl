@@ -1,7 +1,7 @@
 //! Wraps `EVP_SIGNATURE` objects.
 
-use crate::error::ErrorStack;
 use crate::cvt_p;
+use crate::error::ErrorStack;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use openssl_macros::corresponds;
 use std::ffi::CStr;
@@ -34,18 +34,18 @@ impl SignatureRef {
     /// Returns the name of the signature algorithm.
     #[corresponds(EVP_SIGNATURE_get0_name)]
     pub fn name(&self) -> &str {
-        unsafe {
-            CStr::from_ptr(ffi::EVP_SIGNATURE_get0_name(self.as_ptr()))
-        }.to_str().expect("identifier to be in UTF8")
+        unsafe { CStr::from_ptr(ffi::EVP_SIGNATURE_get0_name(self.as_ptr())) }
+            .to_str()
+            .expect("identifier to be in UTF8")
     }
 
     /// Returns a human-readable description of the signature
     /// algorithm.
     #[corresponds(EVP_SIGNATURE_get0_description)]
     pub fn description(&self) -> &str {
-        unsafe {
-            CStr::from_ptr(ffi::EVP_SIGNATURE_get0_description(self.as_ptr()))
-        }.to_str().expect("description to be in UTF8")
+        unsafe { CStr::from_ptr(ffi::EVP_SIGNATURE_get0_description(self.as_ptr())) }
+            .to_str()
+            .expect("description to be in UTF8")
     }
 }
 

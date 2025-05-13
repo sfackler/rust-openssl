@@ -225,13 +225,16 @@ where
     #[cfg(ossl340)]
     #[corresponds(EVP_PKEY_verify_message_init)]
     #[inline]
-    pub fn verify_message_init(&mut self,
-                               algo: &mut crate::signature::Signature)
-                               -> Result<(), ErrorStack>
-    {
+    pub fn verify_message_init(
+        &mut self,
+        algo: &mut crate::signature::Signature,
+    ) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::EVP_PKEY_verify_message_init(self.as_ptr(), algo.as_ptr(),
-                                                  ptr::null()))?;
+            cvt(ffi::EVP_PKEY_verify_message_init(
+                self.as_ptr(),
+                algo.as_ptr(),
+                ptr::null(),
+            ))?;
         }
 
         Ok(())
@@ -429,12 +432,16 @@ where
     #[cfg(ossl340)]
     #[corresponds(EVP_PKEY_sign_message_init)]
     #[inline]
-    pub fn sign_message_init(&mut self, algo: &mut crate::signature::Signature)
-                             -> Result<(), ErrorStack>
-    {
+    pub fn sign_message_init(
+        &mut self,
+        algo: &mut crate::signature::Signature,
+    ) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::EVP_PKEY_sign_message_init(self.as_ptr(), algo.as_ptr(),
-                                                ptr::null()))?;
+            cvt(ffi::EVP_PKEY_sign_message_init(
+                self.as_ptr(),
+                algo.as_ptr(),
+                ptr::null(),
+            ))?;
         }
 
         Ok(())

@@ -612,9 +612,11 @@ extern "C" {
     pub fn EVP_PKEY_sign_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
 
     #[cfg(ossl340)]
-    pub fn EVP_PKEY_sign_message_init(ctx: *mut EVP_PKEY_CTX,
-                                      algo: *mut EVP_SIGNATURE,
-                                      params: *const OSSL_PARAM) -> c_int;
+    pub fn EVP_PKEY_sign_message_init(
+        ctx: *mut EVP_PKEY_CTX,
+        algo: *mut EVP_SIGNATURE,
+        params: *const OSSL_PARAM,
+    ) -> c_int;
 
     pub fn EVP_PKEY_sign(
         ctx: *mut EVP_PKEY_CTX,
@@ -626,9 +628,11 @@ extern "C" {
     pub fn EVP_PKEY_verify_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
 
     #[cfg(ossl340)]
-    pub fn EVP_PKEY_verify_message_init(ctx: *mut EVP_PKEY_CTX,
-                                        algo: *mut EVP_SIGNATURE,
-                                        params: *const OSSL_PARAM) -> c_int;
+    pub fn EVP_PKEY_verify_message_init(
+        ctx: *mut EVP_PKEY_CTX,
+        algo: *mut EVP_SIGNATURE,
+        params: *const OSSL_PARAM,
+    ) -> c_int;
 
     pub fn EVP_PKEY_verify(
         ctx: *mut EVP_PKEY_CTX,
