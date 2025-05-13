@@ -44,7 +44,8 @@ impl Variant {
             Variant::MlDsa44 => CStr::from_bytes_with_nul(b"ML-DSA-44\0"),
             Variant::MlDsa65 => CStr::from_bytes_with_nul(b"ML-DSA-65\0"),
             Variant::MlDsa87 => CStr::from_bytes_with_nul(b"ML-DSA-87\0"),
-        }.unwrap()
+        }
+        .unwrap()
     }
 }
 
@@ -76,10 +77,7 @@ impl<T> PKeyMlDsaBuilder<T> {
 
     /// Creates a new `PKeyMlDsaBuilder` to build ML-DSA private keys
     /// from a seed.
-    pub fn from_seed(
-        variant: Variant,
-        seed: &[u8],
-    ) -> Result<PKeyMlDsaBuilder<T>, ErrorStack> {
+    pub fn from_seed(variant: Variant, seed: &[u8]) -> Result<PKeyMlDsaBuilder<T>, ErrorStack> {
         let bld = OsslParamBuilder::new()?;
         bld.add_octet_string(OSSL_PKEY_PARAM_SEED, seed)?;
         Ok(PKeyMlDsaBuilder::<T> {
@@ -91,11 +89,8 @@ impl<T> PKeyMlDsaBuilder<T> {
 
     /// Build PKey. Internal.
     #[corresponds(EVP_PKEY_fromdata)]
-    fn build_internal(self, selection: c_int)
-                      -> Result<PKey<T>, ErrorStack>
-    {
-        let mut ctx = PkeyCtx::new_from_name(
-            None, self.variant.as_str(), None)?;
+    fn build_internal(self, selection: c_int) -> Result<PKey<T>, ErrorStack> {
+        let mut ctx = PkeyCtx::new_from_name(None, self.variant.as_str(), None)?;
         ctx.fromdata_init()?;
         let params = self.bld.to_param()?;
         unsafe {
@@ -121,9 +116,7 @@ impl PKeyMlDsaBuilder<Private> {
 
     /// Creates a new `PKeyRsaBuilder` to generate a new ML-DSA key
     /// pair.
-    pub fn new_generate(variant: Variant)
-                        -> Result<PKeyMlDsaBuilder<Private>, ErrorStack>
-    {
+    pub fn new_generate(variant: Variant) -> Result<PKeyMlDsaBuilder<Private>, ErrorStack> {
         let bld = OsslParamBuilder::new()?;
         Ok(PKeyMlDsaBuilder::<Private> {
             bld,
@@ -134,8 +127,7 @@ impl PKeyMlDsaBuilder<Private> {
 
     /// Generate an ML-DSA PKey.
     pub fn generate(self) -> Result<PKey<Private>, ErrorStack> {
-        let mut ctx = PkeyCtx::new_from_name(
-            None, self.variant.as_str(), None)?;
+        let mut ctx = PkeyCtx::new_from_name(None, self.variant.as_str(), None)?;
         ctx.keygen_init()?;
         let params = self.bld.to_param()?;
         unsafe {
@@ -161,9 +153,10 @@ pub struct PKeyMlDsaParams<T> {
 impl<T> PKeyMlDsaParams<T> {
     /// Creates a new `PKeyMlDsaParams` from existing ECDSA PKey. Internal.
     #[corresponds(EVP_PKEY_todata)]
-    fn _new_from_pkey<S>(pkey: &PKey<S>, selection: c_int)
-                         -> Result<PKeyMlDsaParams<T>, ErrorStack>
-    {
+    fn _new_from_pkey<S>(
+        pkey: &PKey<S>,
+        selection: c_int,
+    ) -> Result<PKeyMlDsaParams<T>, ErrorStack> {
         unsafe {
             let mut params: *mut ffi::OSSL_PARAM = ptr::null_mut();
             cvt(ffi::EVP_PKEY_todata(pkey.as_ptr(), selection, &mut params))?;
@@ -185,7 +178,8 @@ impl PKeyMlDsaParams<Public> {
     /// Returns a reference to the public key.
     pub fn public_key(&self) -> Result<&[u8], ErrorStack> {
         self.params
-            .locate(OSSL_PKEY_PARAM_PUB_KEY).unwrap()
+            .locate(OSSL_PKEY_PARAM_PUB_KEY)
+            .unwrap()
             .get_octet_string()
     }
 }
@@ -204,7 +198,9 @@ impl PKeyMlDsaParams<Private> {
 
     /// Returns the private key.
     pub fn private_key(&self) -> Result<&[u8], ErrorStack> {
-        self.params.locate(OSSL_PKEY_PARAM_PRIV_KEY)?.get_octet_string()
+        self.params
+            .locate(OSSL_PKEY_PARAM_PRIV_KEY)?
+            .get_octet_string()
     }
 }
 
@@ -256,11 +252,12 @@ mod tests {
         assert!(ErrorStack::get().errors().is_empty());
 
         // Derive a new PKEY with only the public bits.
-        let public_params =
-            PKeyMlDsaParams::<Public>::from_pkey(&key).unwrap();
-        let key_pub = PKeyMlDsaBuilder::<Public>::new(
-            variant, public_params.public_key().unwrap(), None).unwrap()
-            .build().unwrap();
+        let public_params = PKeyMlDsaParams::<Public>::from_pkey(&key).unwrap();
+        let key_pub =
+            PKeyMlDsaBuilder::<Public>::new(variant, public_params.public_key().unwrap(), None)
+                .unwrap()
+                .build()
+                .unwrap();
         let mut ctx = PkeyCtx::new(&key_pub).unwrap();
         let mut algo = Signature::for_ml_dsa(variant).unwrap();
 

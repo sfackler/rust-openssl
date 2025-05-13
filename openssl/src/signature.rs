@@ -64,12 +64,13 @@ impl Clone for Signature {
 impl Signature {
     /// Creates a new `Signature` for use with ML-DSA.
     #[cfg(ossl350)]
-    pub fn for_ml_dsa(variant: crate::pkey_ml_dsa::Variant)
-                      -> Result<Signature, ErrorStack>
-    {
+    pub fn for_ml_dsa(variant: crate::pkey_ml_dsa::Variant) -> Result<Signature, ErrorStack> {
         unsafe {
             Ok(Signature(cvt_p(ffi::EVP_SIGNATURE_fetch(
-                ptr::null_mut(), variant.as_cstr().as_ptr(), ptr::null()))?))
+                ptr::null_mut(),
+                variant.as_cstr().as_ptr(),
+                ptr::null(),
+            ))?))
         }
     }
 }
@@ -82,8 +83,7 @@ mod tests {
     #[cfg(ossl350)]
     #[test]
     fn test_alloc_free() {
-        let sig =
-            Signature::for_ml_dsa(crate::pkey_ml_dsa::Variant::MlDsa44).unwrap();
+        let sig = Signature::for_ml_dsa(crate::pkey_ml_dsa::Variant::MlDsa44).unwrap();
         drop(sig);
     }
 }
