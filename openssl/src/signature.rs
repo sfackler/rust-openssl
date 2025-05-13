@@ -83,8 +83,6 @@ impl Signature {
 #[cfg(test)]
 mod tests {
 
-use std::fs::File;
-
     // XXX: A number of imports is only used when ML-DSA is available.
     // Once support for universally available signature algorithms is
     // added, remove the following line.
