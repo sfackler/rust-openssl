@@ -663,10 +663,7 @@ extern "C" {
     ) -> c_int;
 
     #[cfg(ossl300)]
-    pub fn EVP_PKEY_encapsulate_init(
-        ctx: *mut EVP_PKEY_CTX,
-        params: *const OSSL_PARAM,
-    ) -> c_int;
+    pub fn EVP_PKEY_encapsulate_init(ctx: *mut EVP_PKEY_CTX, params: *const OSSL_PARAM) -> c_int;
     #[cfg(ossl300)]
     pub fn EVP_PKEY_encapsulate(
         ctx: *mut EVP_PKEY_CTX,
@@ -677,10 +674,7 @@ extern "C" {
     ) -> c_int;
 
     #[cfg(ossl300)]
-    pub fn EVP_PKEY_decapsulate_init(
-        ctx: *mut EVP_PKEY_CTX,
-        params: *const OSSL_PARAM,
-    ) -> c_int;
+    pub fn EVP_PKEY_decapsulate_init(ctx: *mut EVP_PKEY_CTX, params: *const OSSL_PARAM) -> c_int;
     #[cfg(ossl300)]
     pub fn EVP_PKEY_decapsulate(
         ctx: *mut EVP_PKEY_CTX,

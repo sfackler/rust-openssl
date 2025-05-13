@@ -203,8 +203,7 @@ where
     #[inline]
     pub fn encapsulate_init(&mut self) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::EVP_PKEY_encapsulate_init(self.as_ptr(),
-                                               ptr::null()))?;
+            cvt(ffi::EVP_PKEY_encapsulate_init(self.as_ptr(), ptr::null()))?;
         }
 
         Ok(())
@@ -283,9 +282,11 @@ where
     /// Performs a public key encapsulation operation.
     #[cfg(ossl300)]
     #[corresponds(EVP_PKEY_encapsulate)]
-    pub fn encapsulate(&mut self, wrappedkey: Option<&mut [u8]>, genkey: Option<&mut [u8]>)
-                       -> Result<(usize, usize), ErrorStack>
-    {
+    pub fn encapsulate(
+        &mut self,
+        wrappedkey: Option<&mut [u8]>,
+        genkey: Option<&mut [u8]>,
+    ) -> Result<(usize, usize), ErrorStack> {
         let mut wrappedkey_len = wrappedkey.as_ref().map_or(0, |b| b.len());
         let mut genkey_len = genkey.as_ref().map_or(0, |b| b.len());
         unsafe {
@@ -303,17 +304,20 @@ where
 
     /// Like [`Self::encapsulate`] but appends ciphertext and key to a [`Vec`].
     #[cfg(ossl300)]
-    pub fn encapsulate_to_vec(&mut self, wrappedkey: &mut Vec<u8>, genkey: &mut Vec<u8>)
-                              -> Result<(usize, usize), ErrorStack>
-    {
+    pub fn encapsulate_to_vec(
+        &mut self,
+        wrappedkey: &mut Vec<u8>,
+        genkey: &mut Vec<u8>,
+    ) -> Result<(usize, usize), ErrorStack> {
         let wrappedkey_base = wrappedkey.len();
         let genkey_base = genkey.len();
         let (wrappedkey_len, genkey_len) = self.encapsulate(None, None)?;
         wrappedkey.resize(wrappedkey_base + wrappedkey_len, 0);
         genkey.resize(genkey_base + genkey_len, 0);
-        let (wrappedkey_len, genkey_len) =
-            self.encapsulate(Some(&mut wrappedkey[wrappedkey_base..]),
-                             Some(&mut genkey[genkey_base..]))?;
+        let (wrappedkey_len, genkey_len) = self.encapsulate(
+            Some(&mut wrappedkey[wrappedkey_base..]),
+            Some(&mut genkey[genkey_base..]),
+        )?;
         wrappedkey.truncate(wrappedkey_base + wrappedkey_len);
         genkey.truncate(genkey_base + genkey_len);
         Ok((wrappedkey_len, genkey_len))
@@ -483,9 +487,7 @@ where
     /// Performs a decapsulation operation using the private key.
     #[cfg(ossl300)]
     #[corresponds(EVP_PKEY_decapsulate)]
-    pub fn decapsulate(&mut self, from: &[u8], to: Option<&mut [u8]>)
-                       -> Result<usize, ErrorStack>
-    {
+    pub fn decapsulate(&mut self, from: &[u8], to: Option<&mut [u8]>) -> Result<usize, ErrorStack> {
         let mut written = to.as_ref().map_or(0, |b| b.len());
         unsafe {
             cvt(ffi::EVP_PKEY_decapsulate(
@@ -502,9 +504,11 @@ where
 
     /// Like [`Self::decapsulate`] but appends plaintext to a [`Vec`].
     #[cfg(ossl300)]
-    pub fn decapsulate_to_vec(&mut self, from: &[u8], out: &mut Vec<u8>)
-                              -> Result<usize, ErrorStack>
-    {
+    pub fn decapsulate_to_vec(
+        &mut self,
+        from: &[u8],
+        out: &mut Vec<u8>,
+    ) -> Result<usize, ErrorStack> {
         let base = out.len();
         let len = self.decapsulate(from, None)?;
         out.resize(base + len, 0);
