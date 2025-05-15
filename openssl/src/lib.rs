@@ -177,18 +177,28 @@ pub mod memcmp;
 pub mod nid;
 #[cfg(not(osslconf = "OPENSSL_NO_OCSP"))]
 pub mod ocsp;
+#[cfg(ossl300)]
+mod ossl_param;
 pub mod pkcs12;
 pub mod pkcs5;
 #[cfg(not(any(boringssl, awslc)))]
 pub mod pkcs7;
 pub mod pkey;
 pub mod pkey_ctx;
+#[cfg(ossl350)]
+pub mod pkey_ml_dsa;
+#[cfg(ossl350)]
+pub mod pkey_ml_kem;
+#[cfg(ossl350)]
+pub mod pkey_slh_dsa;
 #[cfg(ossl300)]
 pub mod provider;
 pub mod rand;
 pub mod rsa;
 pub mod sha;
 pub mod sign;
+#[cfg(ossl300)]
+pub mod signature;
 pub mod srtp;
 pub mod ssl;
 pub mod stack;
