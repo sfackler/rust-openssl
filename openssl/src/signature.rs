@@ -78,6 +78,18 @@ impl Signature {
             ))?))
         }
     }
+
+    /// Creates a new `Signature` for use with SLH-DSA.
+    #[cfg(ossl350)]
+    pub fn for_slh_dsa(variant: crate::pkey_slh_dsa::Variant) -> Result<Signature, ErrorStack> {
+        unsafe {
+            Ok(Signature(cvt_p(ffi::EVP_SIGNATURE_fetch(
+                ptr::null_mut(),
+                variant.as_cstr().as_ptr(),
+                ptr::null(),
+            ))?))
+        }
+    }
 }
 
 #[cfg(test)]

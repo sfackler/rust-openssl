@@ -189,6 +189,8 @@ pub mod pkey_ctx;
 pub mod pkey_ml_dsa;
 #[cfg(ossl350)]
 pub mod pkey_ml_kem;
+#[cfg(ossl350)]
+pub mod pkey_slh_dsa;
 #[cfg(ossl300)]
 pub mod provider;
 pub mod rand;
