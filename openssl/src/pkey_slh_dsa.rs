@@ -83,7 +83,7 @@ pub struct PKeySlhDsaBuilder<T> {
 }
 
 impl<T> PKeySlhDsaBuilder<T> {
-    /// Creates a new `PKeySlhDsaBuilder` to build ML-DSA private or
+    /// Creates a new `PKeySlhDsaBuilder` to build SLH-DSA private or
     /// public keys.
     pub fn new(
         variant: Variant,
@@ -102,7 +102,7 @@ impl<T> PKeySlhDsaBuilder<T> {
         })
     }
 
-    /// Creates a new `PKeySlhDsaBuilder` to build ML-DSA private keys
+    /// Creates a new `PKeySlhDsaBuilder` to build SLH-DSA private keys
     /// from a seed.
     pub fn from_seed(variant: Variant, seed: &[u8]) -> Result<PKeySlhDsaBuilder<T>, ErrorStack> {
         let bld = OsslParamBuilder::new()?;
@@ -135,13 +135,13 @@ impl<T> PKeySlhDsaBuilder<T> {
 }
 
 impl PKeySlhDsaBuilder<Private> {
-    /// Returns the Private ML-DSA PKey from the provided parameters.
+    /// Returns the Private SLH-DSA PKey from the provided parameters.
     #[corresponds(EVP_PKEY_fromdata)]
     pub fn build(self) -> Result<PKey<Private>, ErrorStack> {
         self.build_internal(ffi::EVP_PKEY_KEYPAIR)
     }
 
-    /// Creates a new `PKeyRsaBuilder` to generate a new ML-DSA key
+    /// Creates a new `PKeyRsaBuilder` to generate a new SLH-DSA key
     /// pair.
     pub fn new_generate(variant: Variant) -> Result<PKeySlhDsaBuilder<Private>, ErrorStack> {
         let bld = OsslParamBuilder::new()?;
@@ -152,7 +152,7 @@ impl PKeySlhDsaBuilder<Private> {
         })
     }
 
-    /// Generate an ML-DSA PKey.
+    /// Generate an SLH-DSA PKey.
     pub fn generate(self) -> Result<PKey<Private>, ErrorStack> {
         let mut ctx = PkeyCtx::new_from_name(None, self.variant.as_str(), None)?;
         ctx.keygen_init()?;
@@ -165,7 +165,7 @@ impl PKeySlhDsaBuilder<Private> {
 }
 
 impl PKeySlhDsaBuilder<Public> {
-    /// Returns the Public ML-DSA PKey from the provided parameters.
+    /// Returns the Public SLH-DSA PKey from the provided parameters.
     #[corresponds(EVP_PKEY_fromdata)]
     pub fn build(self) -> Result<PKey<Public>, ErrorStack> {
         self.build_internal(ffi::EVP_PKEY_PUBLIC_KEY)
@@ -178,7 +178,7 @@ pub struct PKeySlhDsaParams<T> {
 }
 
 impl<T> PKeySlhDsaParams<T> {
-    /// Creates a new `PKeySlhDsaParams` from existing ML-DSA PKey. Internal.
+    /// Creates a new `PKeySlhDsaParams` from existing SLH-DSA PKey. Internal.
     #[corresponds(EVP_PKEY_todata)]
     fn _new_from_pkey<S>(
         pkey: &PKey<S>,
@@ -196,7 +196,7 @@ impl<T> PKeySlhDsaParams<T> {
 }
 
 impl PKeySlhDsaParams<Public> {
-    /// Creates a new `PKeySlhDsaParams` from existing Public ML-DSA PKey.
+    /// Creates a new `PKeySlhDsaParams` from existing Public SLH-DSA PKey.
     #[corresponds(EVP_PKEY_todata)]
     pub fn from_pkey<S>(pkey: &PKey<S>) -> Result<PKeySlhDsaParams<Public>, ErrorStack> {
         Self::_new_from_pkey(pkey, ffi::EVP_PKEY_PUBLIC_KEY)
@@ -212,7 +212,7 @@ impl PKeySlhDsaParams<Public> {
 }
 
 impl PKeySlhDsaParams<Private> {
-    /// Creates a new `PKeySlhDsaParams` from existing Private ML-DSA PKey.
+    /// Creates a new `PKeySlhDsaParams` from existing Private SLH-DSA PKey.
     #[corresponds(EVP_PKEY_todata)]
     pub fn from_pkey(pkey: &PKey<Private>) -> Result<PKeySlhDsaParams<Private>, ErrorStack> {
         Self::_new_from_pkey(pkey, ffi::EVP_PKEY_KEYPAIR)
