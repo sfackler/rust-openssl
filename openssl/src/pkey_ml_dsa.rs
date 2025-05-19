@@ -272,5 +272,49 @@ mod tests {
         let valid = ctx.verify(&bad_data[..], &signature);
         assert!(matches!(valid, Ok(false) | Err(_)));
         assert!(ErrorStack::get().errors().is_empty());
+
+        // Derive a new PKEY with the public and private bits.
+        let private_params = PKeyMlDsaParams::<Private>::from_pkey(&key).unwrap();
+        let key_priv = PKeyMlDsaBuilder::<Private>::new(
+            variant,
+            public_params.public_key().unwrap(),
+            Some(private_params.private_key().unwrap()),
+        )
+        .unwrap()
+        .build()
+        .unwrap();
+
+        // And redo the signature and verification.
+        let mut signature = vec![];
+        let mut ctx = PkeyCtx::new(&key_priv).unwrap();
+        ctx.sign_message_init(&mut algo).unwrap();
+        ctx.sign_to_vec(&data[..], &mut signature).unwrap();
+
+        // Verify good version with the public PKEY.
+        ctx.verify_message_init(&mut algo).unwrap();
+        let valid = ctx.verify(&data[..], &signature);
+        assert!(matches!(valid, Ok(true)));
+        assert!(ErrorStack::get().errors().is_empty());
+
+        // Derive a new PKEY from the private seed.
+        let key_priv = PKeyMlDsaBuilder::<Private>::from_seed(
+            variant,
+            private_params.private_key_seed().unwrap(),
+        )
+        .unwrap()
+        .build()
+        .unwrap();
+
+        // And redo the signature and verification.
+        let mut signature = vec![];
+        let mut ctx = PkeyCtx::new(&key_priv).unwrap();
+        ctx.sign_message_init(&mut algo).unwrap();
+        ctx.sign_to_vec(&data[..], &mut signature).unwrap();
+
+        // Verify good version with the public PKEY.
+        ctx.verify_message_init(&mut algo).unwrap();
+        let valid = ctx.verify(&data[..], &signature);
+        assert!(matches!(valid, Ok(true)));
+        assert!(ErrorStack::get().errors().is_empty());
     }
 }
