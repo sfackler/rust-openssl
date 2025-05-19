@@ -103,7 +103,7 @@ impl PKeyMlKemBuilder<Private> {
         self.build_internal(ffi::EVP_PKEY_KEYPAIR)
     }
 
-    /// Creates a new `PKeyRsaBuilder` to generate a new ML-KEM key
+    /// Creates a new `PKeyMlKemBuilder` to generate a new ML-KEM key
     /// pair.
     pub fn new_generate(variant: Variant) -> Result<PKeyMlKemBuilder<Private>, ErrorStack> {
         let bld = OsslParamBuilder::new()?;
