@@ -83,18 +83,11 @@ pub struct PKeySlhDsaBuilder<T> {
 }
 
 impl<T> PKeySlhDsaBuilder<T> {
-    /// Creates a new `PKeySlhDsaBuilder` to build SLH-DSA private or
-    /// public keys.
-    pub fn new(
-        variant: Variant,
-        public: &[u8],
-        private: Option<&[u8]>,
-    ) -> Result<PKeySlhDsaBuilder<T>, ErrorStack> {
+    /// Creates a new `PKeySlhDsaBuilder` to build SLH-DSA public
+    /// keys.
+    pub fn new_public(variant: Variant, public: &[u8]) -> Result<PKeySlhDsaBuilder<T>, ErrorStack> {
         let bld = OsslParamBuilder::new()?;
         bld.add_octet_string(OSSL_PKEY_PARAM_PUB_KEY, public)?;
-        if let Some(private) = private {
-            bld.add_octet_string(OSSL_PKEY_PARAM_PRIV_KEY, private)?
-        };
         Ok(PKeySlhDsaBuilder::<T> {
             bld,
             variant,
@@ -102,11 +95,14 @@ impl<T> PKeySlhDsaBuilder<T> {
         })
     }
 
-    /// Creates a new `PKeySlhDsaBuilder` to build SLH-DSA private keys
-    /// from a seed.
-    pub fn from_seed(variant: Variant, seed: &[u8]) -> Result<PKeySlhDsaBuilder<T>, ErrorStack> {
+    /// Creates a new `PKeySlhDsaBuilder` to build SLH-DSA private
+    /// keys.
+    pub fn new_private(
+        variant: Variant,
+        private: &[u8],
+    ) -> Result<PKeySlhDsaBuilder<T>, ErrorStack> {
         let bld = OsslParamBuilder::new()?;
-        bld.add_octet_string(OSSL_PKEY_PARAM_SEED, seed)?;
+        bld.add_octet_string(OSSL_PKEY_PARAM_PRIV_KEY, private)?;
         Ok(PKeySlhDsaBuilder::<T> {
             bld,
             variant,
@@ -326,7 +322,7 @@ mod tests {
         // Derive a new PKEY with only the public bits.
         let public_params = PKeySlhDsaParams::<Public>::from_pkey(&key).unwrap();
         let key_pub =
-            PKeySlhDsaBuilder::<Public>::new(variant, public_params.public_key().unwrap(), None)
+            PKeySlhDsaBuilder::<Public>::new_public(variant, public_params.public_key().unwrap())
                 .unwrap()
                 .build()
                 .unwrap();
@@ -343,6 +339,36 @@ mod tests {
         ctx.verify_message_init(&mut algo).unwrap();
         let valid = ctx.verify(&bad_data[..], &signature);
         assert!(matches!(valid, Ok(false) | Err(_)));
+        assert!(ErrorStack::get().errors().is_empty());
+
+        // Derive a new PKEY with the public and private bits.
+        let private_params = PKeySlhDsaParams::<Private>::from_pkey(&key).unwrap();
+        let key_priv = PKeySlhDsaBuilder::<Private>::new_private(
+            variant,
+            private_params.private_key().unwrap(),
+        )
+        .unwrap()
+        .build()
+        .unwrap();
+
+        // And redo the signature and verification.
+        let mut signature = vec![];
+        let mut ctx = PkeyCtx::new(&key_priv).unwrap();
+        ctx.sign_message_init(&mut algo).unwrap();
+        ctx.sign_to_vec(&data[..], &mut signature).unwrap();
+
+        // Verify good version with the public PKEY.
+        let mut ctx = PkeyCtx::new(&key_pub).unwrap();
+        ctx.verify_message_init(&mut algo).unwrap();
+        let valid = ctx.verify(&data[..], &signature);
+        assert!(matches!(valid, Ok(true)));
+        assert!(ErrorStack::get().errors().is_empty());
+
+        // Verify good version with the private PKEY.
+        let mut ctx = PkeyCtx::new(&key_priv).unwrap();
+        ctx.verify_message_init(&mut algo).unwrap();
+        let valid = ctx.verify(&data[..], &signature);
+        assert!(matches!(valid, Ok(true)));
         assert!(ErrorStack::get().errors().is_empty());
     }
 }
