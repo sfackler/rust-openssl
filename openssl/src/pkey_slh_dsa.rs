@@ -141,7 +141,7 @@ impl PKeySlhDsaBuilder<Private> {
         self.build_internal(ffi::EVP_PKEY_KEYPAIR)
     }
 
-    /// Creates a new `PKeyRsaBuilder` to generate a new SLH-DSA key
+    /// Creates a new `PKeySlhDsaBuilder` to generate a new SLH-DSA key
     /// pair.
     pub fn new_generate(variant: Variant) -> Result<PKeySlhDsaBuilder<Private>, ErrorStack> {
         let bld = OsslParamBuilder::new()?;
