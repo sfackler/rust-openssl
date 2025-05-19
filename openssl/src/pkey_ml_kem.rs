@@ -251,10 +251,39 @@ mod tests {
 
         assert_eq!(genkey0, genkey1);
 
+        // Decapsulate with a PKEY derived from the private parameters.
+        let private_params = PKeyMlKemParams::<Private>::from_pkey(&key).unwrap();
+        let key_priv = PKeyMlKemBuilder::<Private>::new(
+            variant,
+            public_params.public_key().unwrap(),
+            Some(private_params.private_key().unwrap()),
+        )
+        .unwrap()
+        .build()
+        .unwrap();
+        let mut genkey1 = vec![];
+        let mut ctx = PkeyCtx::new(&key_priv).unwrap();
+        ctx.decapsulate_init().unwrap();
+        ctx.decapsulate_to_vec(&wrappedkey, &mut genkey1).unwrap();
+        assert_eq!(genkey0, genkey1);
+
+        // Decapsulate with a PKEY derived from the private key seed.
+        let key_priv = PKeyMlKemBuilder::<Private>::from_seed(
+            variant,
+            private_params.private_key_seed().unwrap(),
+        )
+        .unwrap()
+        .build()
+        .unwrap();
+        let mut genkey1 = vec![];
+        let mut ctx = PkeyCtx::new(&key_priv).unwrap();
+        ctx.decapsulate_init().unwrap();
+        ctx.decapsulate_to_vec(&wrappedkey, &mut genkey1).unwrap();
+        assert_eq!(genkey0, genkey1);
+
         // Note that we can get the public parameter from the
         // PKeyMlKemParams::<Private> as well.  The same is not true
         // for ML-DSA, for example.
-        let private_params = PKeyMlKemParams::<Private>::from_pkey(&key).unwrap();
         assert_eq!(
             public_params.public_key().unwrap(),
             private_params.public_key().unwrap()
