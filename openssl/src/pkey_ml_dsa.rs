@@ -114,7 +114,7 @@ impl PKeyMlDsaBuilder<Private> {
         self.build_internal(ffi::EVP_PKEY_KEYPAIR)
     }
 
-    /// Creates a new `PKeyRsaBuilder` to generate a new ML-DSA key
+    /// Creates a new `PKeyMlDsaBuilder` to generate a new ML-DSA key
     /// pair.
     pub fn new_generate(variant: Variant) -> Result<PKeyMlDsaBuilder<Private>, ErrorStack> {
         let bld = OsslParamBuilder::new()?;
