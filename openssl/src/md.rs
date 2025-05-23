@@ -109,7 +109,7 @@ impl Md {
             let ptr = cvt_p(ffi::EVP_MD_fetch(
                 ctx.map_or(ptr::null_mut(), ForeignTypeRef::as_ptr),
                 algorithm.as_ptr(),
-                properties.map_or(ptr::null_mut(), |s| s.as_ptr()),
+                properties.as_ref().map_or(ptr::null_mut(), |s| s.as_ptr()),
             ))?;
 
             Ok(Md::from_ptr(ptr))
@@ -231,5 +231,17 @@ impl MdRef {
     #[inline]
     pub fn type_(&self) -> Nid {
         unsafe { Nid::from_raw(ffi::EVP_MD_type(self.as_ptr())) }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    #[cfg(ossl300)]
+    use super::Md;
+
+    #[test]
+    #[cfg(ossl300)]
+    fn test_md_fetch_properties() {
+        assert!(Md::fetch(None, "SHA-256", Some("provider=gibberish")).is_err());
     }
 }

@@ -160,6 +160,8 @@ jobs:
             - name: openssl
               version: vendored
             - name: openssl
+              version: 3.5.0
+            - name: openssl
               version: 3.4.0
             - name: openssl
               version: 3.3.0
@@ -190,17 +192,17 @@ jobs:
               bindgen: true
               library:
                 name: libressl
-                version: 3.8.4
-            - target: x86_64-unknown-linux-gnu
-              bindgen: true
-              library:
-                name: libressl
                 version: 3.9.2
             - target: x86_64-unknown-linux-gnu
               bindgen: true
               library:
                 name: libressl
                 version: 4.0.0
+            - target: x86_64-unknown-linux-gnu
+              bindgen: true
+              library:
+                name: libressl
+                version: 4.1.0
             - target: x86_64-unknown-linux-gnu
               bindgen: false
               library:
@@ -210,17 +212,17 @@ jobs:
               bindgen: false
               library:
                 name: libressl
-                version: 3.8.4
-            - target: x86_64-unknown-linux-gnu
-              bindgen: false
-              library:
-                name: libressl
                 version: 3.9.2
             - target: x86_64-unknown-linux-gnu
               bindgen: false
               library:
                 name: libressl
                 version: 4.0.0
+            - target: x86_64-unknown-linux-gnu
+              bindgen: false
+              library:
+                name: libressl
+                version: 4.1.0
       name: ${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-${{ matrix.bindgen }}
       runs-on: ubuntu-22.04
       env:
