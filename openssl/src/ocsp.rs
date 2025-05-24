@@ -18,17 +18,17 @@ bitflags! {
     #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     #[repr(transparent)]
     pub struct OcspFlag: c_ulong {
-        const NO_CERTS = ffi::OCSP_NOCERTS;
-        const NO_INTERN = ffi::OCSP_NOINTERN;
-        const NO_CHAIN = ffi::OCSP_NOCHAIN;
-        const NO_VERIFY = ffi::OCSP_NOVERIFY;
-        const NO_EXPLICIT = ffi::OCSP_NOEXPLICIT;
-        const NO_CA_SIGN = ffi::OCSP_NOCASIGN;
-        const NO_DELEGATED = ffi::OCSP_NODELEGATED;
-        const NO_CHECKS = ffi::OCSP_NOCHECKS;
-        const TRUST_OTHER = ffi::OCSP_TRUSTOTHER;
-        const RESPID_KEY = ffi::OCSP_RESPID_KEY;
-        const NO_TIME = ffi::OCSP_NOTIME;
+        const NO_CERTS = ffi::OCSP_NOCERTS as c_ulong;
+        const NO_INTERN = ffi::OCSP_NOINTERN as c_ulong;
+        const NO_CHAIN = ffi::OCSP_NOCHAIN as c_ulong;
+        const NO_VERIFY = ffi::OCSP_NOVERIFY as c_ulong;
+        const NO_EXPLICIT = ffi::OCSP_NOEXPLICIT as c_ulong;
+        const NO_CA_SIGN = ffi::OCSP_NOCASIGN as c_ulong;
+        const NO_DELEGATED = ffi::OCSP_NODELEGATED as c_ulong;
+        const NO_CHECKS = ffi::OCSP_NOCHECKS as c_ulong;
+        const TRUST_OTHER = ffi::OCSP_TRUSTOTHER as c_ulong;
+        const RESPID_KEY = ffi::OCSP_RESPID_KEY as c_ulong;
+        const NO_TIME = ffi::OCSP_NOTIME as c_ulong;
     }
 }
 
@@ -122,7 +122,7 @@ pub struct OcspStatus<'a> {
     pub next_update: &'a Asn1GeneralizedTimeRef,
 }
 
-impl<'a> OcspStatus<'a> {
+impl OcspStatus<'_> {
     /// Checks validity of the `this_update` and `next_update` fields.
     ///
     /// The `nsec` parameter specifies an amount of slack time that will be used when comparing

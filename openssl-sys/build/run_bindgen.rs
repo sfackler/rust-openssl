@@ -36,15 +36,20 @@ const INCLUDES: &str = "
 #include <openssl/x509_vfy.h>
 #include <openssl/x509v3.h>
 
+#if !defined(OPENSSL_IS_AWSLC)
 // this must be included after ssl.h for libressl!
 #include <openssl/srtp.h>
+#endif
 
-#if !defined(LIBRESSL_VERSION_NUMBER) && !defined(OPENSSL_IS_BORINGSSL)
+#if !(defined(LIBRESSL_VERSION_NUMBER) || defined(OPENSSL_IS_BORINGSSL) || defined(OPENSSL_IS_AWSLC))
 #include <openssl/cms.h>
 #endif
 
-#if !defined(OPENSSL_IS_BORINGSSL)
+#if !(defined(OPENSSL_IS_BORINGSSL) || defined(OPENSSL_IS_AWSLC))
 #include <openssl/comp.h>
+#endif
+
+#if !defined(OPENSSL_IS_BORINGSSL)
 #include <openssl/ocsp.h>
 #endif
 
@@ -56,8 +61,16 @@ const INCLUDES: &str = "
 #include <openssl/provider.h>
 #endif
 
-#if defined(LIBRESSL_VERSION_NUMBER) || defined(OPENSSL_IS_BORINGSSL)
+#if OPENSSL_VERSION_NUMBER >= 0x30200000
+#include <openssl/quic.h>
+#endif
+
+#if defined(LIBRESSL_VERSION_NUMBER) || defined(OPENSSL_IS_BORINGSSL) || defined(OPENSSL_IS_AWSLC)
 #include <openssl/poly1305.h>
+#endif
+
+#if OPENSSL_VERSION_NUMBER >= 0x30200000
+#include <openssl/thread.h>
 #endif
 ";
 
@@ -70,8 +83,9 @@ pub fn run(include_dirs: &[PathBuf]) {
         .rust_target(RustTarget::Stable_1_47)
         .ctypes_prefix("::libc")
         .raw_line("use libc::*;")
+        .raw_line("#[cfg(windows)] use std::os::windows::raw::HANDLE;")
         .raw_line("type evp_pkey_st = EVP_PKEY;")
-        .allowlist_file(".*/openssl/[^/]+\\.h")
+        .allowlist_file(".*[/\\\\]openssl/[^/\\\\]+\\.h")
         .allowlist_recursively(false)
         // libc is missing pthread_once_t on macOS
         .blocklist_type("CRYPTO_ONCE")
@@ -85,6 +99,8 @@ pub fn run(include_dirs: &[PathBuf]) {
         .blocklist_type("OSSL_FUNC_core_vset_error_fn")
         .blocklist_type("OSSL_FUNC_BIO_vprintf_fn")
         .blocklist_type("OSSL_FUNC_BIO_vsnprintf_fn")
+        // struct hostent * does not exist on Windows
+        .blocklist_function("BIO_gethostbyname")
         // Maintain compatibility for existing enum definitions
         .rustified_enum("point_conversion_form_t")
         // Maintain compatibility for pre-union definitions
@@ -205,6 +221,129 @@ pub fn run_boringssl(include_dirs: &[PathBuf]) {
         .compile("boring_static_wrapper");
 }
 
+#[cfg(feature = "bindgen")]
+mod bindgen_options {
+    use bindgen::callbacks::{ItemInfo, ParseCallbacks};
+
+    #[derive(Debug)]
+    pub struct StripPrefixCallback {
+        remove_prefix: Option<String>,
+    }
+
+    impl StripPrefixCallback {
+        pub fn new(prefix: &str) -> StripPrefixCallback {
+            StripPrefixCallback {
+                remove_prefix: Some(prefix.to_string()),
+            }
+        }
+    }
+
+    impl ParseCallbacks for StripPrefixCallback {
+        fn generated_name_override(&self, item_info: ItemInfo<'_>) -> Option<String> {
+            self.remove_prefix
+                .as_ref()
+                .and_then(|s| item_info.name.strip_prefix(s.as_str()).map(String::from))
+        }
+    }
+}
+
+#[cfg(feature = "bindgen")]
+pub fn run_awslc(include_dirs: &[PathBuf], symbol_prefix: Option<String>) {
+    let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+
+    fs::File::create(out_dir.join("awslc_static_wrapper.h"))
+        .expect("Failed to create awslc_static_wrapper.h")
+        .write_all(INCLUDES.as_bytes())
+        .expect("Failed to write contents to awslc_static_wrapper.h");
+
+    let mut builder = bindgen::builder()
+        .rust_target(RustTarget::Stable_1_47)
+        .ctypes_prefix("::libc")
+        .raw_line("use libc::*;")
+        .derive_default(false)
+        .enable_function_attribute_detection()
+        .default_macro_constant_type(MacroTypeVariation::Signed)
+        .rustified_enum("point_conversion_form_t")
+        .allowlist_file(r".*(/|\\)openssl((/|\\)[^/\\]+)+\.h")
+        .wrap_static_fns(true)
+        .wrap_static_fns_path(out_dir.join("awslc_static_wrapper").display().to_string())
+        .layout_tests(false)
+        .header(out_dir.join("awslc_static_wrapper.h").display().to_string());
+
+    if let Some(prefix) = symbol_prefix {
+        use bindgen_options::StripPrefixCallback;
+        let callback = StripPrefixCallback::new(prefix.as_str());
+        builder = builder.parse_callbacks(Box::from(callback));
+    }
+
+    for include_dir in include_dirs {
+        builder = builder
+            .clang_arg("-I")
+            .clang_arg(include_dir.display().to_string());
+    }
+
+    builder
+        .generate()
+        .unwrap()
+        .write_to_file(out_dir.join("bindgen.rs"))
+        .unwrap();
+
+    cc::Build::new()
+        .file(out_dir.join("awslc_static_wrapper.c"))
+        .includes(include_dirs)
+        .compile("awslc_static_wrapper");
+}
+
+#[cfg(not(feature = "bindgen"))]
+pub fn run_awslc(include_dirs: &[PathBuf], symbol_prefix: Option<String>) {
+    if symbol_prefix.is_some() {
+        panic!("aws-lc installation has prefixed symbols, but bindgen-cli does not support removing prefixes. \
+        Enable the bindgen crate feature to support this installation.")
+    }
+
+    let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+
+    fs::File::create(out_dir.join("awslc_static_wrapper.h"))
+        .expect("Failed to create awslc_static_wrapper.h")
+        .write_all(INCLUDES.as_bytes())
+        .expect("Failed to write contents to awslc_static_wrapper.h");
+
+    let mut bindgen_cmd = process::Command::new("bindgen");
+    bindgen_cmd
+        .arg("-o")
+        .arg(out_dir.join("bindgen.rs"))
+        // Must be a valid version from
+        // https://docs.rs/bindgen/latest/bindgen/enum.RustTarget.html
+        .arg("--rust-target=1.47")
+        .arg("--ctypes-prefix=::libc")
+        .arg("--raw-line=use libc::*;")
+        .arg("--no-derive-default")
+        .arg("--enable-function-attribute-detection")
+        .arg("--default-macro-constant-type=signed")
+        .arg("--rustified-enum=point_conversion_form_t")
+        .arg(r"--allowlist-file=.*(/|\\)openssl((/|\\)[^/\\]+)+\.h")
+        .arg("--experimental")
+        .arg("--wrap-static-fns")
+        .arg("--wrap-static-fns-path")
+        .arg(out_dir.join("awslc_static_wrapper").display().to_string())
+        .arg(out_dir.join("awslc_static_wrapper.h"))
+        .arg("--")
+        .arg(format!("--target={}", env::var("TARGET").unwrap()));
+
+    for include_dir in include_dirs {
+        bindgen_cmd.arg("-I").arg(include_dir.display().to_string());
+    }
+
+    let result = bindgen_cmd.status().expect("bindgen failed to execute");
+    assert!(result.success());
+
+    cc::Build::new()
+        .file(out_dir.join("awslc_static_wrapper.c"))
+        .includes(include_dirs)
+        .compile("awslc_static_wrapper");
+}
+
+#[cfg(feature = "bindgen")]
 #[derive(Debug)]
 struct OpensslCallbacks;
 

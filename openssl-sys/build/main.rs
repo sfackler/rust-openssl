@@ -24,6 +24,7 @@ enum Version {
     Openssl10x,
     Libressl,
     Boringssl,
+    AwsLc,
 }
 
 fn env_inner(name: &str) -> Option<OsString> {
@@ -71,9 +72,104 @@ fn check_ssl_kind() {
         // BoringSSL does not have any build logic, exit early
         std::process::exit(0);
     }
+
+    let is_aws_lc = cfg!(feature = "aws-lc");
+
+    if is_aws_lc {
+        println!("cargo:rustc-cfg=awslc");
+        println!("cargo:awslc=true");
+
+        // The aws-lc-sys crate uses a link name that embeds
+        // the version number of crate. Examples (crate-name => links name):
+        //   * aws-lc-sys => aws_lc_0_26_0
+        // This is done to avoid issues if the cargo dependency graph for an application
+        // were to resolve to multiple versions for the same crate.
+        //
+        // Due to this we need to determine what version of the AWS-LC has been selected (fips or non-fips)
+        // and then need to parse out the pieces we are interested in ignoring the version componenet of the name.
+        const AWS_LC_ENV_VAR_PREFIX: &str = "DEP_AWS_LC_";
+
+        let mut version = None;
+        for (name, _) in std::env::vars() {
+            if let Some(name) = name.strip_prefix(AWS_LC_ENV_VAR_PREFIX) {
+                if let Some(name) = name.strip_suffix("_INCLUDE") {
+                    version = Some(name.to_owned());
+                    break;
+                }
+            }
+        }
+        let version = version.expect("aws-lc version detected");
+
+        // Read the OpenSSL configuration statements and emit rust-cfg for each.
+        if let Ok(vars) = std::env::var(format!("{AWS_LC_ENV_VAR_PREFIX}{version}_CONF")) {
+            for var in vars.split(',') {
+                println!("cargo:rustc-cfg=osslconf=\"{var}\"");
+            }
+            println!("cargo:conf={vars}");
+        }
+
+        // Emit the include header directory from the aws-lc(-fips)-sys crate so that it can be used if needed
+        // by crates consuming openssl-sys.
+        if let Ok(val) = std::env::var(format!("{AWS_LC_ENV_VAR_PREFIX}{version}_INCLUDE")) {
+            println!("cargo:include={val}");
+        }
+
+        // AWS-LC does not have any build logic, exit early
+        std::process::exit(0);
+    }
 }
 
 fn main() {
+    println!("cargo:rustc-check-cfg=cfg(osslconf, values(\"OPENSSL_NO_OCB\", \"OPENSSL_NO_SM4\", \"OPENSSL_NO_SEED\", \"OPENSSL_NO_CHACHA\", \"OPENSSL_NO_CAST\", \"OPENSSL_NO_IDEA\", \"OPENSSL_NO_CAMELLIA\", \"OPENSSL_NO_RC4\", \"OPENSSL_NO_BF\", \"OPENSSL_NO_PSK\", \"OPENSSL_NO_DEPRECATED_3_0\", \"OPENSSL_NO_SCRYPT\", \"OPENSSL_NO_SM3\", \"OPENSSL_NO_RMD160\", \"OPENSSL_NO_EC2M\", \"OPENSSL_NO_OCSP\", \"OPENSSL_NO_CMS\", \"OPENSSL_NO_COMP\", \"OPENSSL_NO_SOCK\", \"OPENSSL_NO_STDIO\", \"OPENSSL_NO_EC\", \"OPENSSL_NO_SSL3_METHOD\", \"OPENSSL_NO_KRB5\", \"OPENSSL_NO_TLSEXT\", \"OPENSSL_NO_SRP\", \"OPENSSL_NO_RFC3779\", \"OPENSSL_NO_SHA\", \"OPENSSL_NO_NEXTPROTONEG\", \"OPENSSL_NO_ENGINE\", \"OPENSSL_NO_BUF_FREELISTS\", \"OPENSSL_NO_RC2\"))");
+
+    println!("cargo:rustc-check-cfg=cfg(openssl)");
+    println!("cargo:rustc-check-cfg=cfg(libressl)");
+    println!("cargo:rustc-check-cfg=cfg(boringssl)");
+    println!("cargo:rustc-check-cfg=cfg(awslc)");
+
+    println!("cargo:rustc-check-cfg=cfg(libressl250)");
+    println!("cargo:rustc-check-cfg=cfg(libressl251)");
+    println!("cargo:rustc-check-cfg=cfg(libressl252)");
+    println!("cargo:rustc-check-cfg=cfg(libressl261)");
+    println!("cargo:rustc-check-cfg=cfg(libressl270)");
+    println!("cargo:rustc-check-cfg=cfg(libressl271)");
+    println!("cargo:rustc-check-cfg=cfg(libressl273)");
+    println!("cargo:rustc-check-cfg=cfg(libressl280)");
+    println!("cargo:rustc-check-cfg=cfg(libressl281)");
+    println!("cargo:rustc-check-cfg=cfg(libressl291)");
+    println!("cargo:rustc-check-cfg=cfg(libressl310)");
+    println!("cargo:rustc-check-cfg=cfg(libressl321)");
+    println!("cargo:rustc-check-cfg=cfg(libressl332)");
+    println!("cargo:rustc-check-cfg=cfg(libressl340)");
+    println!("cargo:rustc-check-cfg=cfg(libressl350)");
+    println!("cargo:rustc-check-cfg=cfg(libressl360)");
+    println!("cargo:rustc-check-cfg=cfg(libressl361)");
+    println!("cargo:rustc-check-cfg=cfg(libressl370)");
+    println!("cargo:rustc-check-cfg=cfg(libressl380)");
+    println!("cargo:rustc-check-cfg=cfg(libressl381)");
+    println!("cargo:rustc-check-cfg=cfg(libressl382)");
+    println!("cargo:rustc-check-cfg=cfg(libressl390)");
+    println!("cargo:rustc-check-cfg=cfg(libressl400)");
+    println!("cargo:rustc-check-cfg=cfg(libressl410)");
+
+    println!("cargo:rustc-check-cfg=cfg(ossl101)");
+    println!("cargo:rustc-check-cfg=cfg(ossl102)");
+    println!("cargo:rustc-check-cfg=cfg(ossl102f)");
+    println!("cargo:rustc-check-cfg=cfg(ossl102h)");
+    println!("cargo:rustc-check-cfg=cfg(ossl110)");
+    println!("cargo:rustc-check-cfg=cfg(ossl110f)");
+    println!("cargo:rustc-check-cfg=cfg(ossl110g)");
+    println!("cargo:rustc-check-cfg=cfg(ossl110h)");
+    println!("cargo:rustc-check-cfg=cfg(ossl111)");
+    println!("cargo:rustc-check-cfg=cfg(ossl111b)");
+    println!("cargo:rustc-check-cfg=cfg(ossl111c)");
+    println!("cargo:rustc-check-cfg=cfg(ossl111d)");
+    println!("cargo:rustc-check-cfg=cfg(ossl300)");
+    println!("cargo:rustc-check-cfg=cfg(ossl310)");
+    println!("cargo:rustc-check-cfg=cfg(ossl320)");
+    println!("cargo:rustc-check-cfg=cfg(ossl330)");
+    println!("cargo:rustc-check-cfg=cfg(ossl340)");
+
     check_ssl_kind();
 
     let target = env::var("TARGET").unwrap();
@@ -132,6 +228,37 @@ fn main() {
         println!("cargo:rustc-link-lib={}={}", kind, lib);
     }
 
+    // libssl in BoringSSL requires the C++ runtime, and static libraries do
+    // not carry dependency information. On unix-like platforms, the C++
+    // runtime and standard library are typically picked up by default via the
+    // C++ compiler, which has a platform-specific default. (See implementations
+    // of `GetDefaultCXXStdlibType` in Clang.) Builds may also choose to
+    // override this and specify their own with `-nostdinc++` and `-nostdlib++`
+    // flags. Some compilers also provide options like `-stdlib=libc++`.
+    //
+    // Typically, such information is carried all the way up the build graph,
+    // but Cargo is not an integrated cross-language build system, so it cannot
+    // safely handle any of these situations. As a result, we need to make
+    // guesses. Getting this wrong may result in symbol conflicts and memory
+    // errors, but this unsafety is inherent to driving builds with
+    // externally-built libraries using Cargo.
+    //
+    // For now, we guess that the build was made with the defaults. This too is
+    // difficult because Rust does not expose this information from Clang, but
+    // try to match the behavior for common platforms. For a more robust option,
+    // this likely needs to be deferred to the caller with an environment
+    // variable.
+    if (version == Version::Boringssl || version == Version::AwsLc)
+        && kind == "static"
+        && env::var("CARGO_CFG_UNIX").is_ok()
+    {
+        let cpp_lib = match env::var("CARGO_CFG_TARGET_OS").unwrap().as_ref() {
+            "macos" => "c++",
+            _ => "stdc++",
+        };
+        println!("cargo:rustc-link-lib={}", cpp_lib);
+    }
+
     // https://github.com/openssl/openssl/pull/15086
     if version == Version::Openssl3xx
         && kind == "static"
@@ -154,8 +281,8 @@ fn main() {
 fn postprocess(include_dirs: &[PathBuf]) -> Version {
     let version = validate_headers(include_dirs);
 
-    // Never run bindgen for BoringSSL, if it was needed we already ran it.
-    if version != Version::Boringssl {
+    // Never run bindgen for BoringSSL or AWS-LC, if it was needed we already ran it.
+    if !(version == Version::Boringssl || version == Version::AwsLc) {
         #[cfg(feature = "bindgen")]
         run_bindgen::run(&include_dirs);
     }
@@ -197,13 +324,13 @@ pointing to your OpenSSL installation or installing OpenSSL headers package
 specific to your distribution:
 
     # On Ubuntu
-    sudo apt-get install libssl-dev
+    sudo apt-get install pkg-config libssl-dev
     # On Arch Linux
-    sudo pacman -S openssl
+    sudo pacman -S pkgconf openssl
     # On Fedora
-    sudo dnf install openssl-devel
+    sudo dnf install pkgconf perl-FindBin perl-IPC-Cmd openssl-devel
     # On Alpine Linux
-    apk add openssl-dev
+    apk add pkgconf openssl-dev
 
 See rust-openssl documentation for more information:
 
@@ -219,14 +346,18 @@ See rust-openssl documentation for more information:
     let mut openssl_version = None;
     let mut libressl_version = None;
     let mut is_boringssl = false;
+    let mut is_awslc = false;
+    let mut bindgen_symbol_prefix: Option<String> = None;
     for line in expanded.lines() {
         let line = line.trim();
 
         let openssl_prefix = "RUST_VERSION_OPENSSL_";
         let new_openssl_prefix = "RUST_VERSION_NEW_OPENSSL_";
         let libressl_prefix = "RUST_VERSION_LIBRESSL_";
-        let boringsl_prefix = "RUST_OPENSSL_IS_BORINGSSL";
+        let boringssl_prefix = "RUST_OPENSSL_IS_BORINGSSL";
+        let awslc_prefix = "RUST_OPENSSL_IS_AWSLC";
         let conf_prefix = "RUST_CONF_";
+        let symbol_prefix = "RUST_BINDGEN_SYMBOL_PREFIX_";
         if let Some(version) = line.strip_prefix(openssl_prefix) {
             openssl_version = Some(parse_version(version));
         } else if let Some(version) = line.strip_prefix(new_openssl_prefix) {
@@ -235,8 +366,13 @@ See rust-openssl documentation for more information:
             libressl_version = Some(parse_version(version));
         } else if let Some(conf) = line.strip_prefix(conf_prefix) {
             enabled.push(conf);
-        } else if line.starts_with(boringsl_prefix) {
+        } else if line.starts_with(boringssl_prefix) {
             is_boringssl = true;
+        } else if line.starts_with(awslc_prefix) {
+            is_awslc = true;
+        } else if line.starts_with(symbol_prefix) {
+            let sym_prefix = String::from(line.strip_prefix(symbol_prefix).unwrap());
+            bindgen_symbol_prefix = Some(sym_prefix);
         }
     }
 
@@ -250,6 +386,13 @@ See rust-openssl documentation for more information:
         println!("cargo:boringssl=true");
         run_bindgen::run_boringssl(include_dirs);
         return Version::Boringssl;
+    }
+
+    if is_awslc {
+        println!("cargo:rustc-cfg=awslc");
+        println!("cargo:awslc=true");
+        run_bindgen::run_awslc(include_dirs, bindgen_symbol_prefix);
+        return Version::AwsLc;
     }
 
     // We set this for any non-BoringSSL lib.
@@ -304,6 +447,10 @@ See rust-openssl documentation for more information:
             (3, 8, _) => ('3', '8', 'x'),
             (3, 9, 0) => ('3', '9', '0'),
             (3, 9, _) => ('3', '9', 'x'),
+            (4, 0, 0) => ('4', '0', '0'),
+            (4, 0, _) => ('4', '0', 'x'),
+            (4, 1, 0) => ('4', '1', '0'),
+            (4, 1, _) => ('4', '1', 'x'),
             _ => version_error(),
         };
 
@@ -346,7 +493,7 @@ fn version_error() -> ! {
         "
 
 This crate is only compatible with OpenSSL (version 1.0.1 through 1.1.1, or 3), or LibreSSL 2.5
-through 3.9.x, but a different version of OpenSSL was found. The build is now aborting
+through 4.1.x, but a different version of OpenSSL was found. The build is now aborting
 due to this version mismatch.
 
 "

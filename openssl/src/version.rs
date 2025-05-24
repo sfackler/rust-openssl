@@ -111,7 +111,7 @@ fn test_versions() {
     println!("Platform: '{}'", platform());
     println!("Dir: '{}'", dir());
 
-    #[cfg(not(any(libressl, boringssl)))]
+    #[cfg(not(any(libressl, boringssl, awslc)))]
     fn expected_name() -> &'static str {
         "OpenSSL"
     }
@@ -123,6 +123,10 @@ fn test_versions() {
     fn expected_name() -> &'static str {
         "BoringSSL"
     }
+    #[cfg(awslc)]
+    fn expected_name() -> &'static str {
+        "AWS-LC"
+    }
 
     assert!(number() > 0);
     assert!(version().starts_with(expected_name()));
@@ -131,5 +135,4 @@ fn test_versions() {
     if !built_on().is_empty() {
         assert!(built_on().starts_with("built on:"));
     }
-    assert!(dir().starts_with("OPENSSLDIR:"));
 }

@@ -79,8 +79,6 @@ impl Nid {
     }
 
     /// Returns the `Nid`s of the digest and public key algorithms associated with a signature ID.
-    ///
-    /// This corresponds to `OBJ_find_sigid_algs`.
     #[corresponds(OBJ_find_sigid_algs)]
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn signature_algorithms(&self) -> Option<SignatureAlgorithms> {
@@ -120,11 +118,11 @@ impl Nid {
 
     pub const UNDEF: Nid = Nid(ffi::NID_undef);
     pub const ITU_T: Nid = Nid(ffi::NID_itu_t);
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub const CCITT: Nid = Nid(ffi::NID_ccitt);
     pub const ISO: Nid = Nid(ffi::NID_iso);
     pub const JOINT_ISO_ITU_T: Nid = Nid(ffi::NID_joint_iso_itu_t);
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, awslc)))]
     pub const JOINT_ISO_CCITT: Nid = Nid(ffi::NID_joint_iso_ccitt);
     pub const MEMBER_BODY: Nid = Nid(ffi::NID_member_body);
     pub const IDENTIFIED_ORGANIZATION: Nid = Nid(ffi::NID_identified_organization);
@@ -1080,19 +1078,19 @@ impl Nid {
     pub const SM2: Nid = Nid(ffi::NID_sm2);
     #[cfg(any(ossl111, libressl291))]
     pub const SM3: Nid = Nid(ffi::NID_sm3);
-    #[cfg(any(ossl111, libressl380))]
+    #[cfg(any(ossl111, libressl380, awslc))]
     pub const SHA3_224: Nid = Nid(ffi::NID_sha3_224);
-    #[cfg(any(ossl111, libressl380))]
+    #[cfg(any(ossl111, libressl380, awslc))]
     pub const SHA3_256: Nid = Nid(ffi::NID_sha3_256);
-    #[cfg(any(ossl111, libressl380))]
+    #[cfg(any(ossl111, libressl380, awslc))]
     pub const SHA3_384: Nid = Nid(ffi::NID_sha3_384);
-    #[cfg(any(ossl111, libressl380))]
+    #[cfg(any(ossl111, libressl380, awslc))]
     pub const SHA3_512: Nid = Nid(ffi::NID_sha3_512);
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, awslc))]
     pub const SHAKE128: Nid = Nid(ffi::NID_shake128);
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, awslc))]
     pub const SHAKE256: Nid = Nid(ffi::NID_shake256);
-    #[cfg(any(ossl110, libressl271))]
+    #[cfg(any(ossl110, libressl271, awslc))]
     pub const CHACHA20_POLY1305: Nid = Nid(ffi::NID_chacha20_poly1305);
 }
 

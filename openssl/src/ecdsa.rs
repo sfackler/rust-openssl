@@ -32,7 +32,7 @@ impl EcdsaSig {
         T: HasPrivate,
     {
         unsafe {
-            assert!(data.len() <= c_int::max_value() as usize);
+            assert!(data.len() <= c_int::MAX as usize);
             let sig = cvt_p(ffi::ECDSA_do_sign(
                 data.as_ptr(),
                 data.len() as LenType,
@@ -77,7 +77,7 @@ impl EcdsaSigRef {
         T: HasPublic,
     {
         unsafe {
-            assert!(data.len() <= c_int::max_value() as usize);
+            assert!(data.len() <= c_int::MAX as usize);
             cvt_n(ffi::ECDSA_do_verify(
                 data.as_ptr(),
                 data.len() as LenType,
@@ -110,7 +110,7 @@ impl EcdsaSigRef {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl273, boringssl))] {
+    if #[cfg(any(ossl110, libressl273, boringssl, awslc))] {
         use ffi::{ECDSA_SIG_set0, ECDSA_SIG_get0};
     } else {
         #[allow(bad_style)]

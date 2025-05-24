@@ -9,6 +9,7 @@ pub enum point_conversion_form_t {
     POINT_CONVERSION_HYBRID = 6,
 }
 
+#[cfg(not(libressl410))]
 pub enum EC_METHOD {}
 pub enum EC_GROUP {}
 pub enum EC_POINT {}
@@ -17,6 +18,7 @@ extern "C" {
     #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
     pub fn EC_GF2m_simple_method() -> *const EC_METHOD;
 
+    #[cfg(not(libressl410))]
     pub fn EC_GROUP_new(meth: *const EC_METHOD) -> *mut EC_GROUP;
 
     pub fn EC_GROUP_free(group: *mut EC_GROUP);
@@ -101,7 +103,7 @@ extern "C" {
 
     pub fn EC_POINT_dup(p: *const EC_POINT, group: *const EC_GROUP) -> *mut EC_POINT;
 
-    #[cfg(any(ossl111, boringssl, libressl350))]
+    #[cfg(any(ossl111, boringssl, libressl350, awslc))]
     pub fn EC_POINT_get_affine_coordinates(
         group: *const EC_GROUP,
         p: *const EC_POINT,

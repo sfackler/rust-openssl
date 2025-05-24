@@ -93,6 +93,8 @@ extern "C" {
     pub fn EVP_DigestFinal(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
     #[cfg(ossl111)]
     pub fn EVP_DigestFinalXOF(ctx: *mut EVP_MD_CTX, res: *mut u8, len: usize) -> c_int;
+    #[cfg(ossl330)]
+    pub fn EVP_DigestSqueeze(ctx: *mut EVP_MD_CTX, res: *mut u8, len: usize) -> c_int;
 
     #[cfg(ossl300)]
     pub fn EVP_MD_fetch(
@@ -438,6 +440,11 @@ extern "C" {
     #[cfg(not(osslconf = "OPENSSL_NO_IDEA"))]
     pub fn EVP_idea_ofb() -> *const EVP_CIPHER;
 
+    #[cfg(not(osslconf = "OPENSSL_NO_RC2"))]
+    pub fn EVP_rc2_cbc() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_RC2"))]
+    pub fn EVP_rc2_40_cbc() -> *const EVP_CIPHER;
+
     #[cfg(not(ossl110))]
     pub fn OPENSSL_add_all_algorithms_noconf();
 
@@ -470,8 +477,11 @@ extern "C" {
 
     pub fn EVP_PKEY_set1_RSA(k: *mut EVP_PKEY, r: *mut RSA) -> c_int;
     pub fn EVP_PKEY_get1_RSA(k: *mut EVP_PKEY) -> *mut RSA;
+    pub fn EVP_PKEY_set1_DSA(k: *mut EVP_PKEY, k: *mut DSA) -> c_int;
     pub fn EVP_PKEY_get1_DSA(k: *mut EVP_PKEY) -> *mut DSA;
+    pub fn EVP_PKEY_set1_DH(k: *mut EVP_PKEY, k: *mut DH) -> c_int;
     pub fn EVP_PKEY_get1_DH(k: *mut EVP_PKEY) -> *mut DH;
+    pub fn EVP_PKEY_set1_EC_KEY(k: *mut EVP_PKEY, k: *mut EC_KEY) -> c_int;
     pub fn EVP_PKEY_get1_EC_KEY(k: *mut EVP_PKEY) -> *mut EC_KEY;
 
     pub fn EVP_PKEY_new() -> *mut EVP_PKEY;

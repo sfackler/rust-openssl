@@ -129,7 +129,7 @@ where
         to: &mut [u8],
         padding: Padding,
     ) -> Result<usize, ErrorStack> {
-        assert!(from.len() <= i32::max_value() as usize);
+        assert!(from.len() <= i32::MAX as usize);
         assert!(to.len() >= self.size() as usize);
 
         unsafe {
@@ -157,7 +157,7 @@ where
         to: &mut [u8],
         padding: Padding,
     ) -> Result<usize, ErrorStack> {
-        assert!(from.len() <= i32::max_value() as usize);
+        assert!(from.len() <= i32::MAX as usize);
         assert!(to.len() >= self.size() as usize);
 
         unsafe {
@@ -234,14 +234,18 @@ where
 
     /// Validates RSA parameters for correctness
     #[corresponds(RSA_check_key)]
-    #[allow(clippy::unnecessary_cast)]
     pub fn check_key(&self) -> Result<bool, ErrorStack> {
         unsafe {
-            let result = ffi::RSA_check_key(self.as_ptr()) as i32;
-            if result == -1 {
-                Err(ErrorStack::get())
+            let result = ffi::RSA_check_key(self.as_ptr());
+            if result != 1 {
+                let errors = ErrorStack::get();
+                if errors.errors().is_empty() {
+                    Ok(false)
+                } else {
+                    Err(errors)
+                }
             } else {
-                Ok(result == 1)
+                Ok(true)
             }
         }
     }
@@ -301,7 +305,7 @@ where
         to: &mut [u8],
         padding: Padding,
     ) -> Result<usize, ErrorStack> {
-        assert!(from.len() <= i32::max_value() as usize);
+        assert!(from.len() <= i32::MAX as usize);
         assert!(to.len() >= self.size() as usize);
 
         unsafe {
@@ -328,7 +332,7 @@ where
         to: &mut [u8],
         padding: Padding,
     ) -> Result<usize, ErrorStack> {
-        assert!(from.len() <= i32::max_value() as usize);
+        assert!(from.len() <= i32::MAX as usize);
         assert!(to.len() >= self.size() as usize);
 
         unsafe {
@@ -581,7 +585,7 @@ impl<T> fmt::Debug for Rsa<T> {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl273, boringssl))] {
+    if #[cfg(any(ossl110, libressl273, boringssl, awslc))] {
         use ffi::{
             RSA_get0_key, RSA_get0_factors, RSA_get0_crt_params, RSA_set0_key, RSA_set0_factors,
             RSA_set0_crt_params,
@@ -848,5 +852,22 @@ mod test {
     fn generate_with_e() {
         let e = BigNum::from_u32(0x10001).unwrap();
         Rsa::generate_with_e(2048, &e).unwrap();
+    }
+
+    #[test]
+    fn test_check_key() {
+        let k = Rsa::private_key_from_pem_passphrase(
+            include_bytes!("../test/rsa-encrypted.pem"),
+            b"mypass",
+        )
+        .unwrap();
+        assert!(matches!(k.check_key(), Ok(true)));
+        assert!(ErrorStack::get().errors().is_empty());
+
+        // BoringSSL simply rejects this key, because its corrupted!
+        if let Ok(k) = Rsa::private_key_from_pem(include_bytes!("../test/corrupted-rsa.pem")) {
+            assert!(matches!(k.check_key(), Ok(false) | Err(_)));
+            assert!(ErrorStack::get().errors().is_empty());
+        }
     }
 }

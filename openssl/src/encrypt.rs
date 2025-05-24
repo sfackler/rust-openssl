@@ -56,10 +56,10 @@ pub struct Encrypter<'a> {
     _p: PhantomData<&'a ()>,
 }
 
-unsafe impl<'a> Sync for Encrypter<'a> {}
-unsafe impl<'a> Send for Encrypter<'a> {}
+unsafe impl Sync for Encrypter<'_> {}
+unsafe impl Send for Encrypter<'_> {}
 
-impl<'a> Drop for Encrypter<'a> {
+impl Drop for Encrypter<'_> {
     fn drop(&mut self) {
         unsafe {
             ffi::EVP_PKEY_CTX_free(self.pctx);
@@ -148,7 +148,7 @@ impl<'a> Encrypter<'a> {
     /// This corresponds to [`EVP_PKEY_CTX_set_rsa_oaep_md`].
     ///
     /// [`EVP_PKEY_CTX_set_rsa_oaep_md`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_set_rsa_oaep_md.html
-    #[cfg(any(ossl102, libressl310))]
+    #[cfg(any(ossl102, libressl310, boringssl, awslc))]
     pub fn set_rsa_oaep_md(&mut self, md: MessageDigest) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_oaep_md(
@@ -260,10 +260,10 @@ pub struct Decrypter<'a> {
     _p: PhantomData<&'a ()>,
 }
 
-unsafe impl<'a> Sync for Decrypter<'a> {}
-unsafe impl<'a> Send for Decrypter<'a> {}
+unsafe impl Sync for Decrypter<'_> {}
+unsafe impl Send for Decrypter<'_> {}
 
-impl<'a> Drop for Decrypter<'a> {
+impl Drop for Decrypter<'_> {
     fn drop(&mut self) {
         unsafe {
             ffi::EVP_PKEY_CTX_free(self.pctx);
@@ -352,7 +352,7 @@ impl<'a> Decrypter<'a> {
     /// This corresponds to [`EVP_PKEY_CTX_set_rsa_oaep_md`].
     ///
     /// [`EVP_PKEY_CTX_set_rsa_oaep_md`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_set_rsa_oaep_md.html
-    #[cfg(any(ossl102, libressl310))]
+    #[cfg(any(ossl102, libressl310, boringssl, awslc))]
     pub fn set_rsa_oaep_md(&mut self, md: MessageDigest) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_oaep_md(
@@ -478,7 +478,7 @@ mod test {
     use hex::FromHex;
 
     use crate::encrypt::{Decrypter, Encrypter};
-    #[cfg(any(ossl102, libressl310))]
+    #[cfg(any(ossl102, libressl310, boringssl, awslc))]
     use crate::hash::MessageDigest;
     use crate::pkey::PKey;
     use crate::rsa::{Padding, Rsa};
@@ -513,7 +513,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(any(ossl102, libressl310))]
+    #[cfg(any(ossl102, libressl310, boringssl, awslc))]
     fn rsa_encrypt_decrypt_with_sha256() {
         let key = include_bytes!("../test/rsa.pem");
         let private_key = Rsa::private_key_from_pem(key).unwrap();

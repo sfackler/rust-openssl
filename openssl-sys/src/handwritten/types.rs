@@ -53,6 +53,20 @@ cfg_if! {
     }
 }
 cfg_if! {
+    if #[cfg(ossl320)] {
+        pub enum BIO_ADDR {}
+        pub enum BIO_POLL_DESCRIPTOR {}
+        #[repr(C)]
+        pub struct BIO_MSG {
+            pub data: *mut c_void,
+            pub data_len: usize,
+            pub peer: *mut BIO_ADDR,
+            pub local: *mut BIO_ADDR,
+            pub flags: u64,
+        }
+    }
+}
+cfg_if! {
     if #[cfg(any(ossl110, libressl350))] {
         pub enum BIGNUM {}
     } else {
@@ -458,6 +472,7 @@ pub struct X509V3_CTX {
     subject_cert: *mut c_void,
     subject_req: *mut c_void,
     crl: *mut c_void,
+    #[cfg(not(libressl400))]
     db_meth: *mut c_void,
     db: *mut c_void,
     #[cfg(ossl300)]
@@ -1032,6 +1047,27 @@ cfg_if! {
         }
     }
 }
+cfg_if! {
+    if #[cfg(ossl320)] {
+        #[repr(C)]
+        pub struct SSL_CONN_CLOSE_INFO {
+            pub error_code: u64,
+            pub frame_type: u64,
+            pub reason: *const ::libc::c_char,
+            pub reason_len: usize,
+            pub flags: u32,
+        }
+        #[repr(C)]
+        pub struct SSL_SHUTDOWN_EX_ARGS {
+            pub quic_error_code: u64,
+            pub quic_reason: *const c_char,
+        }
+        #[repr(C)]
+        pub struct SSL_STREAM_RESET_ARGS {
+            pub quic_error_code: u64,
+        }
+    }
+}
 
 pub enum COMP_CTX {}
 
@@ -1103,3 +1139,8 @@ pub struct OSSL_PARAM {
     data_size: size_t,
     return_size: size_t,
 }
+
+#[cfg(ossl300)]
+pub enum EVP_KDF {}
+#[cfg(ossl300)]
+pub enum EVP_KDF_CTX {}

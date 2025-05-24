@@ -52,7 +52,7 @@
 //!
 
 #![cfg_attr(
-    not(boringssl),
+    not(any(boringssl, awslc)),
     doc = r#"\
 Compute and verify an HMAC-SHA256
 
@@ -85,7 +85,7 @@ use crate::error::ErrorStack;
 use crate::md::MdRef;
 use crate::pkey::{HasPrivate, HasPublic, PKeyRef};
 use crate::pkey_ctx::PkeyCtxRef;
-use crate::{cvt, cvt_n, cvt_p};
+use crate::{cvt, cvt_p};
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use openssl_macros::corresponds;
@@ -93,7 +93,7 @@ use std::convert::TryFrom;
 use std::ptr;
 
 cfg_if! {
-    if #[cfg(any(ossl110, boringssl, libressl382))] {
+    if #[cfg(any(ossl110, boringssl, libressl382, awslc))] {
         use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
     } else {
         use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
@@ -258,7 +258,7 @@ impl MdCtxRef {
     /// Requires OpenSSL 1.1.1 or newer.
     #[corresponds(EVP_DigestFinalXOF)]
     #[inline]
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, awslc))]
     pub fn digest_final_xof(&mut self, out: &mut [u8]) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_DigestFinalXOF(
@@ -309,12 +309,21 @@ impl MdCtxRef {
     #[inline]
     pub fn digest_verify_final(&mut self, signature: &[u8]) -> Result<bool, ErrorStack> {
         unsafe {
-            let r = cvt_n(ffi::EVP_DigestVerifyFinal(
+            let r = ffi::EVP_DigestVerifyFinal(
                 self.as_ptr(),
                 signature.as_ptr() as *mut _,
                 signature.len(),
-            ))?;
-            Ok(r == 1)
+            );
+            if r == 1 {
+                Ok(true)
+            } else {
+                let errors = ErrorStack::get();
+                if errors.errors().is_empty() {
+                    Ok(false)
+                } else {
+                    Err(errors)
+                }
+            }
         }
     }
 
@@ -424,8 +433,11 @@ mod test {
 
         ctx.digest_verify_init(Some(md), &key1).unwrap();
         ctx.digest_verify_update(bad_data).unwrap();
-        let valid = ctx.digest_verify_final(&signature).unwrap();
-        assert!(!valid);
+        assert!(matches!(
+            ctx.digest_verify_final(&signature),
+            Ok(false) | Err(_)
+        ));
+        assert!(ErrorStack::get().errors().is_empty());
     }
 
     #[test]

@@ -7,7 +7,7 @@ pub const PKCS5_SALT_LEN: c_int = 8;
 pub const PKCS12_DEFAULT_ITER: c_int = 2048;
 
 pub const EVP_PKEY_RSA: c_int = NID_rsaEncryption;
-#[cfg(any(ossl111, libressl310, boringssl))]
+#[cfg(any(ossl111, libressl310, boringssl, awslc))]
 pub const EVP_PKEY_RSA_PSS: c_int = NID_rsassaPss;
 pub const EVP_PKEY_DSA: c_int = NID_dsa;
 pub const EVP_PKEY_DH: c_int = NID_dhKeyAgreement;
@@ -184,12 +184,28 @@ cfg_if! {
         pub const EVP_PKEY_OP_DERIVE: c_int = 1 << 10;
     }
 }
+#[cfg(ossl340)]
+pub const EVP_PKEY_OP_SIGNMSG: c_int = 1 << 14;
+#[cfg(ossl340)]
+pub const EVP_PKEY_OP_VERIFYMSG: c_int = 1 << 15;
 
-pub const EVP_PKEY_OP_TYPE_SIG: c_int = EVP_PKEY_OP_SIGN
-    | EVP_PKEY_OP_VERIFY
-    | EVP_PKEY_OP_VERIFYRECOVER
-    | EVP_PKEY_OP_SIGNCTX
-    | EVP_PKEY_OP_VERIFYCTX;
+cfg_if! {
+    if #[cfg(ossl340)] {
+        pub const EVP_PKEY_OP_TYPE_SIG: c_int = EVP_PKEY_OP_SIGN
+            | EVP_PKEY_OP_SIGNMSG
+            | EVP_PKEY_OP_VERIFY
+            | EVP_PKEY_OP_VERIFYMSG
+            | EVP_PKEY_OP_VERIFYRECOVER
+            | EVP_PKEY_OP_SIGNCTX
+            | EVP_PKEY_OP_VERIFYCTX;
+    } else {
+        pub const EVP_PKEY_OP_TYPE_SIG: c_int = EVP_PKEY_OP_SIGN
+            | EVP_PKEY_OP_VERIFY
+            | EVP_PKEY_OP_VERIFYRECOVER
+            | EVP_PKEY_OP_SIGNCTX
+            | EVP_PKEY_OP_VERIFYCTX;
+    }
+}
 
 pub const EVP_PKEY_OP_TYPE_CRYPT: c_int = EVP_PKEY_OP_ENCRYPT | EVP_PKEY_OP_DECRYPT;
 
@@ -297,7 +313,7 @@ pub unsafe fn EVP_PKEY_CTX_add1_hkdf_info(
     )
 }
 
-#[cfg(all(not(ossl300), not(boringssl)))]
+#[cfg(not(any(ossl300, boringssl, awslc)))]
 pub unsafe fn EVP_PKEY_CTX_set_signature_md(cxt: *mut EVP_PKEY_CTX, md: *mut EVP_MD) -> c_int {
     EVP_PKEY_CTX_ctrl(
         cxt,
