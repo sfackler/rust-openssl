@@ -41,9 +41,9 @@ cfg_if::cfg_if! {
             salt: &[u8],
             ad: Option<&[u8]>,
             secret: Option<&[u8]>,
-            mut iter: u32,
-            mut lanes: u32,
-            mut memcost: u32,
+            iter: u32,
+            lanes: u32,
+            memcost: u32,
             out: &mut [u8],
         ) -> Result<(), ErrorStack> {
             return argon2_helper(b"ARGON2D\0", ctx, pass, salt, ad, secret, iter, lanes, memcost, out);
@@ -56,9 +56,9 @@ cfg_if::cfg_if! {
             salt: &[u8],
             ad: Option<&[u8]>,
             secret: Option<&[u8]>,
-            mut iter: u32,
-            mut lanes: u32,
-            mut memcost: u32,
+            iter: u32,
+            lanes: u32,
+            memcost: u32,
             out: &mut [u8],
         ) -> Result<(), ErrorStack> {
             return argon2_helper(b"ARGON2I\0", ctx, pass, salt, ad, secret, iter, lanes, memcost, out);
@@ -71,9 +71,9 @@ cfg_if::cfg_if! {
             salt: &[u8],
             ad: Option<&[u8]>,
             secret: Option<&[u8]>,
-            mut iter: u32,
-            mut lanes: u32,
-            mut memcost: u32,
+            iter: u32,
+            lanes: u32,
+            memcost: u32,
             out: &mut [u8],
         ) -> Result<(), ErrorStack> {
             return argon2_helper(b"ARGON2ID\0", ctx, pass, salt, ad, secret, iter, lanes, memcost, out);
