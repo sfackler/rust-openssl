@@ -1893,8 +1893,8 @@ impl X509Crl {
     }
 
     /// use a negative value to set a time before 'now'
-    pub fn set_last_update(&mut self, seconds_from_now: Option<i32>) -> Result<(), ErrorStack> {
-        let time = Asn1Time::seconds_from_now(seconds_from_now.unwrap_or(0) as c_long)?;
+    pub fn set_last_update(&mut self, seconds_from_now: i32) -> Result<(), ErrorStack> {
+        let time = Asn1Time::seconds_from_now(seconds_from_now as c_long)?;
         cfg_if!(
         if #[cfg(any(ossl110, libressl270, boringssl, awslc))] {
                 unsafe {
@@ -2040,7 +2040,7 @@ impl X509Crl {
             _ => { /* do nothing, already revoked */ }
         }
 
-        self.set_last_update(Some(0))
+        self.set_last_update(0)
     }
 }
 
