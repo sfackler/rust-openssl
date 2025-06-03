@@ -713,12 +713,12 @@ fn test_crl_revoke() {
     let ca = include_bytes!("../../test/crl-ca.crt");
     let ca = X509::from_pem(ca).unwrap();
 
-    let crl = include_bytes!("../../test/test.crl");
-    let mut crl = X509Crl::from_der(crl).unwrap();
-    assert!(crl.verify(&ca.public_key().unwrap()).unwrap());
-
     // ensure revoking an already revoked cert does not change the revoked count
     {
+        let crl = include_bytes!("../../test/test.crl");
+        let mut crl = X509Crl::from_der(crl).unwrap();
+        assert!(crl.verify(&ca.public_key().unwrap()).unwrap());
+
         let already_revoked_cert = include_bytes!("../../test/subca.crt");
         let already_revoked_cert = X509::from_pem(already_revoked_cert).unwrap();
 
@@ -743,7 +743,8 @@ fn test_crl_revoke() {
 
     // ensure revoke does correctly add a new revoked cert to the crl
     {
-        let cert = include_bytes!("../../test/cert.pem");
+        let mut crl = X509Crl::new(&ca, None).unwrap();
+        let cert = include_bytes!("../../test/subca.crt");
         let cert = X509::from_pem(cert).unwrap();
 
         let count_before = crl.entry_count();
@@ -752,6 +753,16 @@ fn test_crl_revoke() {
             count_before + 1,
             crl.entry_count(),
             "clr's entry count should have incremented by one after revoking a cert"
+        );
+
+        let revoked = match crl.get_by_cert(&cert) {
+            CrlStatus::Revoked(revoked) => revoked,
+            _ => panic!("cert should be revoked"),
+        };
+        assert_eq!(
+            revoked.serial_number().to_bn().unwrap(),
+            cert.serial_number().to_bn().unwrap(),
+            "revoked and cert serial numbers should match"
         );
     }
 }

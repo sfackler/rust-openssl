@@ -1637,8 +1637,7 @@ impl X509Revoked {
             ffi::X509_REVOKED_free(result);
             return Err(ErrorStack::get());
         }
-        if ffi::X509_REVOKED_set_revocationDate(result, crate::asn1::Asn1Time::now()?.as_ptr()) <= 0
-        {
+        if ffi::X509_REVOKED_set_revocationDate(result, Asn1Time::now()?.as_ptr()) <= 0 {
             ffi::X509_REVOKED_free(result);
             return Err(ErrorStack::get());
         }
@@ -2025,22 +2024,32 @@ impl X509Crl {
     }
 
     /// Revoke the given certificate.
+    ///
     /// This function won't produce duplicate entries in case the certificate was already revoked.
-    /// Sets the CRL's last_updated time to the current time before returning irregardless of the given certificate.
-    pub fn revoke(&mut self, to_revoke: &X509) -> Result<(), ErrorStack> {
+    ///
+    /// Sets the CRL's last_updated time to the current time before successfully returning irregardless of the given certificate.
+    pub fn revoke(&mut self, to_revoke: &X509) -> Result<(), RevocationError> {
+        // when quering the CRL by certificate, the issuer name must match,
+        // i.e. get_by_cert will not return an entry for cert's with a different issuer name even if they are present in the CRL
+        // since openssl does not check this before inserting a new revocation entry, we do this ourselves
+        if to_revoke.issuer_name().try_cmp(self.issuer_name())? != Ordering::Equal {
+            return Err(RevocationError::IssuerMismatch);
+        }
+
         match self.get_by_cert(to_revoke) {
             CrlStatus::NotRevoked => unsafe {
                 // we are not allowed to drop the revoked after adding it to the crl
                 let revoked = X509Revoked::new_raw(to_revoke)?;
                 if ffi::X509_CRL_add0_revoked(self.as_ptr(), revoked) == 0 {
-                    return Err(ErrorStack::get());
+                    return Err(ErrorStack::get().into());
                 };
             },
 
             _ => { /* do nothing, already revoked */ }
         }
+        self.set_last_update(0)?;
 
-        self.set_last_update(0)
+        Ok(())
     }
 }
 
@@ -2786,5 +2795,19 @@ impl X509PurposeRef {
             }
             X509PurposeId::from_raw(ffi::X509_PURPOSE_get_id(x509_purpose))
         }
+    }
+}
+
+#[derive(Debug)]
+pub enum RevocationError {
+    /// The certificate to revoke is not issued by the CRL's issuer.
+    IssuerMismatch,
+
+    Openssl(ErrorStack),
+}
+
+impl From<ErrorStack> for RevocationError {
+    fn from(err: ErrorStack) -> Self {
+        RevocationError::Openssl(err)
     }
 }
