@@ -146,7 +146,7 @@ impl Cipher {
             let ptr = cvt_p(ffi::EVP_CIPHER_fetch(
                 ctx.map_or(ptr::null_mut(), ForeignTypeRef::as_ptr),
                 algorithm.as_ptr(),
-                properties.map_or(ptr::null_mut(), |s| s.as_ptr()),
+                properties.as_ref().map_or(ptr::null_mut(), |s| s.as_ptr()),
             ))?;
 
             Ok(Cipher::from_ptr(ptr))
@@ -593,5 +593,17 @@ impl CipherRef {
     #[corresponds(EVP_CIPHER_block_size)]
     pub fn block_size(&self) -> usize {
         unsafe { EVP_CIPHER_block_size(self.as_ptr()) as usize }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    #[cfg(ossl300)]
+    use super::Cipher;
+
+    #[test]
+    #[cfg(ossl300)]
+    fn test_cipher_fetch_properties() {
+        assert!(Cipher::fetch(None, "AES-128-GCM", Some("provider=gibberish")).is_err());
     }
 }
