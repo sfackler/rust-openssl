@@ -1831,11 +1831,16 @@ impl X509Crl {
         unsafe {
             let crl = Self(cvt_p(ffi::X509_CRL_new())?);
 
+            cvt(ffi::X509_CRL_set_issuer_name(
+                crl.as_ptr(),
+                issuer_cert.subject_name().as_ptr(),
+            ))?;
+
             #[cfg(any(ossl110, libressl281))]
             if issuer_cert.version() >= Self::X509_VERSION_3 {
                 use crate::x509::extension::AuthorityKeyIdentifier;
 
-                #[cfg(any(ossl110, libressl251, boringssl))]
+                #[cfg(any(ossl110, libressl251))]
                 {
                     // "if present, MUST be v2" (source: RFC 5280, page 55)
                     cvt(ffi::X509_CRL_set_version(
@@ -1843,11 +1848,6 @@ impl X509Crl {
                         Self::X509_CRL_VERSION_2 as c_long,
                     ))?;
                 }
-
-                cvt(ffi::X509_CRL_set_issuer_name(
-                    crl.as_ptr(),
-                    issuer_cert.subject_name().as_ptr(),
-                ))?;
 
                 let context = {
                     let mut ctx = std::mem::MaybeUninit::<ffi::X509V3_CTX>::zeroed();
@@ -2029,11 +2029,14 @@ impl X509Crl {
     ///
     /// Sets the CRL's last_updated time to the current time before successfully returning irregardless of the given certificate.
     pub fn revoke(&mut self, to_revoke: &X509) -> Result<(), RevocationError> {
-        // when quering the CRL by certificate, the issuer name must match,
-        // i.e. get_by_cert will not return an entry for cert's with a different issuer name even if they are present in the CRL
-        // since openssl does not check this before inserting a new revocation entry, we do this ourselves
-        if to_revoke.issuer_name().try_cmp(self.issuer_name())? != Ordering::Equal {
-            return Err(RevocationError::IssuerMismatch);
+        #[cfg(any(ossl110, libressl281, boringssl, awslc))]
+        {
+            // when quering the CRL by certificate, the issuer name must match,
+            // i.e. get_by_cert will not return an entry for cert's with a different issuer name even if they are present in the CRL
+            // since openssl does not check this before inserting a new revocation entry, we do this ourselves
+            if to_revoke.issuer_name().try_cmp(self.issuer_name())? != Ordering::Equal {
+                return Err(RevocationError::IssuerMismatch);
+            }
         }
 
         match self.get_by_cert(to_revoke) {
