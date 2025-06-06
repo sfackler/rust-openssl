@@ -94,7 +94,9 @@ fn find_openssl_dir(target: &str) -> OsString {
 
     // FreeBSD, OpenBSD, and AIX ship with Libre|OpenSSL
     // TODO: see of this is still needed for OpenBSD
-    if host == target && (target.contains("freebsd") || target.contains("openbsd") || target.contains("aix")) {
+    if host == target
+        && (target.contains("freebsd") || target.contains("openbsd") || target.contains("aix"))
+    {
         return OsString::from("/usr");
     }
 
