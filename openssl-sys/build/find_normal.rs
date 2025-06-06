@@ -92,7 +92,8 @@ fn find_openssl_dir(target: &str) -> OsString {
     try_pkg_config();
     try_vcpkg();
 
-    // FreeBSD, OpenBSD, and AIX ship with Libre|OpenSSL but don't include a pkg-config file
+    // FreeBSD, OpenBSD, and AIX ship with Libre|OpenSSL
+    // TODO: see of this is still needed for OpenBSD
     if host == target && (target.contains("freebsd") || target.contains("openbsd") || target.contains("aix")) {
         return OsString::from("/usr");
     }
