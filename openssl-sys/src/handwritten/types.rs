@@ -1141,6 +1141,9 @@ pub struct OSSL_PARAM {
 }
 
 #[cfg(ossl300)]
+pub enum OSSL_PARAM_BLD {}
+
+#[cfg(ossl300)]
 pub enum EVP_KDF {}
 #[cfg(ossl300)]
 pub enum EVP_KDF_CTX {}
