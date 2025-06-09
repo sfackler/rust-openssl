@@ -226,7 +226,7 @@ impl Pkcs12Builder {
     pub fn build2(&self, password: &str) -> Result<Pkcs12, ErrorStack> {
         unsafe {
             let pass = CString::new(password).unwrap();
-            #[cfg(not(boringssl))]
+            #[cfg(not(any(boringssl, awslc_fips)))]
             let pass_len = pass.as_bytes().len();
             let pass = pass.as_ptr();
             let friendly_name = self.name.as_ref().map_or(ptr::null(), |p| p.as_ptr());
@@ -259,7 +259,7 @@ impl Pkcs12Builder {
             ))
             .map(Pkcs12)?;
 
-            #[cfg(not(boringssl))]
+            #[cfg(not(any(boringssl, awslc_fips)))]
             // BoringSSL does not support overriding the MAC and will always
             // use SHA-1.
             {
