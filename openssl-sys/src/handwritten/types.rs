@@ -1072,9 +1072,9 @@ cfg_if! {
 pub enum COMP_CTX {}
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl350))] {
+    if #[cfg(all(any(ossl110, libressl350), not(osslconf = "OPENSSL_NO_COMP")))] {
         pub enum COMP_METHOD {}
-    } else {
+    } else if #[cfg(not(osslconf = "OPENSSL_NO_COMP"))] {
         #[repr(C)]
         pub struct COMP_METHOD {
             pub type_: c_int,
