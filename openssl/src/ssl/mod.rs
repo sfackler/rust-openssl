@@ -72,6 +72,7 @@ use crate::nid::Nid;
 use crate::pkey::{HasPrivate, PKeyRef, Params, Private};
 #[cfg(ossl300)]
 use crate::pkey::{PKey, Public};
+#[cfg(not(osslconf = "OPENSSL_NO_SRTP"))]
 use crate::srtp::{SrtpProtectionProfile, SrtpProtectionProfileRef};
 use crate::ssl::bio::BioMethod;
 use crate::ssl::callbacks::*;
@@ -1269,6 +1270,7 @@ impl SslContextBuilder {
     }
 
     /// Enables the DTLS extension "use_srtp" as defined in RFC5764.
+    #[cfg(not(osslconf = "OPENSSL_NO_SRTP"))]
     #[corresponds(SSL_CTX_set_tlsext_use_srtp)]
     pub fn set_tlsext_use_srtp(&mut self, protocols: &str) -> Result<(), ErrorStack> {
         unsafe {
@@ -2675,6 +2677,7 @@ impl SslRef {
     }
 
     /// Enables the DTLS extension "use_srtp" as defined in RFC5764.
+    #[cfg(not(osslconf = "OPENSSL_NO_SRTP"))]
     #[corresponds(SSL_set_tlsext_use_srtp)]
     pub fn set_tlsext_use_srtp(&mut self, protocols: &str) -> Result<(), ErrorStack> {
         unsafe {
@@ -2693,6 +2696,7 @@ impl SslRef {
     /// Gets all SRTP profiles that are enabled for handshake via set_tlsext_use_srtp
     ///
     /// DTLS extension "use_srtp" as defined in RFC5764 has to be enabled.
+    #[cfg(not(osslconf = "OPENSSL_NO_SRTP"))]
     #[corresponds(SSL_get_srtp_profiles)]
     pub fn srtp_profiles(&self) -> Option<&StackRef<SrtpProtectionProfile>> {
         unsafe {
@@ -2705,6 +2709,7 @@ impl SslRef {
     /// Gets the SRTP profile selected by handshake.
     ///
     /// DTLS extension "use_srtp" as defined in RFC5764 has to be enabled.
+    #[cfg(not(osslconf = "OPENSSL_NO_SRTP"))]
     #[corresponds(SSL_get_selected_srtp_profile)]
     pub fn selected_srtp_profile(&self) -> Option<&SrtpProtectionProfileRef> {
         unsafe {
