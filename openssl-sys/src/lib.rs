@@ -38,7 +38,10 @@ mod aws_lc {
     #[cfg(feature = "aws-lc")]
     pub use aws_lc_sys::*;
 
-    #[cfg(not(feature = "aws-lc"))]
+    #[cfg(feature = "aws-lc-fips")]
+    pub use aws_lc_fips_sys::*;
+
+    #[cfg(not(any(feature = "aws-lc", feature = "aws-lc-fips")))]
     include!(concat!(env!("OUT_DIR"), "/bindgen.rs"));
 
     use libc::{c_char, c_long, c_void};
