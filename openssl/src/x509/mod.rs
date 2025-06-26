@@ -2250,6 +2250,25 @@ foreign_type_and_impl_send_sync! {
     pub struct GeneralNameRef;
 }
 
+#[cfg(any(ossl110, libressl270))]
+impl Clone for X509Crl {
+    fn clone(&self) -> X509Crl {
+        X509CrlRef::to_owned(self)
+    }
+}
+
+#[cfg(any(ossl110, libressl270))]
+impl ToOwned for X509CrlRef {
+    type Owned = X509Crl;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe {
+            ffi::X509_CRL_up_ref(self.as_ptr());
+            X509Crl::from_ptr(self.as_ptr())
+        }
+    }
+}
+
 impl GeneralName {
     unsafe fn new(
         type_: c_int,
