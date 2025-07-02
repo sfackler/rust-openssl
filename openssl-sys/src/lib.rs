@@ -167,12 +167,12 @@ mod openssl {
             _file: *const c_char,
             _line: c_int,
         ) {
-            let mutex = &(*MUTEXES)[n as usize];
+            let mutex = &(&(*MUTEXES))[n as usize];
 
             if mode & CRYPTO_LOCK != 0 {
-                (*GUARDS)[n as usize] = Some(mutex.lock().unwrap());
+                (&mut (*GUARDS))[n as usize] = Some(mutex.lock().unwrap());
             } else {
-                if let None = (*GUARDS)[n as usize].take() {
+                if let None = (&mut (*GUARDS))[n as usize].take() {
                     let _ = writeln!(
                         io::stderr(),
                         "BUG: rust-openssl lock {} already unlocked, aborting",

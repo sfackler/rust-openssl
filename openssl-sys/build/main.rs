@@ -1,3 +1,8 @@
+#![allow(
+    // This can be removed once our MSRV is raised to 1.66.
+    clippy::uninlined_format_args,
+)]
+
 #[cfg(feature = "bindgen")]
 extern crate bindgen;
 extern crate cc;
