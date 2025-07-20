@@ -1097,7 +1097,7 @@ impl SslContextBuilder {
     ///
     /// See [`ciphers`] for details on the format.
     ///
-    /// [`ciphers`]: https://www.openssl.org/docs/manmaster/apps/ciphers.html
+    /// [`ciphers`]: https://docs.openssl.org/master/man1/ciphers/
     #[corresponds(SSL_CTX_set_cipher_list)]
     pub fn set_cipher_list(&mut self, cipher_list: &str) -> Result<(), ErrorStack> {
         let cipher_list = CString::new(cipher_list).unwrap();
@@ -2739,7 +2739,7 @@ impl SslRef {
     /// is not valid UTF-8, this function will return `None`. The `servername_raw` method returns
     /// the raw bytes and does not have this restriction.
     ///
-    /// [`SSL_get_servername`]: https://www.openssl.org/docs/manmaster/man3/SSL_get_servername.html
+    /// [`SSL_get_servername`]: https://docs.openssl.org/master/man3/SSL_get_servername/
     #[corresponds(SSL_get_servername)]
     // FIXME maybe rethink in 0.11?
     pub fn servername(&self, type_: NameType) -> Option<&str> {
@@ -3405,7 +3405,7 @@ impl SslRef {
     ///
     /// See [`ciphers`] for details on the format.
     ///
-    /// [`ciphers`]: https://www.openssl.org/docs/manmaster/apps/ciphers.html
+    /// [`ciphers`]: https://docs.openssl.org/master/man1/ciphers/
     #[corresponds(SSL_set_cipher_list)]
     pub fn set_cipher_list(&mut self, cipher_list: &str) -> Result<(), ErrorStack> {
         let cipher_list = CString::new(cipher_list).unwrap();

@@ -69,7 +69,7 @@ pub enum Mode {
 ///
 /// See OpenSSL doc at [`EVP_EncryptInit`] for more information on each algorithms.
 ///
-/// [`EVP_EncryptInit`]: https://www.openssl.org/docs/manmaster/crypto/EVP_EncryptInit.html
+/// [`EVP_EncryptInit`]: https://docs.openssl.org/master/man3/EVP_EncryptInit/
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Cipher(*const ffi::EVP_CIPHER);
 
