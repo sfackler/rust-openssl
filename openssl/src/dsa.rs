@@ -38,7 +38,7 @@ generic_foreign_type_and_impl_send_sync! {
     ///
     /// OpenSSL documentation at [`DSA_new`]
     ///
-    /// [`DSA_new`]: https://www.openssl.org/docs/manmaster/crypto/DSA_new.html
+    /// [`DSA_new`]: https://docs.openssl.org/master/man3/DSA_new/
     ///
     /// # Examples
     ///

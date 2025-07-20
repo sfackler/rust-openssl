@@ -81,7 +81,7 @@ impl Asn1Flag {
     ///
     /// OpenSSL documentation at [`EC_GROUP`]
     ///
-    /// [`EC_GROUP`]: https://www.openssl.org/docs/manmaster/crypto/EC_GROUP_get_seed_len.html
+    /// [`EC_GROUP`]: https://docs.openssl.org/master/man3/EC_GROUP_get_seed_len/
     pub const EXPLICIT_CURVE: Asn1Flag = Asn1Flag(0);
 
     /// Standard Curves
@@ -91,7 +91,7 @@ impl Asn1Flag {
     ///
     /// OpenSSL documentation at [`EC_GROUP`]
     ///
-    /// [`EC_GROUP`]: https://www.openssl.org/docs/manmaster/man3/EC_GROUP_order_bits.html
+    /// [`EC_GROUP`]: https://docs.openssl.org/master/man3/EC_GROUP_order_bits/
     pub const NAMED_CURVE: Asn1Flag = Asn1Flag(ffi::OPENSSL_EC_NAMED_CURVE);
 }
 
