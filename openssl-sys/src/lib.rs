@@ -93,6 +93,7 @@ mod openssl {
     pub use self::x509::*;
     pub use self::x509_vfy::*;
     pub use self::x509v3::*;
+    pub use self::engine::*;
 
     #[macro_use]
     mod macros;
@@ -123,6 +124,7 @@ mod openssl {
     mod x509;
     mod x509_vfy;
     mod x509v3;
+    mod engine;
 
     use std::sync::Once;
     // explicitly initialize to work around https://github.com/openssl/openssl/issues/3505
