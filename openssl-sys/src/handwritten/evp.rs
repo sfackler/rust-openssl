@@ -669,3 +669,41 @@ extern "C" {
     pub fn EVP_EncodeBlock(dst: *mut c_uchar, src: *const c_uchar, src_len: c_int) -> c_int;
     pub fn EVP_DecodeBlock(dst: *mut c_uchar, src: *const c_uchar, src_len: c_int) -> c_int;
 }
+
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn EVP_PKEY_gettable_params(pkey: *const EVP_PKEY) -> *const OSSL_PARAM;
+            pub fn EVP_PKEY_get_params(pkey: *const EVP_PKEY, params: *mut OSSL_PARAM) -> c_int;
+            pub fn EVP_PKEY_get_int_param(
+                pkey: *const EVP_PKEY,
+                key_name: *const c_char,
+                out: *mut c_int,
+            ) -> c_int;
+            pub fn EVP_PKEY_get_size_t_param(
+                pkey: *const EVP_PKEY,
+                key_name: *const c_char,
+                out: *mut size_t,
+            ) -> c_int;
+            pub fn EVP_PKEY_get_bn_param(
+                pkey: *const EVP_PKEY,
+                key_name: *const c_char,
+                out: *mut *mut BIGNUM,
+            ) -> c_int;
+            pub fn EVP_PKEY_get_utf8_string_param(
+                pkey: *const EVP_PKEY,
+                key_name: *const c_char,
+                str: *mut c_char,
+                max_buf_sz: size_t,
+                out_len: *mut size_t,
+            ) -> c_int;
+            pub fn EVP_PKEY_get_octet_string_param(
+                pkey: *const EVP_PKEY,
+                key_name: *const c_char,
+                buf: *mut c_uchar,
+                max_buf_sz: size_t,
+                out_len: *mut size_t,
+            ) -> c_int;
+        }
+    }
+}
