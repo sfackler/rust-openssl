@@ -68,7 +68,7 @@ let cmac_key = ctx.keygen().unwrap();
 use crate::cipher::CipherRef;
 use crate::error::ErrorStack;
 use crate::md::MdRef;
-use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Private};
+use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Params, Private};
 use crate::rsa::Padding;
 use crate::sign::RsaPssSaltlen;
 use crate::{cvt, cvt_p};
@@ -420,6 +420,17 @@ impl<T> PkeyCtxRef<T> {
         Ok(())
     }
 
+    /// Prepares the context for key parameter generation.
+    #[corresponds(EVP_PKEY_paramgen_init)]
+    #[inline]
+    pub fn paramgen_init(&mut self) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_paramgen_init(self.as_ptr()))?;
+        }
+
+        Ok(())
+    }
+
     /// Sets which algorithm was used to compute the digest used in a
     /// signature. With RSA signatures this causes the signature to be wrapped
     /// in a `DigestInfo` structure. This is almost always what you want with
@@ -730,6 +741,17 @@ impl<T> PkeyCtxRef<T> {
         unsafe {
             let mut key = ptr::null_mut();
             cvt(ffi::EVP_PKEY_keygen(self.as_ptr(), &mut key))?;
+            Ok(PKey::from_ptr(key))
+        }
+    }
+
+    /// Generates a new set of key parameters.
+    #[corresponds(EVP_PKEY_paramgen)]
+    #[inline]
+    pub fn paramgen(&mut self) -> Result<PKey<Params>, ErrorStack> {
+        unsafe {
+            let mut key = ptr::null_mut();
+            cvt(ffi::EVP_PKEY_paramgen(self.as_ptr(), &mut key))?;
             Ok(PKey::from_ptr(key))
         }
     }
