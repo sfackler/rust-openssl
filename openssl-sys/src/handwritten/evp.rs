@@ -704,6 +704,35 @@ cfg_if! {
                 max_buf_sz: size_t,
                 out_len: *mut size_t,
             ) -> c_int;
+
+            pub fn EVP_PKEY_settable_params(pkey: *const EVP_PKEY) -> *const OSSL_PARAM;
+            pub fn EVP_PKEY_set_params(pkey: *mut EVP_PKEY, params: *mut OSSL_PARAM) -> c_int;
+            pub fn EVP_PKEY_set_int_param(
+                pkey: *mut EVP_PKEY,
+                key_name: *const c_char,
+                in_val: c_int,
+            ) -> c_int;
+            pub fn EVP_PKEY_set_size_t_param(
+                pkey: *mut EVP_PKEY,
+                key_name: *const c_char,
+                in_val: size_t,
+            ) -> c_int;
+            pub fn EVP_PKEY_set_bn_param(
+                pkey: *mut EVP_PKEY,
+                key_name: *const c_char,
+                bn: *const BIGNUM,
+            ) -> c_int;
+            pub fn EVP_PKEY_set_utf8_string_param(
+                pkey: *mut EVP_PKEY,
+                key_name: *const c_char,
+                str: *const c_char,
+            ) -> c_int;
+            pub fn EVP_PKEY_set_octet_string_param(
+                pkey: *mut EVP_PKEY,
+                key_name: *const c_char,
+                buf: *const c_uchar,
+                bsize: size_t,
+            ) -> c_int;
         }
     }
 }
