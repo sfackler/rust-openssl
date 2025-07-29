@@ -64,6 +64,7 @@ let cmac_key = ctx.keygen().unwrap();
 //! let valid = ctx.verify(text, &signature).unwrap();
 //! assert!(valid);
 //! ```
+use crate::bn::BigNumRef;
 #[cfg(not(any(boringssl, awslc)))]
 use crate::cipher::CipherRef;
 use crate::error::ErrorStack;
@@ -73,6 +74,7 @@ use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Params, Private};
 use crate::rsa::Padding;
 use crate::sign::RsaPssSaltlen;
 use crate::{cvt, cvt_p};
+use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 #[cfg(not(any(boringssl, awslc)))]
 use libc::c_int;
@@ -539,6 +541,48 @@ impl<T> PkeyCtxRef<T> {
                 self.as_ptr(),
                 padding.as_raw(),
             ))?;
+        }
+
+        Ok(())
+    }
+
+    /// Sets the RSA keygen bits.
+    ///
+    /// This is only useful for RSA keys.
+    #[corresponds(EVP_PKEY_CTX_set_rsa_keygen_bits)]
+    #[inline]
+    pub fn set_rsa_keygen_bits(&mut self, bits: u32) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_rsa_keygen_bits(
+                self.as_ptr(),
+                bits as i32,
+            ))?;
+        }
+
+        Ok(())
+    }
+
+    /// Sets the RSA keygen public exponent.
+    ///
+    /// This is only useful for RSA keys.
+    #[corresponds(EVP_PKEY_CTX_set1_rsa_keygen_pubexp)]
+    #[inline]
+    pub fn set_rsa_keygen_pubexp(&mut self, pubexp: &BigNumRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cfg_if! {
+                if #[cfg(ossl300)] {
+                    cvt(ffi::EVP_PKEY_CTX_set1_rsa_keygen_pubexp(
+                        self.as_ptr(),
+                        pubexp.as_ptr(),
+                    ))?;
+                } else {
+                    cvt(ffi::EVP_PKEY_CTX_set_rsa_keygen_pubexp(
+                        self.as_ptr(),
+                        // Dupe the BN because the EVP_PKEY_CTX takes ownership of it and will free it.
+                        cvt_p(ffi::BN_dup(pubexp.as_ptr()))?,
+                    ))?;
+                }
+            }
         }
 
         Ok(())
