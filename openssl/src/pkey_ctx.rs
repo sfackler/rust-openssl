@@ -447,6 +447,22 @@ impl<T> PkeyCtxRef<T> {
         Ok(())
     }
 
+    /// Sets the DSA paramgen bits.
+    ///
+    /// This is only useful for DSA keys.
+    #[corresponds(EVP_PKEY_CTX_set_dsa_paramgen_bits)]
+    #[inline]
+    pub fn set_dsa_paramgen_bits(&mut self, bits: u32) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_dsa_paramgen_bits(
+                self.as_ptr(),
+                bits as i32,
+            ))?;
+        }
+
+        Ok(())
+    }
+
     /// Returns the RSA padding mode in use.
     ///
     /// This is only useful for RSA keys.
