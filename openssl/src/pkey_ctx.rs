@@ -832,6 +832,8 @@ mod test {
     use crate::pkey::PKey;
     use crate::rsa::Rsa;
     use crate::sign::Verifier;
+    #[cfg(not(boringssl))]
+    use cfg_if::cfg_if;
 
     #[test]
     fn rsa() {
@@ -956,6 +958,29 @@ mod test {
         ctx.set_keygen_mac_key(&hex::decode("9294727a3638bb1c13f48ef8158bfc9d").unwrap())
             .unwrap();
         ctx.keygen().unwrap();
+    }
+
+    #[test]
+    #[cfg(not(boringssl))]
+    fn dsa_paramgen() {
+        let mut ctx = PkeyCtx::new_id(Id::DSA).unwrap();
+        ctx.paramgen_init().unwrap();
+        ctx.set_dsa_paramgen_bits(2048).unwrap();
+        let params = ctx.paramgen().unwrap();
+
+        let size = {
+            cfg_if! {
+                if #[cfg(awslc)] {
+                    72
+                } else if #[cfg(any(libressl, all(ossl101, not(ossl102))))] {
+                    // LibreSSL and OpenSSL 1.0.1 and earlier
+                    48
+                } else {
+                    64
+                }
+            }
+        };
+        assert_eq!(params.size(), size);
     }
 
     #[test]
