@@ -918,6 +918,7 @@ impl<T> PkeyCtxRef<T> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::bn::BigNum;
     #[cfg(not(any(boringssl, awslc)))]
     use crate::cipher::Cipher;
     use crate::ec::{EcGroup, EcKey};
@@ -1099,6 +1100,18 @@ mod test {
         let params = ctx.paramgen().unwrap();
 
         assert_eq!(params.size(), 72);
+    }
+
+    #[test]
+    fn rsa_keygen() {
+        let pubexp = BigNum::from_u32(65537).unwrap();
+        let mut ctx = PkeyCtx::new_id(Id::RSA).unwrap();
+        ctx.keygen_init().unwrap();
+        ctx.set_rsa_keygen_pubexp(&pubexp).unwrap();
+        ctx.set_rsa_keygen_bits(2048).unwrap();
+        let key = ctx.keygen().unwrap();
+
+        assert_eq!(key.bits(), 2048);
     }
 
     #[test]
