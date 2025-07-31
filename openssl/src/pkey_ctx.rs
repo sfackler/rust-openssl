@@ -68,6 +68,7 @@ let cmac_key = ctx.keygen().unwrap();
 use crate::cipher::CipherRef;
 use crate::error::ErrorStack;
 use crate::md::MdRef;
+use crate::nid::Nid;
 use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Params, Private};
 use crate::rsa::Padding;
 use crate::sign::RsaPssSaltlen;
@@ -457,6 +458,22 @@ impl<T> PkeyCtxRef<T> {
             cvt(ffi::EVP_PKEY_CTX_set_dsa_paramgen_bits(
                 self.as_ptr(),
                 bits as i32,
+            ))?;
+        }
+
+        Ok(())
+    }
+
+    /// Sets the EC paramgen curve NID.
+    ///
+    /// This is only useful for EC keys.
+    #[corresponds(EVP_PKEY_CTX_set_ec_paramgen_curve_nid)]
+    #[inline]
+    pub fn set_ec_paramgen_curve_nid(&mut self, nid: Nid) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_ec_paramgen_curve_nid(
+                self.as_ptr(),
+                nid.as_raw(),
             ))?;
         }
 
