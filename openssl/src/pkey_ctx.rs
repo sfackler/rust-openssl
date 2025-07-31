@@ -448,6 +448,40 @@ impl<T> PkeyCtxRef<T> {
         Ok(())
     }
 
+    /// Sets the DH paramgen prime length.
+    ///
+    /// This is only useful for DH keys.
+    #[corresponds(EVP_PKEY_CTX_set_dh_paramgen_prime_len)]
+    #[cfg(not(boringssl))]
+    #[inline]
+    pub fn set_dh_paramgen_prime_len(&mut self, bits: u32) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_dh_paramgen_prime_len(
+                self.as_ptr(),
+                bits as i32,
+            ))?;
+        }
+
+        Ok(())
+    }
+
+    /// Sets the DH paramgen generator.
+    ///
+    /// This is only useful for DH keys.
+    #[corresponds(EVP_PKEY_CTX_set_dh_paramgen_generator)]
+    #[cfg(not(boringssl))]
+    #[inline]
+    pub fn set_dh_paramgen_generator(&mut self, bits: u32) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_dh_paramgen_generator(
+                self.as_ptr(),
+                bits as i32,
+            ))?;
+        }
+
+        Ok(())
+    }
+
     /// Sets the DSA paramgen bits.
     ///
     /// This is only useful for DSA keys.
