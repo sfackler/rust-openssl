@@ -1001,6 +1001,17 @@ mod test {
     }
 
     #[test]
+    fn ec_keygen() {
+        let mut ctx = PkeyCtx::new_id(Id::EC).unwrap();
+        ctx.paramgen_init().unwrap();
+        ctx.set_ec_paramgen_curve_nid(Nid::X9_62_PRIME256V1)
+            .unwrap();
+        let params = ctx.paramgen().unwrap();
+
+        assert_eq!(params.size(), 72);
+    }
+
+    #[test]
     #[cfg(any(ossl110, boringssl, libressl360, awslc))]
     fn hkdf() {
         let mut ctx = PkeyCtx::new_id(Id::HKDF).unwrap();
