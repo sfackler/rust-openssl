@@ -68,7 +68,7 @@ let cmac_key = ctx.keygen().unwrap();
 use crate::cipher::CipherRef;
 use crate::error::ErrorStack;
 use crate::md::MdRef;
-use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Private};
+use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Params, Private};
 use crate::rsa::Padding;
 use crate::sign::RsaPssSaltlen;
 use crate::{cvt, cvt_p};
@@ -420,6 +420,17 @@ impl<T> PkeyCtxRef<T> {
         Ok(())
     }
 
+    /// Prepares the context for key parameter generation.
+    #[corresponds(EVP_PKEY_paramgen_init)]
+    #[inline]
+    pub fn paramgen_init(&mut self) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_paramgen_init(self.as_ptr()))?;
+        }
+
+        Ok(())
+    }
+
     /// Sets which algorithm was used to compute the digest used in a
     /// signature. With RSA signatures this causes the signature to be wrapped
     /// in a `DigestInfo` structure. This is almost always what you want with
@@ -433,6 +444,22 @@ impl<T> PkeyCtxRef<T> {
                 md.as_ptr(),
             ))?;
         }
+        Ok(())
+    }
+
+    /// Sets the DSA paramgen bits.
+    ///
+    /// This is only useful for DSA keys.
+    #[corresponds(EVP_PKEY_CTX_set_dsa_paramgen_bits)]
+    #[inline]
+    pub fn set_dsa_paramgen_bits(&mut self, bits: u32) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_dsa_paramgen_bits(
+                self.as_ptr(),
+                bits as i32,
+            ))?;
+        }
+
         Ok(())
     }
 
@@ -734,6 +761,17 @@ impl<T> PkeyCtxRef<T> {
         }
     }
 
+    /// Generates a new set of key parameters.
+    #[corresponds(EVP_PKEY_paramgen)]
+    #[inline]
+    pub fn paramgen(&mut self) -> Result<PKey<Params>, ErrorStack> {
+        unsafe {
+            let mut key = ptr::null_mut();
+            cvt(ffi::EVP_PKEY_paramgen(self.as_ptr(), &mut key))?;
+            Ok(PKey::from_ptr(key))
+        }
+    }
+
     /// Sets the nonce type for a private key context.
     ///
     /// The nonce for DSA and ECDSA can be either random (the default) or deterministic (as defined by RFC 6979).
@@ -794,6 +832,8 @@ mod test {
     use crate::pkey::PKey;
     use crate::rsa::Rsa;
     use crate::sign::Verifier;
+    #[cfg(not(boringssl))]
+    use cfg_if::cfg_if;
 
     #[test]
     fn rsa() {
@@ -918,6 +958,29 @@ mod test {
         ctx.set_keygen_mac_key(&hex::decode("9294727a3638bb1c13f48ef8158bfc9d").unwrap())
             .unwrap();
         ctx.keygen().unwrap();
+    }
+
+    #[test]
+    #[cfg(not(boringssl))]
+    fn dsa_paramgen() {
+        let mut ctx = PkeyCtx::new_id(Id::DSA).unwrap();
+        ctx.paramgen_init().unwrap();
+        ctx.set_dsa_paramgen_bits(2048).unwrap();
+        let params = ctx.paramgen().unwrap();
+
+        let size = {
+            cfg_if! {
+                if #[cfg(awslc)] {
+                    72
+                } else if #[cfg(any(libressl, all(ossl101, not(ossl102))))] {
+                    // LibreSSL and OpenSSL 1.0.1 and earlier
+                    48
+                } else {
+                    64
+                }
+            }
+        };
+        assert_eq!(params.size(), size);
     }
 
     #[test]

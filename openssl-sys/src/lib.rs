@@ -73,6 +73,7 @@ mod openssl {
     pub use self::bn::*;
     pub use self::cms::*;
     pub use self::crypto::*;
+    pub use self::dsa::*;
     pub use self::dtls1::*;
     pub use self::ec::*;
     pub use self::err::*;
@@ -103,6 +104,7 @@ mod openssl {
     mod bn;
     mod cms;
     mod crypto;
+    mod dsa;
     mod dtls1;
     mod ec;
     mod err;
