@@ -20,6 +20,7 @@ vendored = ['openssl-src']
 unstable_boringssl = ['bssl-sys']
 aws-lc = ['dep:aws-lc-sys']
 aws-lc-fips = ['dep:aws-lc-fips-sys']
+bindgen = ['dep:bindgen']
 
 [dependencies]
 libc.workspace = true

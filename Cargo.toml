@@ -23,7 +23,7 @@ quote = "1"
 syn = { version = "2", features = ["full"] }
 
 # Build dependencies
-bindgen = { version = "0.69.0", features = ["experimental"] }
+bindgen = { version = "0.72.0", features = ["experimental"] }
 cc = "1.0.61"
 openssl-src = { version = "300.2.0",  features = ["legacy"] }
 pkg-config = "0.3.9"
