@@ -2,14 +2,14 @@
 name = "systest"
 version = "0.1.0"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-libc = "0.2"
-openssl-sys = { path = "../openssl-sys" }
+libc.workspace = true
+openssl-sys.workspace = true
 
 [build-dependencies]
-ctest = "0.4.11"
+ctest.workspace = true
 
 [features]
 vendored = ['openssl-sys/vendored']

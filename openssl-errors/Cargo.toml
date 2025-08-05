@@ -8,13 +8,13 @@ description = "Custom error library support for the openssl crate."
 repository = "https://github.com/sfackler/rust-openssl"
 readme = "README.md"
 categories = ["api-bindings"]
-rust-version = "1.63.0"
+rust-version = "1.70.0"
 
 [dependencies]
-cfg-if = "1.0"
-libc = "0.2"
+cfg-if.workspace = true
+libc.workspace = true
 
-openssl-sys = { version = "0.9.64", path = "../openssl-sys" }
+openssl-sys.workspace = true
 
 [dev-dependencies]
-openssl = { version = "0.10.19", path = "../openssl" }
+openssl.workspace = true

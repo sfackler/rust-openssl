@@ -13,7 +13,7 @@ categories = ["cryptography", "external-ffi-bindings"]
 links = "openssl"
 build = "build/main.rs"
 edition = "2021"
-rust-version = "1.63.0"
+rust-version = "1.70.0"
 
 [features]
 vendored = ['openssl-src']
@@ -22,17 +22,17 @@ aws-lc = ['dep:aws-lc-sys']
 aws-lc-fips = ['dep:aws-lc-fips-sys']
 
 [dependencies]
-libc = "0.2"
-bssl-sys = { version = "0.1.0", optional = true }
-aws-lc-sys = { version = "0.27", features = ["ssl"], optional = true }
-aws-lc-fips-sys = { version = "0.13", features = ["ssl", "bindgen"], optional = true }
+libc.workspace = true
+bssl-sys = { workspace = true, optional = true}
+aws-lc-sys = { workspace = true, optional = true}
+aws-lc-fips-sys = { workspace = true, optional = true}
 
 [build-dependencies]
-bindgen = { version = "0.69.0", optional = true, features = ["experimental"] }
-cc = "1.0.61"
-openssl-src = { version = "300.2.0", optional = true, features = ["legacy"] }
-pkg-config = "0.3.9"
-vcpkg = "0.2.8"
+bindgen = { workspace = true, optional = true }
+cc.workspace = true
+openssl-src = { workspace = true, optional = true }
+pkg-config.workspace = true
+vcpkg.workspace = true
 
 # We don't actually use metadeps for annoying reasons but this is still here for tooling
 [package.metadata.pkg-config]
