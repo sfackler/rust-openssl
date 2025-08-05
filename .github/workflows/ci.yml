@@ -86,7 +86,6 @@ jobs:
       - run: cargo check -p openssl
 
   windows-vcpkg:
-    name: windows-vcpkg
     strategy:
       matrix:
         os:
@@ -94,6 +93,7 @@ jobs:
             arch: x64
           - runner: windows-11-arm
             arch: arm64
+    name: windows-vcpkg-${{ matrix.os.arch }}
     runs-on: ${{ matrix.os.runner }}
     steps:
       - uses: actions/checkout@v4
