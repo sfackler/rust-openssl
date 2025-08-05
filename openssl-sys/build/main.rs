@@ -1,8 +1,3 @@
-#![allow(
-    // This can be removed once our MSRV is raised to 1.66.
-    clippy::uninlined_format_args,
-)]
-
 #[cfg(feature = "bindgen")]
 extern crate bindgen;
 extern crate cc;
@@ -34,11 +29,11 @@ enum Version {
 
 fn env_inner(name: &str) -> Option<OsString> {
     let var = env::var_os(name);
-    println!("cargo:rerun-if-env-changed={}", name);
+    println!("cargo:rerun-if-env-changed={name}");
 
     match var {
         Some(ref v) => println!("{} = {}", name, v.to_string_lossy()),
-        None => println!("{} unset", name),
+        None => println!("{name} unset"),
     }
 
     var
@@ -46,7 +41,7 @@ fn env_inner(name: &str) -> Option<OsString> {
 
 fn env(name: &str) -> Option<OsString> {
     let prefix = env::var("TARGET").unwrap().to_uppercase().replace('-', "_");
-    let prefixed = format!("{}_{}", prefix, name);
+    let prefixed = format!("{prefix}_{name}");
     env_inner(&prefixed).or_else(|| env_inner(name))
 }
 
@@ -69,9 +64,9 @@ fn check_ssl_kind() {
 
         if let Ok(vars) = env::var("DEP_BSSL_CONF") {
             for var in vars.split(',') {
-                println!("cargo:rustc-cfg=osslconf=\"{}\"", var);
+                println!("cargo:rustc-cfg=osslconf=\"{var}\"");
             }
-            println!("cargo:conf={}", vars);
+            println!("cargo:conf={vars}");
         }
 
         // BoringSSL does not have any build logic, exit early
@@ -196,12 +191,12 @@ fn main() {
     let potential_path = include_dir.join("openssl");
     if potential_path.exists() && !cfg!(feature = "vendored") {
         if let Some(printable_include) = potential_path.to_str() {
-            println!("cargo:rerun-if-changed={}", printable_include);
+            println!("cargo:rerun-if-changed={printable_include}");
         }
     }
 
     if !lib_dirs.iter().all(|p| p.exists()) {
-        panic!("OpenSSL library directory does not exist: {:?}", lib_dirs);
+        panic!("OpenSSL library directory does not exist: {lib_dirs:?}");
     }
     if !include_dir.exists() {
         panic!(
@@ -240,7 +235,7 @@ fn main() {
 
     let kind = determine_mode(&lib_dirs, &libs);
     for lib in libs.into_iter() {
-        println!("cargo:rustc-link-lib={}={}", kind, lib);
+        println!("cargo:rustc-link-lib={kind}={lib}");
     }
 
     // libssl in BoringSSL requires the C++ runtime, and static libraries do
@@ -271,7 +266,7 @@ fn main() {
             "macos" => "c++",
             _ => "stdc++",
         };
-        println!("cargo:rustc-link-lib={}", cpp_lib);
+        println!("cargo:rustc-link-lib={cpp_lib}");
     }
 
     // https://github.com/openssl/openssl/pull/15086
@@ -330,7 +325,7 @@ fn validate_headers(include_dirs: &[PathBuf]) -> Version {
             panic!(
                 "
 Header expansion error:
-{:?}
+{e:?}
 
 Failed to find OpenSSL development headers.
 
@@ -350,8 +345,7 @@ specific to your distribution:
 See rust-openssl documentation for more information:
 
     https://docs.rs/openssl
-",
-                e
+"
             );
         }
     };
@@ -392,7 +386,7 @@ See rust-openssl documentation for more information:
     }
 
     for enabled in &enabled {
-        println!("cargo:rustc-cfg=osslconf=\"{}\"", enabled);
+        println!("cargo:rustc-cfg=osslconf=\"{enabled}\"");
     }
     println!("cargo:conf={}", enabled.join(","));
 
@@ -414,11 +408,11 @@ See rust-openssl documentation for more information:
     println!("cargo:rustc-cfg=openssl");
 
     for cfg in cfgs::get(openssl_version, libressl_version) {
-        println!("cargo:rustc-cfg={}", cfg);
+        println!("cargo:rustc-cfg={cfg}");
     }
 
     if let Some(libressl_version) = libressl_version {
-        println!("cargo:libressl_version_number={:x}", libressl_version);
+        println!("cargo:libressl_version_number={libressl_version:x}");
 
         let major = (libressl_version >> 28) as u8;
         let minor = (libressl_version >> 20) as u8;
@@ -470,12 +464,12 @@ See rust-openssl documentation for more information:
         };
 
         println!("cargo:libressl=true");
-        println!("cargo:libressl_version={}{}{}", major, minor, fix);
+        println!("cargo:libressl_version={major}{minor}{fix}");
         println!("cargo:version=101");
         Version::Libressl
     } else {
         let openssl_version = openssl_version.unwrap();
-        println!("cargo:version_number={:x}", openssl_version);
+        println!("cargo:version_number={openssl_version:x}");
 
         if openssl_version >= 0x4_00_00_00_0 {
             version_error()
@@ -529,7 +523,7 @@ fn parse_version(version: &str) -> u64 {
 
 // parses a string that looks like 3_0_0
 fn parse_new_version(version: &str) -> u64 {
-    println!("version: {}", version);
+    println!("version: {version}");
     let mut it = version.split('_');
     let major = it.next().unwrap().parse::<u64>().unwrap();
     let minor = it.next().unwrap().parse::<u64>().unwrap();
@@ -566,20 +560,19 @@ fn determine_mode(libdirs: &[PathBuf], libs: &[&str]) -> &'static str {
     }
     let can_static = libs
         .iter()
-        .all(|l| files.contains(&format!("lib{}.a", l)) || files.contains(&format!("{}.lib", l)));
+        .all(|l| files.contains(&format!("lib{l}.a")) || files.contains(&format!("{l}.lib")));
     let can_dylib = libs.iter().all(|l| {
-        files.contains(&format!("lib{}.so", l))
-            || files.contains(&format!("{}.dll", l))
-            || files.contains(&format!("lib{}.dylib", l))
+        files.contains(&format!("lib{l}.so"))
+            || files.contains(&format!("{l}.dll"))
+            || files.contains(&format!("lib{l}.dylib"))
     });
     match (can_static, can_dylib) {
         (true, false) => return "static",
         (false, true) => return "dylib",
         (false, false) => {
             panic!(
-                "OpenSSL libdir at `{:?}` does not contain the required files \
-                 to either statically or dynamically link OpenSSL",
-                libdirs
+                "OpenSSL libdir at `{libdirs:?}` does not contain the required files \
+                 to either statically or dynamically link OpenSSL"
             );
         }
         (true, true) => {}
