@@ -217,6 +217,7 @@ impl<T> PKeyRef<T> {
     /// Returns the BigNum value associated with the given key name.
     #[corresponds(EVP_PKEY_get_bn_param)]
     #[cfg(ossl300)]
+    #[allow(dead_code)]
     pub(crate) fn get_bn_param(&self, key: &str) -> Result<&BigNumRef, ErrorStack> {
         let key = CString::new(key).unwrap();
         let mut value = ptr::null_mut();
@@ -233,6 +234,7 @@ impl<T> PKeyRef<T> {
     /// Returns the String value associated with the given key name.
     #[corresponds(EVP_PKEY_get_utf8_string_param)]
     #[cfg(ossl300)]
+    #[allow(dead_code)]
     pub(crate) fn get_utf8_string_param(&self, key: &str) -> Result<String, ErrorStack> {
         const VALUE_LEN: usize = 4096;
         let key = CString::new(key).unwrap();
