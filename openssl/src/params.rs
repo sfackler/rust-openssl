@@ -93,6 +93,7 @@ unsafe impl Sync for ParamsRef<'_> {}
 impl<'a> ParamsRef<'a> {
     /// Merges two `ParamsRef` objects into a new `Params` object.
     #[corresponds(OSSL_PARAM_merge)]
+    #[allow(dead_code)]
     pub fn merge(&self, other: &ParamsRef<'a>) -> Result<Params<'a>, ErrorStack> {
         cvt_p(unsafe { ffi::OSSL_PARAM_merge(self.as_ptr(), other.as_ptr()) })
             .map(|p| unsafe { Params::from_ptr(p) })
@@ -100,6 +101,7 @@ impl<'a> ParamsRef<'a> {
 
     /// Locate a parameter by the given key.
     #[corresponds(OSSL_PARAM_locate_const)]
+    #[allow(dead_code)]
     fn locate(&self, key: &CStr) -> Option<*const ffi::OSSL_PARAM> {
         let param = unsafe { ffi::OSSL_PARAM_locate_const(self.as_ptr(), key.as_ptr()) };
         if param.is_null() {
@@ -125,12 +127,14 @@ unsafe impl Sync for ParamBuilder<'_> {}
 impl<'a, 'b> ParamBuilder<'a> {
     /// Creates a new `ParamBuilder`.
     #[corresponds[OSSL_PARAM_BLD_new]]
+    #[allow(dead_code)]
     pub fn new() -> Self {
         unsafe { ParamBuilder(ffi::OSSL_PARAM_BLD_new(), PhantomData) }
     }
 
     /// Push a BigNum parameter into the builder.
     #[corresponds[OSSL_PARAM_BLD_push_BN]]
+    #[allow(dead_code)]
     pub fn push_bignum(self, key: &'b CStr, bn: &'a BigNumRef) -> Result<Self, ErrorStack> {
         cvt(unsafe { ffi::OSSL_PARAM_BLD_push_BN(self.0, key.as_ptr(), bn.as_ptr()) })?;
         Ok(self)
@@ -138,6 +142,7 @@ impl<'a, 'b> ParamBuilder<'a> {
 
     /// Push a UTF-8 String parameter into the builder.
     #[corresponds[OSSL_PARAM_BLD_push_utf8_string]]
+    #[allow(dead_code)]
     pub fn push_utf_string(self, key: &'b CStr, string: &'a str) -> Result<Self, ErrorStack> {
         let value = string.as_bytes();
         cvt(unsafe {
@@ -184,6 +189,7 @@ impl<'a, 'b> ParamBuilder<'a> {
 
     /// Build a `Params` array from the builder consuming the builder.
     #[corresponds(OSSL_PARAM_BLD_to_param)]
+    #[allow(dead_code)]
     pub fn build(self) -> Result<Params<'b>, ErrorStack> {
         let ptr = cvt_p(unsafe { ffi::OSSL_PARAM_BLD_to_param(self.0) })?;
         Ok(unsafe { Params::from_ptr(ptr) })
