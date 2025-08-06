@@ -30,4 +30,53 @@ extern "C" {
         val: *mut *const c_void,
         used_len: *mut usize,
     ) -> c_int;
+
+    pub fn OSSL_PARAM_BLD_new() -> *mut OSSL_PARAM_BLD;
+    pub fn OSSL_PARAM_BLD_free(bld: *mut OSSL_PARAM_BLD);
+    pub fn OSSL_PARAM_BLD_to_param(bld: *mut OSSL_PARAM_BLD) -> *mut OSSL_PARAM;
+    pub fn OSSL_PARAM_BLD_push_uint(
+        bld: *mut OSSL_PARAM_BLD,
+        key: *const c_char,
+        val: c_uint,
+    ) -> c_int;
+    pub fn OSSL_PARAM_BLD_push_size_t(
+        bld: *mut OSSL_PARAM_BLD,
+        key: *const c_char,
+        val: size_t,
+    ) -> c_int;
+    pub fn OSSL_PARAM_BLD_push_BN(
+        bld: *mut OSSL_PARAM_BLD,
+        key: *const c_char,
+        bn: *const BIGNUM,
+    ) -> c_int;
+    pub fn OSSL_PARAM_BLD_push_BN_pad(
+        bld: *mut OSSL_PARAM_BLD,
+        key: *const c_char,
+        bn: *const BIGNUM,
+        sz: size_t,
+    ) -> c_int;
+    pub fn OSSL_PARAM_BLD_push_utf8_string(
+        bld: *mut OSSL_PARAM_BLD,
+        key: *const c_char,
+        buf: *const c_char,
+        bsize: size_t,
+    ) -> c_int;
+    pub fn OSSL_PARAM_BLD_push_utf8_ptr(
+        bld: *mut OSSL_PARAM_BLD,
+        key: *const c_char,
+        buf: *mut c_char,
+        bsize: size_t,
+    ) -> c_int;
+    pub fn OSSL_PARAM_BLD_push_octet_string(
+        bld: *mut OSSL_PARAM_BLD,
+        key: *const c_char,
+        buf: *const c_void,
+        bsize: size_t,
+    ) -> c_int;
+    pub fn OSSL_PARAM_BLD_push_octet_ptr(
+        bld: *mut OSSL_PARAM_BLD,
+        key: *const c_char,
+        buf: *mut c_void,
+        bsize: size_t,
+    ) -> c_int;
 }
