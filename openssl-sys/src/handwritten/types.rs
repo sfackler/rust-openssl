@@ -1134,11 +1134,14 @@ pub enum OSSL_LIB_CTX {}
 #[repr(C)]
 pub struct OSSL_PARAM {
     key: *const c_char,
-    data_type: c_uchar,
+    data_type: c_uint,
     data: *mut c_void,
     data_size: size_t,
     return_size: size_t,
 }
+
+#[cfg(ossl300)]
+pub enum OSSL_PARAM_BLD {}
 
 #[cfg(ossl300)]
 pub enum EVP_KDF {}
