@@ -73,6 +73,8 @@ use crate::nid::Nid;
 use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Params, Private};
 use crate::rsa::Padding;
 use crate::sign::RsaPssSaltlen;
+#[cfg(ossl320)]
+use crate::util::c_str;
 use crate::{cvt, cvt_p};
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
@@ -82,8 +84,6 @@ use libc::c_int;
 use libc::c_uint;
 use openssl_macros::corresponds;
 use std::convert::TryFrom;
-#[cfg(ossl320)]
-use std::ffi::CStr;
 use std::ptr;
 
 /// HKDF modes of operation.
@@ -876,7 +876,7 @@ impl<T> PkeyCtxRef<T> {
     #[cfg(ossl320)]
     #[corresponds(EVP_PKEY_CTX_set_params)]
     pub fn set_nonce_type(&mut self, nonce_type: NonceType) -> Result<(), ErrorStack> {
-        let nonce_field_name = CStr::from_bytes_with_nul(b"nonce-type\0").unwrap();
+        let nonce_field_name = c_str(b"nonce-type\0");
         let mut nonce_type = nonce_type.0;
         unsafe {
             let param_nonce =
@@ -898,7 +898,7 @@ impl<T> PkeyCtxRef<T> {
     #[cfg(ossl320)]
     #[corresponds(EVP_PKEY_CTX_get_params)]
     pub fn nonce_type(&mut self) -> Result<NonceType, ErrorStack> {
-        let nonce_field_name = CStr::from_bytes_with_nul(b"nonce-type\0").unwrap();
+        let nonce_field_name = c_str(b"nonce-type\0");
         let mut nonce_type: c_uint = 0;
         unsafe {
             let param_nonce =
