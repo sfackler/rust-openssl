@@ -25,15 +25,14 @@ impl Drop for EvpKdfCtx {
 cfg_if::cfg_if! {
     if #[cfg(all(ossl320, not(osslconf = "OPENSSL_NO_ARGON2")))] {
         use std::cmp;
-        use std::ffi::c_void;
         use std::ffi::CStr;
-        use std::mem::MaybeUninit;
         use std::ptr;
         use foreign_types::ForeignTypeRef;
-        use libc::c_char;
         use crate::{cvt, cvt_p};
         use crate::lib_ctx::LibCtxRef;
         use crate::error::ErrorStack;
+        use crate::params::ParamBuilder;
+        use crate::util::c_str;
 
         #[allow(clippy::too_many_arguments)]
         pub fn argon2d(
@@ -94,86 +93,50 @@ cfg_if::cfg_if! {
             salt: &[u8],
             ad: Option<&[u8]>,
             secret: Option<&[u8]>,
-            mut iter: u32,
-            mut lanes: u32,
-            mut memcost: u32,
+            iter: u32,
+            lanes: u32,
+            memcost: u32,
             out: &mut [u8],
         ) -> Result<(), ErrorStack> {
-            unsafe {
-                ffi::init();
-                let libctx = ctx.map_or(ptr::null_mut(), ForeignTypeRef::as_ptr);
+            ffi::init();
+            let libctx = ctx.map_or(ptr::null_mut(), ForeignTypeRef::as_ptr);
 
-                let max_threads = ffi::OSSL_get_max_threads(libctx);
-                let mut threads = 1;
-                // If max_threads is 0, then this isn't a threaded build.
-                // If max_threads is > u32::MAX we need to clamp since
-                // argon2's threads parameter is a u32.
-                if max_threads > 0 {
-                    threads = cmp::min(lanes, cmp::min(max_threads, u32::MAX as u64) as u32);
-                }
-                let mut params: [ffi::OSSL_PARAM; 10] =
-                    core::array::from_fn(|_| MaybeUninit::<ffi::OSSL_PARAM>::zeroed().assume_init());
-                let mut idx = 0;
-                params[idx] = ffi::OSSL_PARAM_construct_octet_string(
-                    b"pass\0".as_ptr() as *const c_char,
-                    pass.as_ptr() as *mut c_void,
-                    pass.len(),
-                );
-                idx += 1;
-                params[idx] = ffi::OSSL_PARAM_construct_octet_string(
-                    b"salt\0".as_ptr() as *const c_char,
-                    salt.as_ptr() as *mut c_void,
-                    salt.len(),
-                );
-                idx += 1;
-                params[idx] =
-                    ffi::OSSL_PARAM_construct_uint(b"threads\0".as_ptr() as *const c_char, &mut threads);
-                idx += 1;
-                params[idx] =
-                    ffi::OSSL_PARAM_construct_uint(b"lanes\0".as_ptr() as *const c_char, &mut lanes);
-                idx += 1;
-                params[idx] =
-                    ffi::OSSL_PARAM_construct_uint(b"memcost\0".as_ptr() as *const c_char, &mut memcost);
-                idx += 1;
-                params[idx] =
-                    ffi::OSSL_PARAM_construct_uint(b"iter\0".as_ptr() as *const c_char, &mut iter);
-                idx += 1;
-                let mut size = out.len() as u32;
-                params[idx] =
-                    ffi::OSSL_PARAM_construct_uint(b"size\0".as_ptr() as *const c_char, &mut size);
-                idx += 1;
-                if let Some(ad) = ad {
-                    params[idx] = ffi::OSSL_PARAM_construct_octet_string(
-                        b"ad\0".as_ptr() as *const c_char,
-                        ad.as_ptr() as *mut c_void,
-                        ad.len(),
-                    );
-                    idx += 1;
-                }
-                if let Some(secret) = secret {
-                    params[idx] = ffi::OSSL_PARAM_construct_octet_string(
-                        b"secret\0".as_ptr() as *const c_char,
-                        secret.as_ptr() as *mut c_void,
-                        secret.len(),
-                    );
-                    idx += 1;
-                }
-                params[idx] = ffi::OSSL_PARAM_construct_end();
+            let max_threads = unsafe { ffi::OSSL_get_max_threads(libctx) };
+            let mut threads = 1;
+            // If max_threads is 0, then this isn't a threaded build.
+            // If max_threads is > u32::MAX we need to clamp since
+            // argon2's threads parameter is a u32.
+            if max_threads > 0 {
+                threads = cmp::min(lanes, cmp::min(max_threads, u32::MAX as u64) as u32);
+            }
+            let mut param_builder = ParamBuilder::new()
+                .push_byte_string(c_str(b"pass\0"), pass)?
+                .push_byte_string(c_str(b"salt\0"), salt)?
+                .push_uint(c_str(b"threads\0"), threads)?
+                .push_uint(c_str(b"lanes\0"), lanes)?
+                .push_uint(c_str(b"memcost\0"), memcost)?
+                .push_uint(c_str(b"iter\0"), iter)?
+                .push_size_t(c_str(b"size\0"), out.len())?;
+            if let Some(ad) = ad {
+                param_builder = param_builder.push_byte_string(c_str(b"ad\0"), ad)?;
+            }
+            if let Some(secret) = secret {
+                param_builder = param_builder.push_byte_string(c_str(b"secret\0"), secret)?;
+            }
 
-                let argon2 = EvpKdf(cvt_p(ffi::EVP_KDF_fetch(
-                    libctx,
-                    kdf_identifier.as_ptr() as *const c_char,
-                    ptr::null(),
-                ))?);
-                let ctx = EvpKdfCtx(cvt_p(ffi::EVP_KDF_CTX_new(argon2.0))?);
-                cvt(ffi::EVP_KDF_derive(
+            let argon2 = EvpKdf(cvt_p(unsafe {
+                ffi::EVP_KDF_fetch(libctx, kdf_identifier.as_ptr(), ptr::null())
+            })?);
+            let ctx = EvpKdfCtx(cvt_p(unsafe { ffi::EVP_KDF_CTX_new(argon2.0) })?);
+            cvt(unsafe {
+                ffi::EVP_KDF_derive(
                     ctx.0,
                     out.as_mut_ptr(),
                     out.len(),
-                    params.as_ptr(),
-                ))
-                .map(|_| ())
-            }
+                    param_builder.build()?.as_ptr(),
+                )
+            })
+            .map(|_| ())
         }
     }
 }
