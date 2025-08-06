@@ -70,6 +70,8 @@ use crate::cipher::CipherRef;
 use crate::error::ErrorStack;
 use crate::md::MdRef;
 use crate::nid::Nid;
+#[cfg(ossl320)]
+use crate::params::ParamBuilder;
 #[cfg(ossl300)]
 use crate::params::ParamsRef;
 #[cfg(ossl300)]
@@ -917,6 +919,14 @@ impl<T> PkeyCtxRef<T> {
         }
     }
 
+    /// Sets parameters on the given context
+    #[corresponds(EVP_PKEY_CTX_set_params)]
+    #[cfg(ossl300)]
+    #[allow(dead_code)]
+    fn set_params(&mut self, params: &ParamsRef<'_>) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::EVP_PKEY_CTX_set_params(self.as_ptr(), params.as_ptr()) }).map(|_| ())
+    }
+
     /// Sets the nonce type for a private key context.
     ///
     /// The nonce for DSA and ECDSA can be either random (the default) or deterministic (as defined by RFC 6979).
@@ -926,17 +936,10 @@ impl<T> PkeyCtxRef<T> {
     #[cfg(ossl320)]
     #[corresponds(EVP_PKEY_CTX_set_params)]
     pub fn set_nonce_type(&mut self, nonce_type: NonceType) -> Result<(), ErrorStack> {
-        let nonce_field_name = c_str(b"nonce-type\0");
-        let mut nonce_type = nonce_type.0;
-        unsafe {
-            let param_nonce =
-                ffi::OSSL_PARAM_construct_uint(nonce_field_name.as_ptr(), &mut nonce_type);
-            let param_end = ffi::OSSL_PARAM_construct_end();
-
-            let params = [param_nonce, param_end];
-            cvt(ffi::EVP_PKEY_CTX_set_params(self.as_ptr(), params.as_ptr()))?;
-        }
-        Ok(())
+        let params = ParamBuilder::new()
+            .push_uint(c_str(b"nonce-type\0"), nonce_type.0)?
+            .build()?;
+        self.set_params(&params)
     }
 
     /// Gets the nonce type for a private key context.
