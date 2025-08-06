@@ -20,20 +20,19 @@ vendored = ['openssl-src']
 unstable_boringssl = ['bssl-sys']
 aws-lc = ['dep:aws-lc-sys']
 aws-lc-fips = ['dep:aws-lc-fips-sys']
-bindgen = ['dep:bindgen']
 
 [dependencies]
-libc.workspace = true
-bssl-sys = { workspace = true, optional = true}
-aws-lc-sys = { workspace = true, optional = true}
-aws-lc-fips-sys = { workspace = true, optional = true}
+libc = "0.2"
+bssl-sys = { version = "0.1.0", optional = true }
+aws-lc-sys = { version = "0.27", features = ["ssl"], optional = true }
+aws-lc-fips-sys = { version = "0.13", features = ["ssl", "bindgen"], optional = true }
 
 [build-dependencies]
-bindgen = { workspace = true, optional = true }
-cc.workspace = true
-openssl-src = { workspace = true, optional = true }
-pkg-config.workspace = true
-vcpkg.workspace = true
+bindgen = { version = "0.72.0", optional = true, features = ["experimental"] }
+cc = "1.0.61"
+openssl-src = { version = "300.2.0", optional = true, features = ["legacy"] }
+pkg-config = "0.3.9"
+vcpkg = "0.2.8"
 
 # We don't actually use metadeps for annoying reasons but this is still here for tooling
 [package.metadata.pkg-config]

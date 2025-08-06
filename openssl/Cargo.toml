@@ -26,14 +26,14 @@ aws-lc-fips = ["ffi/aws-lc-fips"]
 default = []
 
 [dependencies]
-bitflags.workspace = true
-cfg-if.workspace = true
-foreign-types.workspace = true
-libc.workspace = true
-once_cell.workspace = true
+bitflags = "2.2.1"
+cfg-if = "1.0"
+foreign-types = "0.3.1"
+libc = "0.2"
+once_cell = "1.5.2"
 
-openssl-macros.workspace = true
-ffi.workspace = true # 0.9.109 => -
+openssl-macros = { version = "0.1.1", path = "../openssl-macros" }
+ffi = { package = "openssl-sys", version = "0.9.109", path = "../openssl-sys" }
 
 [dev-dependencies]
-hex.workspace = true
+hex = "0.4"
