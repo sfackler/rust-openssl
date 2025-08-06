@@ -39,7 +39,18 @@ foreign_type_and_impl_send_sync! {
     pub struct OsslParamArrayRef;
 }
 
-impl OsslParamArray {
+impl OsslParamArrayRef {
+    /// Locate a parameter by the given key (returning a const reference).
+    #[corresponds(OSSL_PARAM_locate_const)]
+    fn locate_const(&self, key: &CStr) -> Option<*const ffi::OSSL_PARAM> {
+        let param = unsafe { ffi::OSSL_PARAM_locate_const(self.as_ptr(), key.as_ptr()) };
+        if param.is_null() {
+            None
+        } else {
+            Some(param)
+        }
+    }
+
     /// Locates the individual `OSSL_PARAM` element representing an
     /// octet string identified by the key in the `OsslParamArray`
     /// array and returns a reference to it.
@@ -48,8 +59,8 @@ impl OsslParamArray {
     #[corresponds(OSSL_PARAM_get_octet_string)]
     #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
     pub(crate) fn locate_octet_string<'a>(&'a self, key: &CStr) -> Result<&'a [u8], ErrorStack> {
+        let param = self.locate_const(key).ok_or_else(ErrorStack::get)?;
         unsafe {
-            let param = cvt_p(ffi::OSSL_PARAM_locate(self.as_ptr(), key.as_ptr()))?;
             let mut val: *const c_void = ptr::null_mut();
             let mut val_len: usize = 0;
             cvt(ffi::OSSL_PARAM_get_octet_string_ptr(
@@ -59,6 +70,14 @@ impl OsslParamArray {
             ))?;
             Ok(util::from_raw_parts(val as *const u8, val_len))
         }
+    }
+
+    /// Merges two `ParamsRef` objects into a new `Params` object.
+    #[corresponds(OSSL_PARAM_merge)]
+    #[allow(dead_code)] // TODO: remove when used by DH key creation
+    pub fn merge(&self, other: &OsslParamArrayRef) -> Result<OsslParamArray, ErrorStack> {
+        cvt_p(unsafe { ffi::OSSL_PARAM_merge(self.as_ptr(), other.as_ptr()) })
+            .map(|p| unsafe { OsslParamArray::from_ptr(p) })
     }
 }
 
@@ -200,11 +219,9 @@ mod tests {
     }
 
     fn assert_param(params: &OsslParamArray, key: &CStr, is_null: bool) {
-        let param = unsafe { ffi::OSSL_PARAM_locate_const(params.as_ptr(), key.as_ptr()) };
-        if is_null {
-            assert!(param.is_null(), "Unexpectedly found param: {key:?}");
-        } else {
-            assert!(!param.is_null(), "Failed to find param: {key:?}");
+        match params.locate_const(key) {
+            Some(_) => assert!(!is_null, "Unexpectedly found param: {key:?}"),
+            None => assert!(is_null, "Failed to find param: {key:?}"),
         }
     }
 
@@ -265,5 +282,40 @@ mod tests {
 
         assert_param(&params, OSSL_PKEY_PARAM_PUB_KEY, false);
         assert_param(&params, OSSL_PKEY_PARAM_GROUP_NAME, true);
+    }
+
+    #[test]
+    fn test_merge() {
+        let n = BigNum::from_u32(0xbc747fc5).unwrap();
+        let e = BigNum::from_u32(0x10001).unwrap();
+        let d = BigNum::from_u32(0x7b133399).unwrap();
+
+        let mut merged_params: OsslParamArray;
+        let mut builder1 = OsslParamBuilder::new().unwrap();
+        builder1.add_bn(OSSL_PKEY_PARAM_RSA_N, &n).unwrap();
+        let params1 = builder1.to_param().unwrap();
+        {
+            let mut builder2 = OsslParamBuilder::new().unwrap();
+            builder2.add_bn(OSSL_PKEY_PARAM_RSA_E, &e).unwrap();
+            let params2 = builder2.to_param().unwrap();
+            merged_params = params1.merge(&params2).unwrap();
+        }
+
+        // Merge 1 & 2, d (added in 3) should not be present
+        assert_param(&merged_params, OSSL_PKEY_PARAM_RSA_N, false);
+        assert_param(&merged_params, OSSL_PKEY_PARAM_RSA_E, false);
+        assert_param(&merged_params, OSSL_PKEY_PARAM_RSA_D, true);
+
+        {
+            let mut builder3 = OsslParamBuilder::new().unwrap();
+            builder3.add_bn(OSSL_PKEY_PARAM_RSA_D, &d).unwrap();
+            let params3 = builder3.to_param().unwrap();
+            merged_params = merged_params.merge(&params3).unwrap();
+        }
+
+        // Merge 3 into 1+2, we should now have all params
+        assert_param(&merged_params, OSSL_PKEY_PARAM_RSA_N, false);
+        assert_param(&merged_params, OSSL_PKEY_PARAM_RSA_E, false);
+        assert_param(&merged_params, OSSL_PKEY_PARAM_RSA_D, false);
     }
 }
