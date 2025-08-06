@@ -186,8 +186,6 @@ pub fn run_boringssl(include_dirs: &[PathBuf]) {
     bindgen_cmd
         .arg("-o")
         .arg(out_dir.join("bindgen.rs"))
-        // Must be a valid version from
-        // https://docs.rs/bindgen/latest/bindgen/enum.RustTarget.html
         .arg("--rust-target=1.70")
         .arg("--ctypes-prefix=::libc")
         .arg("--raw-line=use libc::*;")
@@ -312,8 +310,6 @@ pub fn run_awslc(include_dirs: &[PathBuf], symbol_prefix: Option<String>) {
     bindgen_cmd
         .arg("-o")
         .arg(out_dir.join("bindgen.rs"))
-        // Must be a valid version from
-        // https://docs.rs/bindgen/latest/bindgen/enum.RustTarget.html
         .arg("--rust-target=1.70")
         .arg("--ctypes-prefix=::libc")
         .arg("--raw-line=use libc::*;")
