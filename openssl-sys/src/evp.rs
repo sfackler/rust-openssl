@@ -341,3 +341,27 @@ pub unsafe fn EVP_PKEY_assign_DH(pkey: *mut EVP_PKEY, dh: *mut DH) -> c_int {
 pub unsafe fn EVP_PKEY_assign_EC_KEY(pkey: *mut EVP_PKEY, ec_key: *mut EC_KEY) -> c_int {
     EVP_PKEY_assign(pkey, EVP_PKEY_EC, ec_key as *mut c_void)
 }
+
+cfg_if! {
+    if #[cfg(ossl300)] {
+        // consts required for EVP_PKEY_fromdata selection value
+
+        // From <openssl/core_dispatch.h>
+        const OSSL_KEYMGMT_SELECT_PRIVATE_KEY: c_int = 0x01;
+        const OSSL_KEYMGMT_SELECT_PUBLIC_KEY: c_int = 0x02;
+        const OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS: c_int = 0x04;
+        const OSSL_KEYMGMT_SELECT_OTHER_PARAMETERS: c_int = 0x80;
+        const OSSL_KEYMGMT_SELECT_ALL_PARAMETERS: c_int =
+            OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS | OSSL_KEYMGMT_SELECT_OTHER_PARAMETERS;
+        const OSSL_KEYMGMT_SELECT_KEYPAIR: c_int =
+            OSSL_KEYMGMT_SELECT_PRIVATE_KEY | OSSL_KEYMGMT_SELECT_PUBLIC_KEY;
+        const OSSL_KEYMGMT_SELECT_ALL: c_int =
+            OSSL_KEYMGMT_SELECT_KEYPAIR | OSSL_KEYMGMT_SELECT_ALL_PARAMETERS;
+
+        // From <openssl/evp.h>
+        pub const EVP_PKEY_KEY_PARAMETERS: c_int = OSSL_KEYMGMT_SELECT_ALL_PARAMETERS;
+        pub const EVP_PKEY_PRIVATE_KEY: c_int = EVP_PKEY_KEY_PARAMETERS | OSSL_KEYMGMT_SELECT_PRIVATE_KEY;
+        pub const EVP_PKEY_PUBLIC_KEY: c_int = EVP_PKEY_KEY_PARAMETERS | OSSL_KEYMGMT_SELECT_PUBLIC_KEY;
+        pub const EVP_PKEY_KEYPAIR: c_int = EVP_PKEY_PUBLIC_KEY | OSSL_KEYMGMT_SELECT_PRIVATE_KEY;
+    }
+}
