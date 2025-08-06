@@ -38,14 +38,14 @@ pub const EVP_CTRL_GCM_SET_IVLEN: c_int = 0x9;
 pub const EVP_CTRL_GCM_GET_TAG: c_int = 0x10;
 pub const EVP_CTRL_GCM_SET_TAG: c_int = 0x11;
 
-#[cfg(ossl300)]
-pub const EVP_PKEY_KEY_PARAMETERS: c_int = OSSL_KEYMGMT_SELECT_ALL_PARAMETERS;
-#[cfg(ossl300)]
-pub const EVP_PKEY_PRIVATE_KEY: c_int = EVP_PKEY_KEY_PARAMETERS | OSSL_KEYMGMT_SELECT_PRIVATE_KEY;
-#[cfg(ossl300)]
-pub const EVP_PKEY_PUBLIC_KEY: c_int = EVP_PKEY_KEY_PARAMETERS | OSSL_KEYMGMT_SELECT_PUBLIC_KEY;
-#[cfg(ossl300)]
-pub const EVP_PKEY_KEYPAIR: c_int = EVP_PKEY_PUBLIC_KEY | OSSL_KEYMGMT_SELECT_PRIVATE_KEY;
+cfg_if! {
+    if #[cfg(ossl300)] {
+        pub const EVP_PKEY_KEY_PARAMETERS: c_int = OSSL_KEYMGMT_SELECT_ALL_PARAMETERS;
+        pub const EVP_PKEY_PRIVATE_KEY: c_int = EVP_PKEY_KEY_PARAMETERS | OSSL_KEYMGMT_SELECT_PRIVATE_KEY;
+        pub const EVP_PKEY_PUBLIC_KEY: c_int = EVP_PKEY_KEY_PARAMETERS | OSSL_KEYMGMT_SELECT_PUBLIC_KEY;
+        pub const EVP_PKEY_KEYPAIR: c_int = EVP_PKEY_PUBLIC_KEY | OSSL_KEYMGMT_SELECT_PRIVATE_KEY;
+    }
+}
 
 pub unsafe fn EVP_get_digestbynid(type_: c_int) -> *const EVP_MD {
     EVP_get_digestbyname(OBJ_nid2sn(type_))
