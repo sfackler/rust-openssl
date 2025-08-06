@@ -70,6 +70,8 @@ use crate::cipher::CipherRef;
 use crate::error::ErrorStack;
 use crate::md::MdRef;
 use crate::nid::Nid;
+#[cfg(ossl300)]
+use crate::pkey::Public;
 use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Params, Private};
 use crate::rsa::Padding;
 use crate::sign::RsaPssSaltlen;
@@ -125,6 +127,27 @@ impl NonceType {
 
     /// Uses a deterministic value for the nonce k as defined in RFC #6979 (See Section 3.2 “Generation of k”).
     pub const DETERMINISTIC_K: Self = NonceType(1);
+}
+
+cfg_if! {
+    if #[cfg(ossl300)] {
+        /// Selection for fromdata operation.
+        pub(crate) trait Selection {
+            const SELECTION: c_int;
+        }
+
+        impl Selection for Params  {
+            const SELECTION: c_int = ffi::EVP_PKEY_KEY_PARAMETERS;
+        }
+
+        impl Selection for Public  {
+            const SELECTION: c_int = ffi::EVP_PKEY_PUBLIC_KEY;
+        }
+
+        impl Selection for Private  {
+            const SELECTION: c_int = ffi::EVP_PKEY_KEYPAIR;
+        }
+    }
 }
 
 generic_foreign_type_and_impl_send_sync! {
