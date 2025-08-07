@@ -64,6 +64,7 @@ let cmac_key = ctx.keygen().unwrap();
 //! let valid = ctx.verify(text, &signature).unwrap();
 //! assert!(valid);
 //! ```
+use crate::bn::BigNumRef;
 #[cfg(not(any(boringssl, awslc)))]
 use crate::cipher::CipherRef;
 use crate::error::ErrorStack;
@@ -73,6 +74,7 @@ use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Params, Private};
 use crate::rsa::Padding;
 use crate::sign::RsaPssSaltlen;
 use crate::{cvt, cvt_p};
+use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 #[cfg(not(any(boringssl, awslc)))]
 use libc::c_int;
@@ -544,6 +546,48 @@ impl<T> PkeyCtxRef<T> {
         Ok(())
     }
 
+    /// Sets the RSA keygen bits.
+    ///
+    /// This is only useful for RSA keys.
+    #[corresponds(EVP_PKEY_CTX_set_rsa_keygen_bits)]
+    #[inline]
+    pub fn set_rsa_keygen_bits(&mut self, bits: u32) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_rsa_keygen_bits(
+                self.as_ptr(),
+                bits as i32,
+            ))?;
+        }
+
+        Ok(())
+    }
+
+    /// Sets the RSA keygen public exponent.
+    ///
+    /// This is only useful for RSA keys.
+    #[corresponds(EVP_PKEY_CTX_set1_rsa_keygen_pubexp)]
+    #[inline]
+    pub fn set_rsa_keygen_pubexp(&mut self, pubexp: &BigNumRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cfg_if! {
+                if #[cfg(ossl300)] {
+                    cvt(ffi::EVP_PKEY_CTX_set1_rsa_keygen_pubexp(
+                        self.as_ptr(),
+                        pubexp.as_ptr(),
+                    ))?;
+                } else {
+                    cvt(ffi::EVP_PKEY_CTX_set_rsa_keygen_pubexp(
+                        self.as_ptr(),
+                        // Dupe the BN because the EVP_PKEY_CTX takes ownership of it and will free it.
+                        cvt_p(ffi::BN_dup(pubexp.as_ptr()))?,
+                    ))?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// Sets the RSA PSS salt length.
     ///
     /// This is only useful for RSA keys.
@@ -874,6 +918,7 @@ impl<T> PkeyCtxRef<T> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::bn::BigNum;
     #[cfg(not(any(boringssl, awslc)))]
     use crate::cipher::Cipher;
     use crate::ec::{EcGroup, EcKey};
@@ -1055,6 +1100,18 @@ mod test {
         let params = ctx.paramgen().unwrap();
 
         assert_eq!(params.size(), 72);
+    }
+
+    #[test]
+    fn rsa_keygen() {
+        let pubexp = BigNum::from_u32(65537).unwrap();
+        let mut ctx = PkeyCtx::new_id(Id::RSA).unwrap();
+        ctx.keygen_init().unwrap();
+        ctx.set_rsa_keygen_pubexp(&pubexp).unwrap();
+        ctx.set_rsa_keygen_bits(2048).unwrap();
+        let key = ctx.keygen().unwrap();
+
+        assert_eq!(key.bits(), 2048);
     }
 
     #[test]
