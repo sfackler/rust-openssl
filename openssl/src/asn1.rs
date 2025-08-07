@@ -651,6 +651,18 @@ impl Asn1OctetStringRef {
     }
 }
 
+impl PartialEq for Asn1OctetStringRef {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_slice() == other.as_slice()
+    }
+}
+
+impl PartialEq for Asn1OctetString {
+    fn eq(&self, other: &Self) -> bool {
+        Asn1OctetStringRef::eq(self, other)
+    }
+}
+
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_OBJECT;
     fn drop = ffi::ASN1_OBJECT_free;
