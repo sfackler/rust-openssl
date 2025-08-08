@@ -286,30 +286,36 @@ mod test {
         let e = BigNum::from_u32(0x10001).unwrap();
         let d = BigNum::from_u32(0x7b133399).unwrap();
 
+        let mut merged_params: Params<'_>;
         let params1 = ParamBuilder::new()
             .push_bignum(c_str(b"n\0"), &n)
             .unwrap()
             .build()
             .unwrap();
-        let params2 = ParamBuilder::new()
-            .push_bignum(c_str(b"e\0"), &e)
-            .unwrap()
-            .build()
-            .unwrap();
-        let params3 = ParamBuilder::new()
-            .push_bignum(c_str(b"d\0"), &d)
-            .unwrap()
-            .build()
-            .unwrap();
+        {
+            let params2 = ParamBuilder::new()
+                .push_bignum(c_str(b"e\0"), &e)
+                .unwrap()
+                .build()
+                .unwrap();
+            merged_params = params1.merge(&params2).unwrap();
+        }
 
         // Merge 1 & 2, d (added in 3) should not be present
-        let merged_params = params1.merge(&params2).unwrap();
         assert_param(&merged_params, c_str(b"n\0"), false);
         assert_param(&merged_params, c_str(b"e\0"), false);
         assert_param(&merged_params, c_str(b"d\0"), true);
 
+        {
+            let params3 = ParamBuilder::new()
+                .push_bignum(c_str(b"d\0"), &d)
+                .unwrap()
+                .build()
+                .unwrap();
+            merged_params = merged_params.merge(&params3).unwrap();
+        }
+
         // Merge 3 into 1+2, we should now have all params
-        let merged_params = merged_params.merge(&params3).unwrap();
         assert_param(&merged_params, c_str(b"n\0"), false);
         assert_param(&merged_params, c_str(b"e\0"), false);
         assert_param(&merged_params, c_str(b"e\0"), false);
