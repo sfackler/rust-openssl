@@ -94,9 +94,18 @@ impl<'a> ParamsRef<'a> {
     /// Merges two `ParamsRef` objects into a new `Params` object.
     #[corresponds(OSSL_PARAM_merge)]
     #[allow(dead_code)]
-    pub fn merge(&self, other: &ParamsRef<'a>) -> Result<Params<'a>, ErrorStack> {
-        cvt_p(unsafe { ffi::OSSL_PARAM_merge(self.as_ptr(), other.as_ptr()) })
-            .map(|p| unsafe { Params::from_ptr(p) })
+    pub fn merge(&self, other: &ParamsRef<'_>) -> Result<Params<'a>, ErrorStack> {
+        // OSSL_PARAM_merge shallow copies the params
+        // OSSL_PARAM_free  deep frees (so the params and values will be freed)
+        // OSSL_PARAM_dup   deep copies
+        // Dupe both params[] so we don't end up pointing to freed memory.
+        cvt_p(unsafe {
+            ffi::OSSL_PARAM_merge(
+                ffi::OSSL_PARAM_dup(self.as_ptr()),
+                ffi::OSSL_PARAM_dup(other.as_ptr()),
+            )
+        })
+        .map(|p| unsafe { Params::from_ptr(p) })
     }
 
     /// Locate a parameter by the given key.
