@@ -493,6 +493,27 @@ extern "C" {
     #[cfg(any(ossl110, libressl270))]
     pub fn EVP_PKEY_up_ref(pkey: *mut EVP_PKEY) -> c_int;
 
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_fromdata_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
+
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_fromdata(
+        ctx: *mut EVP_PKEY_CTX,
+        ppkey: *mut *mut EVP_PKEY,
+        selection: c_int,
+        param: *mut OSSL_PARAM,
+    ) -> c_int;
+
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_todata(
+        ppkey: *const EVP_PKEY,
+        selection: c_int,
+        param: *mut *mut OSSL_PARAM,
+    ) -> c_int;
+
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_generate(ctx: *mut EVP_PKEY_CTX, k: *mut *mut EVP_PKEY) -> c_int;
+
     pub fn d2i_AutoPrivateKey(
         a: *mut *mut EVP_PKEY,
         pp: *mut *const c_uchar,
@@ -539,6 +560,12 @@ extern "C" {
 
     pub fn EVP_PKEY_CTX_new(k: *mut EVP_PKEY, e: *mut ENGINE) -> *mut EVP_PKEY_CTX;
     pub fn EVP_PKEY_CTX_new_id(id: c_int, e: *mut ENGINE) -> *mut EVP_PKEY_CTX;
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_CTX_new_from_name(
+        libctx: *mut OSSL_LIB_CTX,
+        name: *const c_char,
+        propquery: *const c_char,
+    ) -> *mut EVP_PKEY_CTX;
     pub fn EVP_PKEY_CTX_free(ctx: *mut EVP_PKEY_CTX);
 
     pub fn EVP_PKEY_CTX_ctrl(
@@ -589,6 +616,14 @@ extern "C" {
     pub fn EVP_PKEY_paramgen(ctx: *mut EVP_PKEY_CTX, key: *mut *mut EVP_PKEY) -> c_int;
 
     pub fn EVP_PKEY_sign_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
+
+    #[cfg(ossl340)]
+    pub fn EVP_PKEY_sign_message_init(
+        ctx: *mut EVP_PKEY_CTX,
+        algo: *mut EVP_SIGNATURE,
+        params: *const OSSL_PARAM,
+    ) -> c_int;
+
     pub fn EVP_PKEY_sign(
         ctx: *mut EVP_PKEY_CTX,
         sig: *mut c_uchar,
@@ -597,6 +632,14 @@ extern "C" {
         tbslen: size_t,
     ) -> c_int;
     pub fn EVP_PKEY_verify_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
+
+    #[cfg(ossl340)]
+    pub fn EVP_PKEY_verify_message_init(
+        ctx: *mut EVP_PKEY_CTX,
+        algo: *mut EVP_SIGNATURE,
+        params: *const OSSL_PARAM,
+    ) -> c_int;
+
     pub fn EVP_PKEY_verify(
         ctx: *mut EVP_PKEY_CTX,
         sig: *const c_uchar,
@@ -627,6 +670,28 @@ extern "C" {
         routlen: *mut size_t,
         sig: *const c_uchar,
         siglen: size_t,
+    ) -> c_int;
+
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_encapsulate_init(ctx: *mut EVP_PKEY_CTX, params: *const OSSL_PARAM) -> c_int;
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_encapsulate(
+        ctx: *mut EVP_PKEY_CTX,
+        wrappedkey: *mut c_uchar,
+        wrappedkeylen: *mut size_t,
+        genkey: *mut c_uchar,
+        genkeylen: *mut size_t,
+    ) -> c_int;
+
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_decapsulate_init(ctx: *mut EVP_PKEY_CTX, params: *const OSSL_PARAM) -> c_int;
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_decapsulate(
+        ctx: *mut EVP_PKEY_CTX,
+        genkey: *mut c_uchar,
+        genkeylen: *mut size_t,
+        wrappedkey: *const c_uchar,
+        wrappedkeylen: size_t,
     ) -> c_int;
 }
 
@@ -668,4 +733,19 @@ cfg_if! {
 extern "C" {
     pub fn EVP_EncodeBlock(dst: *mut c_uchar, src: *const c_uchar, src_len: c_int) -> c_int;
     pub fn EVP_DecodeBlock(dst: *mut c_uchar, src: *const c_uchar, src_len: c_int) -> c_int;
+}
+
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn EVP_SIGNATURE_free(s: *mut EVP_SIGNATURE);
+            pub fn EVP_SIGNATURE_up_ref(s: *mut EVP_SIGNATURE) -> c_int;
+            pub fn EVP_SIGNATURE_fetch(ctx: *mut OSSL_LIB_CTX,
+                                       algorithm: *const c_char,
+                                       properties: *const c_char)
+                                       -> *mut EVP_SIGNATURE;
+            pub fn EVP_SIGNATURE_get0_name(s: *const EVP_SIGNATURE) -> *const c_char;
+            pub fn EVP_SIGNATURE_get0_description(s: *const EVP_SIGNATURE) -> *const c_char;
+        }
+    }
 }
