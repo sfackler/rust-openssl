@@ -493,6 +493,27 @@ extern "C" {
     #[cfg(any(ossl110, libressl270))]
     pub fn EVP_PKEY_up_ref(pkey: *mut EVP_PKEY) -> c_int;
 
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_fromdata_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
+
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_fromdata(
+        ctx: *mut EVP_PKEY_CTX,
+        ppkey: *mut *mut EVP_PKEY,
+        selection: c_int,
+        param: *mut OSSL_PARAM,
+    ) -> c_int;
+
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_todata(
+        ppkey: *const EVP_PKEY,
+        selection: c_int,
+        param: *mut *mut OSSL_PARAM,
+    ) -> c_int;
+
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_generate(ctx: *mut EVP_PKEY_CTX, k: *mut *mut EVP_PKEY) -> c_int;
+
     pub fn d2i_AutoPrivateKey(
         a: *mut *mut EVP_PKEY,
         pp: *mut *const c_uchar,
@@ -539,6 +560,12 @@ extern "C" {
 
     pub fn EVP_PKEY_CTX_new(k: *mut EVP_PKEY, e: *mut ENGINE) -> *mut EVP_PKEY_CTX;
     pub fn EVP_PKEY_CTX_new_id(id: c_int, e: *mut ENGINE) -> *mut EVP_PKEY_CTX;
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_CTX_new_from_name(
+        libctx: *mut OSSL_LIB_CTX,
+        name: *const c_char,
+        propquery: *const c_char,
+    ) -> *mut EVP_PKEY_CTX;
     pub fn EVP_PKEY_CTX_free(ctx: *mut EVP_PKEY_CTX);
 
     pub fn EVP_PKEY_CTX_ctrl(
