@@ -121,8 +121,8 @@ impl X509StoreContextRef {
     /// This corresponds to [`X509_STORE_CTX_init`] before calling `with_context` and to
     /// [`X509_STORE_CTX_cleanup`] after calling `with_context`.
     ///
-    /// [`X509_STORE_CTX_init`]:  https://www.openssl.org/docs/manmaster/crypto/X509_STORE_CTX_init.html
-    /// [`X509_STORE_CTX_cleanup`]:  https://www.openssl.org/docs/manmaster/crypto/X509_STORE_CTX_cleanup.html
+    /// [`X509_STORE_CTX_init`]:  https://docs.openssl.org/master/man3/X509_STORE_CTX_init/
+    /// [`X509_STORE_CTX_cleanup`]:  https://docs.openssl.org/master/man3/X509_STORE_CTX_cleanup/
     pub fn init<F, T>(
         &mut self,
         trust: &store::X509StoreRef,
@@ -1206,7 +1206,7 @@ impl X509Name {
         ///
         /// This corresponds to [`d2i_X509_NAME`].
         ///
-        /// [`d2i_X509_NAME`]: https://www.openssl.org/docs/manmaster/man3/d2i_X509_NAME.html
+        /// [`d2i_X509_NAME`]: https://docs.openssl.org/master/man3/d2i_X509_NAME/
         from_der,
         X509Name,
         ffi::d2i_X509_NAME
@@ -1263,7 +1263,7 @@ impl X509NameRef {
         ///
         /// This corresponds to [`i2d_X509_NAME`].
         ///
-        /// [`i2d_X509_NAME`]: https://www.openssl.org/docs/manmaster/crypto/i2d_X509_NAME.html
+        /// [`i2d_X509_NAME`]: https://docs.openssl.org/master/man3/i2d_X509_NAME/
         to_der,
         ffi::i2d_X509_NAME
     }
@@ -1479,7 +1479,7 @@ impl X509Req {
         ///
         /// This corresponds to [`PEM_read_bio_X509_REQ`].
         ///
-        /// [`PEM_read_bio_X509_REQ`]: https://www.openssl.org/docs/manmaster/crypto/PEM_read_bio_X509_REQ.html
+        /// [`PEM_read_bio_X509_REQ`]: https://docs.openssl.org/master/man3/PEM_read_bio_X509_REQ/
         from_pem,
         X509Req,
         ffi::PEM_read_bio_X509_REQ
@@ -1490,7 +1490,7 @@ impl X509Req {
         ///
         /// This corresponds to [`d2i_X509_REQ`].
         ///
-        /// [`d2i_X509_REQ`]: https://www.openssl.org/docs/manmaster/crypto/d2i_X509_REQ.html
+        /// [`d2i_X509_REQ`]: https://docs.openssl.org/master/man3/d2i_X509_REQ/
         from_der,
         X509Req,
         ffi::d2i_X509_REQ
@@ -1505,7 +1505,7 @@ impl X509ReqRef {
         ///
         /// This corresponds to [`PEM_write_bio_X509_REQ`].
         ///
-        /// [`PEM_write_bio_X509_REQ`]: https://www.openssl.org/docs/manmaster/crypto/PEM_write_bio_X509_REQ.html
+        /// [`PEM_write_bio_X509_REQ`]: https://docs.openssl.org/master/man3/PEM_write_bio_X509_REQ/
         to_pem,
         ffi::PEM_write_bio_X509_REQ
     }
@@ -1515,7 +1515,7 @@ impl X509ReqRef {
         ///
         /// This corresponds to [`i2d_X509_REQ`].
         ///
-        /// [`i2d_X509_REQ`]: https://www.openssl.org/docs/manmaster/crypto/i2d_X509_REQ.html
+        /// [`i2d_X509_REQ`]: https://docs.openssl.org/master/man3/i2d_X509_REQ/
         to_der,
         ffi::i2d_X509_REQ
     }
@@ -1740,7 +1740,7 @@ foreign_type_and_impl_send_sync! {
 ///
 /// Corresponds to the return value from the [`X509_CRL_get0_by_*`] methods.
 ///
-/// [`X509_CRL_get0_by_*`]: https://www.openssl.org/docs/man1.1.0/man3/X509_CRL_get0_by_serial.html
+/// [`X509_CRL_get0_by_*`]: https://docs.openssl.org/master/man3/X509_CRL_get0_by_serial/
 pub enum CrlStatus<'a> {
     /// The certificate is not present in the list
     NotRevoked,

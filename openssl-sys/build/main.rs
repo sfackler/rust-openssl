@@ -1,3 +1,8 @@
+#![allow(
+    // This can be removed once our MSRV is raised to 1.66.
+    clippy::uninlined_format_args,
+)]
+
 #[cfg(feature = "bindgen")]
 extern crate bindgen;
 extern crate cc;
@@ -74,11 +79,9 @@ fn check_ssl_kind() {
     }
 
     let is_aws_lc = cfg!(feature = "aws-lc");
+    let is_aws_lc_fips = cfg!(feature = "aws-lc-fips");
 
-    if is_aws_lc {
-        println!("cargo:rustc-cfg=awslc");
-        println!("cargo:awslc=true");
-
+    if is_aws_lc || is_aws_lc_fips {
         // The aws-lc-sys crate uses a link name that embeds
         // the version number of crate. Examples (crate-name => links name):
         //   * aws-lc-sys => aws_lc_0_26_0
@@ -87,11 +90,22 @@ fn check_ssl_kind() {
         //
         // Due to this we need to determine what version of the AWS-LC has been selected (fips or non-fips)
         // and then need to parse out the pieces we are interested in ignoring the version componenet of the name.
-        const AWS_LC_ENV_VAR_PREFIX: &str = "DEP_AWS_LC_";
+        let aws_lc_env_var_prefix: &'static str = if is_aws_lc_fips {
+            "DEP_AWS_LC_FIPS_"
+        } else {
+            "DEP_AWS_LC_"
+        };
+
+        println!("cargo:rustc-cfg=awslc");
+        println!("cargo:awslc=true");
+        if is_aws_lc_fips {
+            println!("cargo:rustc-cfg=awslc_fips");
+            println!("cargo:awslc_fips=true");
+        }
 
         let mut version = None;
         for (name, _) in std::env::vars() {
-            if let Some(name) = name.strip_prefix(AWS_LC_ENV_VAR_PREFIX) {
+            if let Some(name) = name.strip_prefix(aws_lc_env_var_prefix) {
                 if let Some(name) = name.strip_suffix("_INCLUDE") {
                     version = Some(name.to_owned());
                     break;
@@ -101,7 +115,7 @@ fn check_ssl_kind() {
         let version = version.expect("aws-lc version detected");
 
         // Read the OpenSSL configuration statements and emit rust-cfg for each.
-        if let Ok(vars) = std::env::var(format!("{AWS_LC_ENV_VAR_PREFIX}{version}_CONF")) {
+        if let Ok(vars) = std::env::var(format!("{aws_lc_env_var_prefix}{version}_CONF")) {
             for var in vars.split(',') {
                 println!("cargo:rustc-cfg=osslconf=\"{var}\"");
             }
@@ -110,7 +124,7 @@ fn check_ssl_kind() {
 
         // Emit the include header directory from the aws-lc(-fips)-sys crate so that it can be used if needed
         // by crates consuming openssl-sys.
-        if let Ok(val) = std::env::var(format!("{AWS_LC_ENV_VAR_PREFIX}{version}_INCLUDE")) {
+        if let Ok(val) = std::env::var(format!("{aws_lc_env_var_prefix}{version}_INCLUDE")) {
             println!("cargo:include={val}");
         }
 
@@ -151,6 +165,7 @@ fn main() {
     println!("cargo:rustc-check-cfg=cfg(libressl390)");
     println!("cargo:rustc-check-cfg=cfg(libressl400)");
     println!("cargo:rustc-check-cfg=cfg(libressl410)");
+    println!("cargo:rustc-check-cfg=cfg(libressl420)");
 
     println!("cargo:rustc-check-cfg=cfg(ossl101)");
     println!("cargo:rustc-check-cfg=cfg(ossl102)");

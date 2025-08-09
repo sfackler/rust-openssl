@@ -162,6 +162,7 @@ cfg_if! {
     }
 }
 
+pub const EVP_PKEY_OP_PARAMGEN: c_int = 1 << 1;
 pub const EVP_PKEY_OP_KEYGEN: c_int = 1 << 2;
 cfg_if! {
     if #[cfg(ossl300)] {

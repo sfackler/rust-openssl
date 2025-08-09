@@ -1,6 +1,11 @@
 use super::super::*;
 use libc::*;
 
+#[cfg(ossl300)]
+extern "C" {
+    pub fn EVP_PKEY_CTX_set_ec_paramgen_curve_nid(ctx: *mut EVP_PKEY_CTX, nid: c_int) -> c_int;
+}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub enum point_conversion_form_t {

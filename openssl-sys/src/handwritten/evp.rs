@@ -472,17 +472,21 @@ cfg_if! {
         }
     }
 }
+const_ptr_api! {
+    extern "C" {
+        pub fn EVP_PKEY_get1_RSA(k: #[const_ptr_if(libressl420)] EVP_PKEY) -> *mut RSA;
+        pub fn EVP_PKEY_get1_DSA(k: #[const_ptr_if(libressl420)] EVP_PKEY) -> *mut DSA;
+        pub fn EVP_PKEY_get1_DH(k: #[const_ptr_if(libressl420)] EVP_PKEY) -> *mut DH;
+        pub fn EVP_PKEY_get1_EC_KEY(k: #[const_ptr_if(libressl420)] EVP_PKEY) -> *mut EC_KEY;
+    }
+}
 extern "C" {
     pub fn EVP_PKEY_assign(pkey: *mut EVP_PKEY, typ: c_int, key: *mut c_void) -> c_int;
 
     pub fn EVP_PKEY_set1_RSA(k: *mut EVP_PKEY, r: *mut RSA) -> c_int;
-    pub fn EVP_PKEY_get1_RSA(k: *mut EVP_PKEY) -> *mut RSA;
     pub fn EVP_PKEY_set1_DSA(k: *mut EVP_PKEY, k: *mut DSA) -> c_int;
-    pub fn EVP_PKEY_get1_DSA(k: *mut EVP_PKEY) -> *mut DSA;
     pub fn EVP_PKEY_set1_DH(k: *mut EVP_PKEY, k: *mut DH) -> c_int;
-    pub fn EVP_PKEY_get1_DH(k: *mut EVP_PKEY) -> *mut DH;
     pub fn EVP_PKEY_set1_EC_KEY(k: *mut EVP_PKEY, k: *mut EC_KEY) -> c_int;
-    pub fn EVP_PKEY_get1_EC_KEY(k: *mut EVP_PKEY) -> *mut EC_KEY;
 
     pub fn EVP_PKEY_new() -> *mut EVP_PKEY;
     pub fn EVP_PKEY_free(k: *mut EVP_PKEY);
@@ -580,7 +584,9 @@ extern "C" {
         ...
     ) -> *mut EVP_PKEY;
     pub fn EVP_PKEY_keygen_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
+    pub fn EVP_PKEY_paramgen_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
     pub fn EVP_PKEY_keygen(ctx: *mut EVP_PKEY_CTX, key: *mut *mut EVP_PKEY) -> c_int;
+    pub fn EVP_PKEY_paramgen(ctx: *mut EVP_PKEY_CTX, key: *mut *mut EVP_PKEY) -> c_int;
 
     pub fn EVP_PKEY_sign_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
     pub fn EVP_PKEY_sign(
