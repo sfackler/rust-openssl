@@ -160,6 +160,8 @@ pub mod dh;
 pub mod dsa;
 pub mod ec;
 pub mod ecdsa;
+#[cfg(ossl300)]
+mod encdec;
 pub mod encrypt;
 #[cfg(not(any(boringssl, awslc)))]
 pub mod envelope;
