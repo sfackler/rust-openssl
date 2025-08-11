@@ -135,21 +135,41 @@ impl NonceType {
 
 cfg_if! {
     if #[cfg(ossl300)] {
+        #[derive(Debug, PartialEq)]
+        pub(crate) enum Selection {
+            /// Key parameters
+            KeyParameters,
+            /// Public key (including parameters, if applicable).
+            PublicKey,
+            /// Keypair, which includes private key, public key, and parameters (if available).
+            Keypair,
+        }
+
+        impl From<Selection> for i32 {
+            fn from(value: Selection) -> Self {
+                match value {
+                    Selection::KeyParameters => ffi::EVP_PKEY_KEY_PARAMETERS,
+                    Selection::PublicKey => ffi::EVP_PKEY_PUBLIC_KEY,
+                    Selection::Keypair => ffi::EVP_PKEY_KEYPAIR,
+                }
+            }
+        }
+
         /// Selection for fromdata operation.
-        pub(crate) trait Selection {
-            const SELECTION: c_int;
+        pub(crate) trait SelectionT {
+            const SELECTION: Selection;
         }
 
-        impl Selection for Params  {
-            const SELECTION: c_int = ffi::EVP_PKEY_KEY_PARAMETERS;
+        impl SelectionT for Params  {
+            const SELECTION: Selection = Selection::KeyParameters;
         }
 
-        impl Selection for Public  {
-            const SELECTION: c_int = ffi::EVP_PKEY_PUBLIC_KEY;
+        impl SelectionT for Public  {
+            const SELECTION: Selection = Selection::PublicKey;
         }
 
-        impl Selection for Private  {
-            const SELECTION: c_int = ffi::EVP_PKEY_KEYPAIR;
+        impl SelectionT for Private  {
+            const SELECTION: Selection = Selection::Keypair;
         }
     }
 }
@@ -475,13 +495,18 @@ impl<T> PkeyCtxRef<T> {
     #[inline]
     #[cfg(ossl300)]
     #[allow(dead_code)]
-    pub(crate) fn fromdata<K: Selection>(
+    pub(crate) fn fromdata<K: SelectionT>(
         &mut self,
         params: &ParamsRef<'_>,
     ) -> Result<PKey<K>, ErrorStack> {
         let mut key_ptr = ptr::null_mut();
         cvt(unsafe {
-            ffi::EVP_PKEY_fromdata(self.as_ptr(), &mut key_ptr, K::SELECTION, params.as_ptr())
+            ffi::EVP_PKEY_fromdata(
+                self.as_ptr(),
+                &mut key_ptr,
+                K::SELECTION.into(),
+                params.as_ptr(),
+            )
         })?;
         Ok(unsafe { PKey::from_ptr(key_ptr) })
     }
@@ -971,7 +996,7 @@ impl<T> PkeyCtxRef<T> {
 /// Creates a new `PKey` from the given ID and parameters.
 #[cfg(ossl300)]
 #[allow(dead_code)]
-pub(crate) fn pkey_from_params<K: Selection>(
+pub(crate) fn pkey_from_params<K: SelectionT>(
     id: Id,
     params: &ParamsRef<'_>,
 ) -> Result<PKey<K>, ErrorStack> {
