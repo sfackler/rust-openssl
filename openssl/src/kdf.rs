@@ -26,6 +26,7 @@ cfg_if::cfg_if! {
     if #[cfg(all(ossl320, not(osslconf = "OPENSSL_NO_ARGON2")))] {
         use std::cmp;
         use std::ffi::c_void;
+        use std::ffi::CStr;
         use std::mem::MaybeUninit;
         use std::ptr;
         use foreign_types::ForeignTypeRef;
@@ -46,7 +47,7 @@ cfg_if::cfg_if! {
             memcost: u32,
             out: &mut [u8],
         ) -> Result<(), ErrorStack> {
-            return argon2_helper(b"ARGON2D\0", ctx, pass, salt, ad, secret, iter, lanes, memcost, out);
+            return argon2_helper(c"ARGON2D", ctx, pass, salt, ad, secret, iter, lanes, memcost, out);
         }
 
         #[allow(clippy::too_many_arguments)]
@@ -61,7 +62,7 @@ cfg_if::cfg_if! {
             memcost: u32,
             out: &mut [u8],
         ) -> Result<(), ErrorStack> {
-            return argon2_helper(b"ARGON2I\0", ctx, pass, salt, ad, secret, iter, lanes, memcost, out);
+            return argon2_helper(c"ARGON2I", ctx, pass, salt, ad, secret, iter, lanes, memcost, out);
         }
 
         #[allow(clippy::too_many_arguments)]
@@ -76,7 +77,7 @@ cfg_if::cfg_if! {
             memcost: u32,
             out: &mut [u8],
         ) -> Result<(), ErrorStack> {
-            return argon2_helper(b"ARGON2ID\0", ctx, pass, salt, ad, secret, iter, lanes, memcost, out);
+            return argon2_helper(c"ARGON2ID", ctx, pass, salt, ad, secret, iter, lanes, memcost, out);
         }
 
         /// Derives a key using the argon2* algorithms.
@@ -87,7 +88,7 @@ cfg_if::cfg_if! {
         ///
         /// Requires OpenSSL 3.2.0 or newer.
         fn argon2_helper(
-            kdf_identifier: &'static [u8],
+            kdf_identifier: &CStr,
             ctx: Option<&LibCtxRef>,
             pass: &[u8],
             salt: &[u8],
