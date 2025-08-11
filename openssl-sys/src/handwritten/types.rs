@@ -1146,6 +1146,8 @@ pub enum EVP_KDF {}
 pub enum EVP_KDF_CTX {}
 
 #[cfg(ossl300)]
+pub enum OSSL_ENCODER_CTX {}
+#[cfg(ossl300)]
 pub enum OSSL_DECODER_CTX {}
 
 #[cfg(ossl300)]
