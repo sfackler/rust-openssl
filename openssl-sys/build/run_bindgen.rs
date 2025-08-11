@@ -62,6 +62,7 @@ const INCLUDES: &str = "
 #include <openssl/params.h>
 #include <openssl/param_build.h>
 #include <openssl/decoder.h>
+#include <openssl/encoder.h>
 #endif
 
 #if OPENSSL_VERSION_NUMBER >= 0x30200000
