@@ -26,6 +26,7 @@ cfg_if::cfg_if! {
     if #[cfg(all(ossl320, not(osslconf = "OPENSSL_NO_ARGON2")))] {
         use std::cmp;
         use std::ffi::c_void;
+        use std::ffi::CStr;
         use std::mem::MaybeUninit;
         use std::ptr;
         use foreign_types::ForeignTypeRef;
@@ -34,15 +35,60 @@ cfg_if::cfg_if! {
         use crate::lib_ctx::LibCtxRef;
         use crate::error::ErrorStack;
 
-        /// Derives a key using the argon2id algorithm.
+        #[allow(clippy::too_many_arguments)]
+        pub fn argon2d(
+            ctx: Option<&LibCtxRef>,
+            pass: &[u8],
+            salt: &[u8],
+            ad: Option<&[u8]>,
+            secret: Option<&[u8]>,
+            iter: u32,
+            lanes: u32,
+            memcost: u32,
+            out: &mut [u8],
+        ) -> Result<(), ErrorStack> {
+            return argon2_helper(CStr::from_bytes_with_nul(b"ARGON2D\0").unwrap(), ctx, pass, salt, ad, secret, iter, lanes, memcost, out);
+        }
+
+        #[allow(clippy::too_many_arguments)]
+        pub fn argon2i(
+            ctx: Option<&LibCtxRef>,
+            pass: &[u8],
+            salt: &[u8],
+            ad: Option<&[u8]>,
+            secret: Option<&[u8]>,
+            iter: u32,
+            lanes: u32,
+            memcost: u32,
+            out: &mut [u8],
+        ) -> Result<(), ErrorStack> {
+            return argon2_helper(CStr::from_bytes_with_nul(b"ARGON2I\0").unwrap(), ctx, pass, salt, ad, secret, iter, lanes, memcost, out);
+        }
+
+        #[allow(clippy::too_many_arguments)]
+        pub fn argon2id(
+            ctx: Option<&LibCtxRef>,
+            pass: &[u8],
+            salt: &[u8],
+            ad: Option<&[u8]>,
+            secret: Option<&[u8]>,
+            iter: u32,
+            lanes: u32,
+            memcost: u32,
+            out: &mut [u8],
+        ) -> Result<(), ErrorStack> {
+            return argon2_helper(CStr::from_bytes_with_nul(b"ARGON2ID\0").unwrap(), ctx, pass, salt, ad, secret, iter, lanes, memcost, out);
+        }
+
+        /// Derives a key using the argon2* algorithms.
         ///
         /// To use multiple cores to process the lanes in parallel you must
         /// set a global max thread count using `OSSL_set_max_threads`. On
         /// builds with no threads all lanes will be processed sequentially.
         ///
         /// Requires OpenSSL 3.2.0 or newer.
-        #[allow(clippy::too_many_arguments)]
-        pub fn argon2id(
+        fn argon2_helper(
+            kdf_identifier: &CStr,
             ctx: Option<&LibCtxRef>,
             pass: &[u8],
             salt: &[u8],
@@ -61,7 +107,7 @@ cfg_if::cfg_if! {
                 let mut threads = 1;
                 // If max_threads is 0, then this isn't a threaded build.
                 // If max_threads is > u32::MAX we need to clamp since
-                // argon2id's threads parameter is a u32.
+                // argon2's threads parameter is a u32.
                 if max_threads > 0 {
                     threads = cmp::min(lanes, cmp::min(max_threads, u32::MAX as u64) as u32);
                 }
@@ -116,7 +162,7 @@ cfg_if::cfg_if! {
 
                 let argon2 = EvpKdf(cvt_p(ffi::EVP_KDF_fetch(
                     libctx,
-                    b"ARGON2ID\0".as_ptr() as *const c_char,
+                    kdf_identifier.as_ptr() as *const c_char,
                     ptr::null(),
                 ))?);
                 let ctx = EvpKdfCtx(cvt_p(ffi::EVP_KDF_CTX_new(argon2.0))?);
@@ -147,6 +193,60 @@ mod tests {
 
         let mut actual = [0u8; 32];
         super::argon2id(
+            None,
+            &pass,
+            &salt,
+            Some(&ad),
+            Some(&secret),
+            3,
+            4,
+            32,
+            &mut actual,
+        )
+        .unwrap();
+        assert_eq!(hex::encode(&actual[..]), expected);
+    }
+
+    #[test]
+    #[cfg(all(ossl320, not(osslconf = "OPENSSL_NO_ARGON2")))]
+    fn argon2d() {
+        // RFC 9106 test vector for argon2d
+        let pass = hex::decode("0101010101010101010101010101010101010101010101010101010101010101")
+            .unwrap();
+        let salt = hex::decode("02020202020202020202020202020202").unwrap();
+        let secret = hex::decode("0303030303030303").unwrap();
+        let ad = hex::decode("040404040404040404040404").unwrap();
+        let expected = "512b391b6f1162975371d30919734294f868e3be3984f3c1a13a4db9fabe4acb";
+
+        let mut actual = [0u8; 32];
+        super::argon2d(
+            None,
+            &pass,
+            &salt,
+            Some(&ad),
+            Some(&secret),
+            3,
+            4,
+            32,
+            &mut actual,
+        )
+        .unwrap();
+        assert_eq!(hex::encode(&actual[..]), expected);
+    }
+
+    #[test]
+    #[cfg(all(ossl320, not(osslconf = "OPENSSL_NO_ARGON2")))]
+    fn argon2i() {
+        // RFC 9106 test vector for argon2i
+        let pass = hex::decode("0101010101010101010101010101010101010101010101010101010101010101")
+            .unwrap();
+        let salt = hex::decode("02020202020202020202020202020202").unwrap();
+        let secret = hex::decode("0303030303030303").unwrap();
+        let ad = hex::decode("040404040404040404040404").unwrap();
+        let expected = "c814d9d1dc7f37aa13f0d77f2494bda1c8de6b016dd388d29952a4c4672b6ce8";
+
+        let mut actual = [0u8; 32];
+        super::argon2i(
             None,
             &pass,
             &salt,
