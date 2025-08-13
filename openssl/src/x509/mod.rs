@@ -2271,6 +2271,16 @@ foreign_type_and_impl_send_sync! {
     pub struct X509AlgorithmRef;
 }
 
+impl X509Algorithm {
+    pub fn new() -> Result<Self, ErrorStack> {
+        ffi::init();
+        unsafe {
+            let ptr = cvt_p(ffi::X509_ALGOR_new())?;
+            Ok(Self::from_ptr(ptr))
+        }
+    }
+}
+
 impl X509AlgorithmRef {
     /// Returns the ASN.1 OID of this algorithm.
     pub fn object(&self) -> &Asn1ObjectRef {
@@ -2279,6 +2289,18 @@ impl X509AlgorithmRef {
             X509_ALGOR_get0(&mut oid, ptr::null_mut(), ptr::null_mut(), self.as_ptr());
             Asn1ObjectRef::from_const_ptr_opt(oid).expect("algorithm oid must not be null")
         }
+    }
+}
+
+impl PartialEq for X509AlgorithmRef {
+    fn eq(&self, other: &Self) -> bool {
+        unsafe { ffi::X509_ALGOR_cmp(self.as_ptr(), other.as_ptr()) == 0 }
+    }
+}
+
+impl PartialEq for X509Algorithm {
+    fn eq(&self, other: &Self) -> bool {
+        X509AlgorithmRef::eq(self, other)
     }
 }
 
