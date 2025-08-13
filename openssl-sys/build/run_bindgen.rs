@@ -1,7 +1,11 @@
 #[cfg(feature = "bindgen")]
+use bindgen::callbacks::IntKind;
+#[cfg(feature = "bindgen")]
 use bindgen::callbacks::{MacroParsingBehavior, ParseCallbacks};
 #[cfg(feature = "bindgen")]
 use bindgen::{MacroTypeVariation, RustTarget};
+#[cfg(feature = "bindgen")]
+use once_cell::sync::OnceCell;
 use std::io::Write;
 use std::path::PathBuf;
 #[cfg(not(feature = "bindgen"))]
@@ -75,9 +79,32 @@ const INCLUDES: &str = "
 ";
 
 #[cfg(feature = "bindgen")]
+static MACRO_PREFIX_KIND: OnceCell<Vec<(regex::Regex, IntKind)>> = OnceCell::new();
+
+#[cfg(feature = "bindgen")]
+fn setup_prefix_kind() {
+    let kinds = vec![
+        (regex::Regex::new(r"^OPENSSL_INIT_.+").unwrap(), IntKind::U64),
+        (regex::Regex::new(r"^(SSL_CTRL|CRYPTO_EX_INDEX|NID|EVP|X509_FILETYPE|SSL_FILETYPE|SSL3_AD|TLS1_AD)_.+").unwrap(), IntKind::Int),
+        (regex::Regex::new(r"^SSL_VERIFY_.+").unwrap(), IntKind::Int),
+        (regex::Regex::new(r"^OPENSSL_VERSION").unwrap(), IntKind::Int),
+    ];
+    let _ = MACRO_PREFIX_KIND.get_or_init(|| kinds);
+}
+#[cfg(feature = "bindgen")]
+fn match_prefix_kine(name: &str) -> Option<IntKind> {
+    let kinds = MACRO_PREFIX_KIND.get()?;
+
+    kinds
+        .iter()
+        .find(|&(re, _)| re.is_match(name))
+        .map(|(_, kind)| *kind)
+}
+
+#[cfg(feature = "bindgen")]
 pub fn run(include_dirs: &[PathBuf]) {
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
-
+    setup_prefix_kind();
     let mut builder = bindgen::builder()
         .parse_callbacks(Box::new(OpensslCallbacks))
         .rust_target(RustTarget::Stable_1_47)
@@ -350,8 +377,19 @@ struct OpensslCallbacks;
 #[cfg(feature = "bindgen")]
 impl ParseCallbacks for OpensslCallbacks {
     // for now we'll continue hand-writing constants
-    fn will_parse_macro(&self, _name: &str) -> MacroParsingBehavior {
-        MacroParsingBehavior::Ignore
+    fn will_parse_macro(&self, name: &str) -> MacroParsingBehavior {
+        if let Some(_) = match_prefix_kine(name) {
+            MacroParsingBehavior::Default
+        } else {
+            MacroParsingBehavior::Ignore
+        }
+    }
+    fn int_macro(&self, name: &str, _value: i64) -> Option<IntKind> {
+        if let Some(kind) = match_prefix_kine(name) {
+            return Some(kind);
+        }
+        // auto
+        None
     }
 
     fn item_name(&self, original_item_name: &str) -> Option<String> {
