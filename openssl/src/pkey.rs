@@ -51,14 +51,14 @@ use crate::error::ErrorStack;
 use crate::pkey_ctx::PkeyCtx;
 use crate::rsa::Rsa;
 use crate::symm::Cipher;
-use crate::util::{invoke_passwd_cb, CallbackState};
+use crate::util::{c_str, invoke_passwd_cb, CallbackState};
 use crate::{cvt, cvt_p};
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long};
 use openssl_macros::corresponds;
 use std::convert::{TryFrom, TryInto};
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::fmt;
 #[cfg(all(not(any(boringssl, awslc)), ossl110))]
 use std::mem;
@@ -149,6 +149,41 @@ impl TryFrom<Id> for &'static str {
             Id::X448 => Ok("X448"),
             #[cfg(ossl111)]
             Id::POLY1305 => Ok("POLY1305"),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<Id> for &'static CStr {
+    type Error = ();
+    fn try_from(id: Id) -> Result<Self, Self::Error> {
+        match id {
+            Id::RSA => Ok(c_str(b"RSA\0")),
+            #[cfg(any(ossl111, libressl310, boringssl, awslc))]
+            Id::RSA_PSS => Ok(c_str(b"RSA-PSS\0")),
+            #[cfg(not(boringssl))]
+            Id::HMAC => Ok(c_str(b"HMAC\0")),
+            #[cfg(not(any(boringssl, awslc)))]
+            Id::CMAC => Ok(c_str(b"CMAC\0")),
+            Id::DSA => Ok(c_str(b"DSA\0")),
+            Id::DH => Ok(c_str(b"DH\0")),
+            #[cfg(ossl110)]
+            Id::DHX => Ok(c_str(b"DHX\0")),
+            Id::EC => Ok(c_str(b"EC\0")),
+            #[cfg(ossl111)]
+            Id::SM2 => Ok(c_str(b"SM2\0")),
+            #[cfg(any(ossl110, boringssl, libressl360, awslc))]
+            Id::HKDF => Ok(c_str(b"HKDF\0")),
+            #[cfg(any(ossl111, boringssl, libressl370, awslc))]
+            Id::ED25519 => Ok(c_str(b"Ed25519\0")),
+            #[cfg(ossl111)]
+            Id::ED448 => Ok(c_str(b"Ed448\0")),
+            #[cfg(any(ossl111, boringssl, libressl370, awslc))]
+            Id::X25519 => Ok(c_str(b"X25519\0")),
+            #[cfg(ossl111)]
+            Id::X448 => Ok(c_str(b"X448\0")),
+            #[cfg(ossl111)]
+            Id::POLY1305 => Ok(c_str(b"POLY1305\0")),
             _ => Err(()),
         }
     }
