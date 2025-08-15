@@ -588,6 +588,16 @@ extern "C" {
     pub fn EVP_PKEY_keygen(ctx: *mut EVP_PKEY_CTX, key: *mut *mut EVP_PKEY) -> c_int;
     pub fn EVP_PKEY_paramgen(ctx: *mut EVP_PKEY_CTX, key: *mut *mut EVP_PKEY) -> c_int;
 
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_fromdata_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_fromdata(
+        ctx: *mut EVP_PKEY_CTX,
+        ppkey: *mut *mut EVP_PKEY,
+        selection: c_int,
+        params: *mut OSSL_PARAM,
+    ) -> c_int;
+
     pub fn EVP_PKEY_sign_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
     pub fn EVP_PKEY_sign(
         ctx: *mut EVP_PKEY_CTX,
