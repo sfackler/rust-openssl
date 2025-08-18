@@ -80,7 +80,7 @@ pub fn run(include_dirs: &[PathBuf]) {
 
     let mut builder = bindgen::builder()
         .parse_callbacks(Box::new(OpensslCallbacks))
-        .rust_target(RustTarget::stable(47, 0).unwrap())
+        .rust_target(RustTarget::stable(70, 0).unwrap())
         .ctypes_prefix("::libc")
         .raw_line("use libc::*;")
         .raw_line("#[cfg(windows)] use std::os::windows::raw::HANDLE;")
@@ -134,7 +134,7 @@ pub fn run_boringssl(include_dirs: &[PathBuf]) {
         .expect("Failed to write contents to boring_static_wrapper.h");
 
     let mut builder = bindgen::builder()
-        .rust_target(RustTarget::stable(47, 0).unwrap())
+        .rust_target(RustTarget::stable(70, 0).unwrap())
         .ctypes_prefix("::libc")
         .raw_line("use libc::*;")
         .derive_default(false)
@@ -186,7 +186,7 @@ pub fn run_boringssl(include_dirs: &[PathBuf]) {
     bindgen_cmd
         .arg("-o")
         .arg(out_dir.join("bindgen.rs"))
-        .arg("--rust-target=1.47")
+        .arg("--rust-target=1.70")
         .arg("--ctypes-prefix=::libc")
         .arg("--raw-line=use libc::*;")
         .arg("--no-derive-default")
@@ -255,7 +255,7 @@ pub fn run_awslc(include_dirs: &[PathBuf], symbol_prefix: Option<String>) {
         .expect("Failed to write contents to awslc_static_wrapper.h");
 
     let mut builder = bindgen::builder()
-        .rust_target(RustTarget::stable(47, 0).unwrap())
+        .rust_target(RustTarget::stable(70, 0).unwrap())
         .ctypes_prefix("::libc")
         .raw_line("use libc::*;")
         .derive_default(false)
@@ -310,7 +310,7 @@ pub fn run_awslc(include_dirs: &[PathBuf], symbol_prefix: Option<String>) {
     bindgen_cmd
         .arg("-o")
         .arg(out_dir.join("bindgen.rs"))
-        .arg("--rust-target=1.47")
+        .arg("--rust-target=1.70")
         .arg("--ctypes-prefix=::libc")
         .arg("--raw-line=use libc::*;")
         .arg("--no-derive-default")
