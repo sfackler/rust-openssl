@@ -111,5 +111,9 @@ const_ptr_api! {
         pub fn ASN1_STRING_type(x: #[const_ptr_if(any(ossl110, libressl280))]  ASN1_STRING) -> c_int;
         pub fn ASN1_generate_v3(str: #[const_ptr_if(any(ossl110, libressl280))] c_char, cnf: *mut X509V3_CTX) -> *mut ASN1_TYPE;
         pub fn i2d_ASN1_TYPE(a: #[const_ptr_if(ossl300)] ASN1_TYPE, pp: *mut *mut c_uchar) -> c_int;
+        pub fn ASN1_TIME_to_generalizedtime(
+            t: #[const_ptr_if(any(ossl110, libressl280))] ASN1_TIME,
+            out: *mut *mut ASN1_GENERALIZEDTIME
+        ) -> *mut ASN1_GENERALIZEDTIME;
     }
 }
