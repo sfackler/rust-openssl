@@ -370,6 +370,8 @@ impl ParseCallbacks for OpensslCallbacks {
             | "SSL_set_tmp_ecdh_callback"
             | "SSL_CTX_callback_ctrl"
             | "SSL_CTX_set_alpn_select_cb" => Some(format!("{}__fixed_rust", item_info.name)),
+            // On NetBSD, "off_t" is generated as "__off_t".
+            "__off_t" => Some("off_t".to_string()),
             _ => None,
         }
     }
