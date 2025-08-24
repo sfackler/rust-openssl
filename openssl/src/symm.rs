@@ -114,6 +114,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_cfb1()) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn aes_128_cfb128() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_cfb128()) }
     }
@@ -159,6 +160,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_192_cfb1()) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn aes_192_cfb128() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_192_cfb128()) }
     }
@@ -209,6 +211,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_cfb1()) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn aes_256_cfb128() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_cfb128()) }
     }
