@@ -1134,13 +1134,32 @@ pub enum OSSL_LIB_CTX {}
 #[repr(C)]
 pub struct OSSL_PARAM {
     key: *const c_char,
-    data_type: c_uchar,
+    data_type: c_uint,
     data: *mut c_void,
     data_size: size_t,
     return_size: size_t,
 }
 
 #[cfg(ossl300)]
+pub enum OSSL_PARAM_BLD {}
+
+#[cfg(ossl300)]
 pub enum EVP_KDF {}
 #[cfg(ossl300)]
 pub enum EVP_KDF_CTX {}
+
+#[cfg(ossl300)]
+pub enum OSSL_ENCODER_CTX {}
+#[cfg(ossl300)]
+pub enum OSSL_DECODER_CTX {}
+
+#[cfg(ossl300)]
+pub type OSSL_PASSPHRASE_CALLBACK = Option<
+    unsafe extern "C" fn(
+        pass: *mut c_char,
+        pass_size: size_t,
+        pass_len: *mut size_t,
+        params: *const OSSL_PARAM,
+        arg: *mut c_void,
+    ) -> c_int,
+>;

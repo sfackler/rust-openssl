@@ -3,6 +3,7 @@ use crate::util;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_char, c_int, c_void};
 use std::any::Any;
+use std::ffi::CStr;
 use std::panic::{self, AssertUnwindSafe};
 use std::slice;
 
@@ -115,4 +116,12 @@ pub unsafe fn from_raw_parts_mut<'a, T>(data: *mut T, len: usize) -> &'a mut [T]
         #[allow(clippy::disallowed_methods)]
         slice::from_raw_parts_mut(data, len)
     }
+}
+
+/// Converts a byte slice to a C string.
+///
+/// String should be null-terminated.
+#[allow(dead_code)]
+pub fn c_str(s: &[u8]) -> &CStr {
+    CStr::from_bytes_with_nul(s).unwrap()
 }
