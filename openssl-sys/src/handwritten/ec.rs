@@ -26,6 +26,8 @@ extern "C" {
     #[cfg(not(libressl410))]
     pub fn EC_GROUP_new(meth: *const EC_METHOD) -> *mut EC_GROUP;
 
+    pub fn EC_GROUP_dup(group: *const EC_GROUP) -> *mut EC_GROUP;
+
     pub fn EC_GROUP_free(group: *mut EC_GROUP);
 
     pub fn EC_GROUP_get_order(
