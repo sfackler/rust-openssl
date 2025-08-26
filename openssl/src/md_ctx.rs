@@ -301,6 +301,22 @@ impl MdCtxRef {
         Ok(len)
     }
 
+    fn convert_verify_result(r: ffi::c_int) -> Result<bool, ErrorStack> {
+        // https://docs.openssl.org/3.2/man3/EVP_DigestVerifyInit/#return-values
+        match r {
+            // EVP_DigestVerifyFinal() and EVP_DigestVerify() return 1  for success...
+            1 => Ok(true),
+            // A return value of zero indicates that the signature did not verify successfully
+            0 => {
+                // Clear the error stack so debugging any subsequent errors is not confusing
+                ErrorStack::clear();
+                Ok(false)
+            }
+            // while other values indicate a more serious error
+            _ => Err(ErrorStack::get()),
+        }
+    }
+
     /// Verifies the provided signature.
     ///
     /// Returns `Ok(true)` if the signature is valid, `Ok(false)` if the signature is invalid, and `Err` if an error
