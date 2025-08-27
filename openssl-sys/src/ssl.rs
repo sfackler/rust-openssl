@@ -403,6 +403,14 @@ pub unsafe fn SSL_set0_verify_cert_store(ssl: *mut SSL, st: *mut X509_STORE) -> 
 
 cfg_if! {
     if #[cfg(ossl111)] {
+        pub unsafe fn SSL_set1_groups_list(ctx: *mut SSL, s: *const c_char) -> c_long {
+            SSL_ctrl(
+                ctx,
+                SSL_CTRL_SET_GROUPS_LIST,
+                0,
+                s as *const c_void as *mut c_void,
+            )
+        }
         pub unsafe fn SSL_CTX_set1_groups_list(ctx: *mut SSL_CTX, s: *const c_char) -> c_long {
             SSL_CTX_ctrl(
                 ctx,
@@ -413,6 +421,7 @@ cfg_if! {
         }
     } else if #[cfg(libressl251)] {
         extern "C" {
+            pub fn SSL_set1_groups_list(ctx: *mut SSL, list: *const c_char) -> c_int;
             pub fn SSL_CTX_set1_groups_list(ctx: *mut SSL_CTX, s: *const c_char) -> c_int;
         }
     }
