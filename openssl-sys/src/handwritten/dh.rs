@@ -6,6 +6,7 @@ extern "C" {
     pub fn EVP_PKEY_CTX_set_dh_paramgen_generator(ctx: *mut EVP_PKEY_CTX, gen: c_int) -> c_int;
 }
 
+#[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
 extern "C" {
     pub fn DH_new() -> *mut DH;
     pub fn DH_free(dh: *mut DH);
