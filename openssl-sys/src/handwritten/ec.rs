@@ -116,6 +116,14 @@ extern "C" {
         y: *mut BIGNUM,
         ctx: *mut BN_CTX,
     ) -> c_int;
+    #[cfg(any(ossl111, boringssl, libressl350, awslc))]
+    pub fn EC_POINT_set_affine_coordinates(
+        group: *const EC_GROUP,
+        p: *mut EC_POINT,
+        x: *const BIGNUM,
+        y: *const BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
 
     pub fn EC_POINT_get_affine_coordinates_GFp(
         group: *const EC_GROUP,
