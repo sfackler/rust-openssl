@@ -67,6 +67,8 @@ fn main() {
         .header("openssl/aes.h")
         .header("openssl/ocsp.h")
         .header("openssl/evp.h")
+        .header("openssl/dsa.h")
+        .header("openssl/rsa.h")
         .header("openssl/x509_vfy.h");
 
     if let Some(version) = libressl_version {
