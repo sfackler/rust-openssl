@@ -561,7 +561,7 @@ impl EcPointRef {
         }
     }
 
-    /// Sets affine coordinates of a curve over a prime field using the provided
+    /// Sets affine coordinates of a point on an elliptic curve using the provided
     /// `x` and `y` `BigNum`s
     #[corresponds(EC_POINT_set_affine_coordinates)]
     #[cfg(any(ossl111, boringssl, libressl350, awslc))]
