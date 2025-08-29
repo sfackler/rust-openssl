@@ -15,6 +15,7 @@ pub use self::hmac::*;
 pub use self::kdf::*;
 pub use self::object::*;
 pub use self::ocsp::*;
+#[cfg(ossl300)]
 pub use self::params::*;
 pub use self::pem::*;
 pub use self::pkcs12::*;
@@ -54,6 +55,7 @@ mod hmac;
 mod kdf;
 mod object;
 mod ocsp;
+#[cfg(ossl300)]
 mod params;
 mod pem;
 mod pkcs12;
