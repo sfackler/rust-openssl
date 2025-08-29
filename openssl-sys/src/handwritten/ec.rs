@@ -14,16 +14,13 @@ pub enum point_conversion_form_t {
     POINT_CONVERSION_HYBRID = 6,
 }
 
-#[cfg(not(libressl410))]
+#[cfg(not(any(libressl410, osslconf = "OPENSSL_NO_DEPRECATED_3_0")))]
 pub enum EC_METHOD {}
 pub enum EC_GROUP {}
 pub enum EC_POINT {}
 
 extern "C" {
-    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
-    pub fn EC_GF2m_simple_method() -> *const EC_METHOD;
-
-    #[cfg(not(libressl410))]
+    #[cfg(not(any(libressl410, osslconf = "OPENSSL_NO_DEPRECATED_3_0")))]
     pub fn EC_GROUP_new(meth: *const EC_METHOD) -> *mut EC_GROUP;
 
     pub fn EC_GROUP_dup(group: *const EC_GROUP) -> *mut EC_GROUP;
@@ -56,23 +53,6 @@ extern "C" {
     pub fn EC_GROUP_set_asn1_flag(key: *mut EC_GROUP, flag: c_int);
 
     pub fn EC_GROUP_get_asn1_flag(group: *const EC_GROUP) -> c_int;
-
-    pub fn EC_GROUP_get_curve_GFp(
-        group: *const EC_GROUP,
-        p: *mut BIGNUM,
-        a: *mut BIGNUM,
-        b: *mut BIGNUM,
-        ctx: *mut BN_CTX,
-    ) -> c_int;
-
-    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
-    pub fn EC_GROUP_get_curve_GF2m(
-        group: *const EC_GROUP,
-        p: *mut BIGNUM,
-        a: *mut BIGNUM,
-        b: *mut BIGNUM,
-        ctx: *mut BN_CTX,
-    ) -> c_int;
 
     pub fn EC_GROUP_get_degree(group: *const EC_GROUP) -> c_int;
 
@@ -124,31 +104,6 @@ extern "C" {
         p: *mut EC_POINT,
         x: *const BIGNUM,
         y: *const BIGNUM,
-        ctx: *mut BN_CTX,
-    ) -> c_int;
-
-    pub fn EC_POINT_get_affine_coordinates_GFp(
-        group: *const EC_GROUP,
-        p: *const EC_POINT,
-        x: *mut BIGNUM,
-        y: *mut BIGNUM,
-        ctx: *mut BN_CTX,
-    ) -> c_int;
-
-    pub fn EC_POINT_set_affine_coordinates_GFp(
-        group: *const EC_GROUP,
-        p: *mut EC_POINT,
-        x: *const BIGNUM,
-        y: *const BIGNUM,
-        ctx: *mut BN_CTX,
-    ) -> c_int;
-
-    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
-    pub fn EC_POINT_get_affine_coordinates_GF2m(
-        group: *const EC_GROUP,
-        p: *const EC_POINT,
-        x: *mut BIGNUM,
-        y: *mut BIGNUM,
         ctx: *mut BN_CTX,
     ) -> c_int;
 
@@ -208,6 +163,54 @@ extern "C" {
         m: *const BIGNUM,
         ctx: *mut BN_CTX,
     ) -> c_int;
+}
+
+#[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
+extern "C" {
+    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
+    pub fn EC_GF2m_simple_method() -> *const EC_METHOD;
+
+    pub fn EC_GROUP_get_curve_GFp(
+        group: *const EC_GROUP,
+        p: *mut BIGNUM,
+        a: *mut BIGNUM,
+        b: *mut BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
+
+    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
+    pub fn EC_GROUP_get_curve_GF2m(
+        group: *const EC_GROUP,
+        p: *mut BIGNUM,
+        a: *mut BIGNUM,
+        b: *mut BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
+
+    pub fn EC_POINT_get_affine_coordinates_GFp(
+        group: *const EC_GROUP,
+        p: *const EC_POINT,
+        x: *mut BIGNUM,
+        y: *mut BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
+
+    pub fn EC_POINT_set_affine_coordinates_GFp(
+        group: *const EC_GROUP,
+        p: *mut EC_POINT,
+        x: *const BIGNUM,
+        y: *const BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
+
+    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
+    pub fn EC_POINT_get_affine_coordinates_GF2m(
+        group: *const EC_GROUP,
+        p: *const EC_POINT,
+        x: *mut BIGNUM,
+        y: *mut BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
 
     pub fn EC_KEY_new() -> *mut EC_KEY;
 
@@ -265,6 +268,17 @@ extern "C" {
     #[cfg(any(ossl110, libressl273))]
     pub fn ECDSA_SIG_set0(sig: *mut ECDSA_SIG, pr: *mut BIGNUM, ps: *mut BIGNUM) -> c_int;
 
+    pub fn d2i_ECDSA_SIG(
+        sig: *mut *mut ECDSA_SIG,
+        inp: *mut *const c_uchar,
+        length: c_long,
+    ) -> *mut ECDSA_SIG;
+
+    pub fn i2d_ECDSA_SIG(sig: *const ECDSA_SIG, out: *mut *mut c_uchar) -> c_int;
+}
+
+#[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
+extern "C" {
     pub fn ECDSA_do_sign(
         dgst: *const c_uchar,
         dgst_len: c_int,
@@ -277,12 +291,4 @@ extern "C" {
         sig: *const ECDSA_SIG,
         eckey: *mut EC_KEY,
     ) -> c_int;
-
-    pub fn d2i_ECDSA_SIG(
-        sig: *mut *mut ECDSA_SIG,
-        inp: *mut *const c_uchar,
-        length: c_long,
-    ) -> *mut ECDSA_SIG;
-
-    pub fn i2d_ECDSA_SIG(sig: *const ECDSA_SIG, out: *mut *mut c_uchar) -> c_int;
 }
