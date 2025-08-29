@@ -561,6 +561,29 @@ impl EcPointRef {
         }
     }
 
+    /// Sets affine coordinates of a point on an elliptic curve using the provided
+    /// `x` and `y` `BigNum`s
+    #[corresponds(EC_POINT_set_affine_coordinates)]
+    #[cfg(any(ossl111, boringssl, libressl350, awslc))]
+    pub fn set_affine_coordinates(
+        &mut self,
+        group: &EcGroupRef,
+        x: &BigNumRef,
+        y: &BigNumRef,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EC_POINT_set_affine_coordinates(
+                group.as_ptr(),
+                self.as_ptr(),
+                x.as_ptr(),
+                y.as_ptr(),
+                ctx.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
     /// Sets affine coordinates of a curve over a prime field using the provided
     /// `x` and `y` `BigNum`s
     #[corresponds(EC_POINT_set_affine_coordinates_GFp)]
