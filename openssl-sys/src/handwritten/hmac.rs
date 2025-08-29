@@ -2,6 +2,7 @@ use libc::*;
 
 use super::super::*;
 
+#[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
 cfg_if! {
     if #[cfg(any(ossl110, libressl350))] {
         extern "C" {
@@ -16,6 +17,7 @@ cfg_if! {
     }
 }
 
+#[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
 extern "C" {
     pub fn HMAC_Init_ex(
         ctx: *mut HMAC_CTX,
