@@ -70,9 +70,17 @@ use crate::cipher::CipherRef;
 use crate::error::ErrorStack;
 use crate::md::MdRef;
 use crate::nid::Nid;
+#[cfg(ossl320)]
+use crate::params::ParamBuilder;
+#[cfg(ossl300)]
+use crate::params::ParamsRef;
+#[cfg(ossl300)]
+use crate::pkey::Public;
 use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Params, Private};
 use crate::rsa::Padding;
 use crate::sign::RsaPssSaltlen;
+#[cfg(ossl320)]
+use crate::util::c_str;
 use crate::{cvt, cvt_p};
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
@@ -82,8 +90,6 @@ use libc::c_int;
 use libc::c_uint;
 use openssl_macros::corresponds;
 use std::convert::TryFrom;
-#[cfg(ossl320)]
-use std::ffi::CStr;
 use std::ptr;
 
 /// HKDF modes of operation.
@@ -125,6 +131,47 @@ impl NonceType {
 
     /// Uses a deterministic value for the nonce k as defined in RFC #6979 (See Section 3.2 “Generation of k”).
     pub const DETERMINISTIC_K: Self = NonceType(1);
+}
+
+cfg_if! {
+    if #[cfg(ossl300)] {
+        #[derive(Debug, PartialEq)]
+        pub(crate) enum Selection {
+            /// Key parameters
+            KeyParameters,
+            /// Public key (including parameters, if applicable).
+            PublicKey,
+            /// Keypair, which includes private key, public key, and parameters (if available).
+            Keypair,
+        }
+
+        impl From<Selection> for i32 {
+            fn from(value: Selection) -> Self {
+                match value {
+                    Selection::KeyParameters => ffi::EVP_PKEY_KEY_PARAMETERS,
+                    Selection::PublicKey => ffi::EVP_PKEY_PUBLIC_KEY,
+                    Selection::Keypair => ffi::EVP_PKEY_KEYPAIR,
+                }
+            }
+        }
+
+        /// Selection for fromdata operation.
+        pub(crate) trait SelectionT {
+            const SELECTION: Selection;
+        }
+
+        impl SelectionT for Params  {
+            const SELECTION: Selection = Selection::KeyParameters;
+        }
+
+        impl SelectionT for Public  {
+            const SELECTION: Selection = Selection::PublicKey;
+        }
+
+        impl SelectionT for Private  {
+            const SELECTION: Selection = Selection::Keypair;
+        }
+    }
 }
 
 generic_foreign_type_and_impl_send_sync! {
@@ -432,6 +479,36 @@ impl<T> PkeyCtxRef<T> {
         }
 
         Ok(())
+    }
+
+    /// Prepares the context for creating a key from user data.
+    #[corresponds(EVP_PKEY_fromdata_init)]
+    #[inline]
+    #[cfg(ossl300)]
+    #[allow(dead_code)]
+    pub(crate) fn fromdata_init(&mut self) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::EVP_PKEY_fromdata_init(self.as_ptr()) }).map(|_| ())
+    }
+
+    /// Convert a stack of Params into a PKey.
+    #[corresponds(EVP_PKEY_fromdata)]
+    #[inline]
+    #[cfg(ossl300)]
+    #[allow(dead_code)]
+    pub(crate) fn fromdata<K: SelectionT>(
+        &mut self,
+        params: &ParamsRef<'_>,
+    ) -> Result<PKey<K>, ErrorStack> {
+        let mut key_ptr = ptr::null_mut();
+        cvt(unsafe {
+            ffi::EVP_PKEY_fromdata(
+                self.as_ptr(),
+                &mut key_ptr,
+                K::SELECTION.into(),
+                params.as_ptr(),
+            )
+        })?;
+        Ok(unsafe { PKey::from_ptr(key_ptr) })
     }
 
     /// Sets which algorithm was used to compute the digest used in a
@@ -867,6 +944,14 @@ impl<T> PkeyCtxRef<T> {
         }
     }
 
+    /// Sets parameters on the given context
+    #[corresponds(EVP_PKEY_CTX_set_params)]
+    #[cfg(ossl300)]
+    #[allow(dead_code)]
+    fn set_params(&mut self, params: &ParamsRef<'_>) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::EVP_PKEY_CTX_set_params(self.as_ptr(), params.as_ptr()) }).map(|_| ())
+    }
+
     /// Sets the nonce type for a private key context.
     ///
     /// The nonce for DSA and ECDSA can be either random (the default) or deterministic (as defined by RFC 6979).
@@ -876,17 +961,10 @@ impl<T> PkeyCtxRef<T> {
     #[cfg(ossl320)]
     #[corresponds(EVP_PKEY_CTX_set_params)]
     pub fn set_nonce_type(&mut self, nonce_type: NonceType) -> Result<(), ErrorStack> {
-        let nonce_field_name = CStr::from_bytes_with_nul(b"nonce-type\0").unwrap();
-        let mut nonce_type = nonce_type.0;
-        unsafe {
-            let param_nonce =
-                ffi::OSSL_PARAM_construct_uint(nonce_field_name.as_ptr(), &mut nonce_type);
-            let param_end = ffi::OSSL_PARAM_construct_end();
-
-            let params = [param_nonce, param_end];
-            cvt(ffi::EVP_PKEY_CTX_set_params(self.as_ptr(), params.as_ptr()))?;
-        }
-        Ok(())
+        let params = ParamBuilder::new()
+            .push_uint(c_str(b"nonce-type\0"), nonce_type.0)?
+            .build()?;
+        self.set_params(&params)
     }
 
     /// Gets the nonce type for a private key context.
@@ -898,7 +976,7 @@ impl<T> PkeyCtxRef<T> {
     #[cfg(ossl320)]
     #[corresponds(EVP_PKEY_CTX_get_params)]
     pub fn nonce_type(&mut self) -> Result<NonceType, ErrorStack> {
-        let nonce_field_name = CStr::from_bytes_with_nul(b"nonce-type\0").unwrap();
+        let nonce_field_name = c_str(b"nonce-type\0");
         let mut nonce_type: c_uint = 0;
         unsafe {
             let param_nonce =
@@ -915,6 +993,18 @@ impl<T> PkeyCtxRef<T> {
     }
 }
 
+/// Creates a new `PKey` from the given ID and parameters.
+#[cfg(ossl300)]
+#[allow(dead_code)]
+pub(crate) fn pkey_from_params<K: SelectionT>(
+    id: Id,
+    params: &ParamsRef<'_>,
+) -> Result<PKey<K>, ErrorStack> {
+    let mut ctx = PkeyCtx::new_id(id)?;
+    ctx.fromdata_init()?;
+    ctx.fromdata(params)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -925,11 +1015,17 @@ mod test {
     use crate::hash::{hash, MessageDigest};
     use crate::md::Md;
     use crate::nid::Nid;
+    #[cfg(ossl300)]
+    use crate::params::ParamBuilder;
     use crate::pkey::PKey;
     use crate::rsa::Rsa;
     use crate::sign::Verifier;
+    #[cfg(ossl300)]
+    use crate::util::c_str;
     #[cfg(not(boringssl))]
     use cfg_if::cfg_if;
+    #[cfg(ossl300)]
+    use std::cmp::Ordering;
 
     #[test]
     fn rsa() {
@@ -1300,5 +1396,31 @@ mxJ7imIrEg9nIQ==
         ctx.sign_to_vec(&hashed_input, &mut output).unwrap();
         assert_eq!(output, expected_output);
         assert!(ErrorStack::get().errors().is_empty());
+    }
+
+    #[test]
+    #[cfg(ossl300)]
+    fn test_fromdata() {
+        let n = BigNum::from_u32(0xbc747fc5).unwrap();
+        let e = BigNum::from_u32(0x10001).unwrap();
+        let d = BigNum::from_u32(0x7b133399).unwrap();
+
+        let params = ParamBuilder::new()
+            .push_bignum(c_str(b"n\0"), &n)
+            .unwrap()
+            .push_bignum(c_str(b"e\0"), &e)
+            .unwrap()
+            .push_bignum(c_str(b"d\0"), &d)
+            .unwrap()
+            .build()
+            .unwrap();
+
+        let pkey: PKey<Private> = pkey_from_params(Id::RSA, &params).unwrap();
+
+        let rsa = pkey.rsa().unwrap();
+
+        assert_eq!(rsa.n().ucmp(&n), Ordering::Equal);
+        assert_eq!(rsa.e().ucmp(&e), Ordering::Equal);
+        assert_eq!(rsa.d().ucmp(&d), Ordering::Equal);
     }
 }

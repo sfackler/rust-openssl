@@ -1,6 +1,7 @@
 use super::super::*;
 use libc::*;
 
+#[cfg(ossl300)]
 extern "C" {
     pub fn OSSL_PARAM_free(p: *mut OSSL_PARAM);
     pub fn OSSL_PARAM_dup(params: *const OSSL_PARAM) -> *mut OSSL_PARAM;
