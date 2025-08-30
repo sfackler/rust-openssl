@@ -34,15 +34,19 @@ cfg_if::cfg_if! {
         use crate::error::ErrorStack;
         use crate::ossl_param::OsslParamBuilder;
 
-        const OSSL_KDF_PARAM_PASSWORD: &CStr = c"pass";
-        const OSSL_KDF_PARAM_SALT: &CStr = c"salt";
-        const OSSL_KDF_PARAM_SECRET: &CStr = c"secret";
-        const OSSL_KDF_PARAM_ITER: &CStr = c"iter";
-        const OSSL_KDF_PARAM_SIZE: &CStr = c"size";
-        const OSSL_KDF_PARAM_THREADS: &CStr = c"threads";
-        const OSSL_KDF_PARAM_ARGON2_AD: &CStr = c"ad";
-        const OSSL_KDF_PARAM_ARGON2_LANES: &CStr = c"lanes";
-        const OSSL_KDF_PARAM_ARGON2_MEMCOST: &CStr = c"memcost";
+        // Safety: these all have null terminators.
+        // We cen remove these CStr::from_bytes_with_nul_unchecked calls
+        // when we upgrade to Rust 1.77+ with literal c"" syntax.
+
+        const OSSL_KDF_PARAM_PASSWORD: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"pass\0") };
+        const OSSL_KDF_PARAM_SALT: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"salt\0") };
+        const OSSL_KDF_PARAM_SECRET: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"secret\0") };
+        const OSSL_KDF_PARAM_ITER: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"iter\0") };
+        const OSSL_KDF_PARAM_SIZE: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"size\0") };
+        const OSSL_KDF_PARAM_THREADS: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"threads\0") };
+        const OSSL_KDF_PARAM_ARGON2_AD: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"ad\0") };
+        const OSSL_KDF_PARAM_ARGON2_LANES: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"lanes\0") };
+        const OSSL_KDF_PARAM_ARGON2_MEMCOST: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"memcost\0") };
 
         #[allow(clippy::too_many_arguments)]
         pub fn argon2d(
