@@ -7,9 +7,10 @@
 //! Internet protocols, including SSL/TLS, which is the basis for HTTPS,
 //! the secure protocol for browsing the web.
 
+use bitflags::bitflags;
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
-use libc::{c_int, c_long, c_uint, c_void};
+use libc::{c_int, c_long, c_uint, c_ulong, c_void};
 use std::cmp::{self, Ordering};
 use std::convert::{TryFrom, TryInto};
 use std::error::Error;
@@ -57,6 +58,44 @@ mod tests;
 pub unsafe trait ExtensionType {
     const NID: Nid;
     type Output: ForeignType;
+}
+
+/// Flags used to print an `X509NameRef`
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct X509NamePrintFlags(c_ulong);
+
+bitflags! {
+    impl X509NamePrintFlags: c_ulong {
+        // TODO: by OpenSSL version?
+        const COMPAT = ffi::XN_FLAG_COMPAT;
+        const SEP_COMMA_PLUS = ffi::XN_FLAG_SEP_COMMA_PLUS;
+        const SEP_CPLUS_SPC = ffi::XN_FLAG_SEP_CPLUS_SPC;
+        const SEP_SPLUS_SPC = ffi::XN_FLAG_SEP_SPLUS_SPC;
+        const SEP_MULTILINE = ffi::XN_FLAG_SEP_MULTILINE;
+        const DN_REV = ffi::XN_FLAG_DN_REV;
+        const FN_SN = ffi::XN_FLAG_FN_SN;
+        const FN_LN = ffi::XN_FLAG_FN_LN;
+        const FN_OID = ffi::XN_FLAG_FN_OID;
+        const FN_NONE = ffi::XN_FLAG_FN_NONE;
+        const SPC_EQ = ffi::XN_FLAG_SPC_EQ;
+        const DUMP_UNKNOWN_FIELDS = ffi::XN_FLAG_DUMP_UNKNOWN_FIELDS;
+        const FN_ALIGN = ffi::XN_FLAG_FN_ALIGN;
+        const RFC2253 = ffi::XN_FLAG_RFC2253;
+        const ONELINE = ffi::XN_FLAG_ONELINE;
+        const MULTILINE = ffi::XN_FLAG_MULTILINE;
+        const STR_ESC_2253 = ffi::ASN1_STRFLGS_ESC_2253;
+        const STR_ESC_CTRL = ffi::ASN1_STRFLGS_ESC_CTRL;
+        const STR_ESC_MSB = ffi::ASN1_STRFLGS_ESC_MSB;
+        const STR_ESC_QUOTE = ffi::ASN1_STRFLGS_ESC_QUOTE;
+        const STR_UTF8_CONVERT = ffi::ASN1_STRFLGS_UTF8_CONVERT;
+        const STR_IGNORE_TYPE = ffi::ASN1_STRFLGS_IGNORE_TYPE;
+        const STR_SHOW_TYPE = ffi::ASN1_STRFLGS_SHOW_TYPE;
+        const STR_DUMP_ALL = ffi::ASN1_STRFLGS_DUMP_ALL;
+        const STR_DUMP_UNKNOWN = ffi::ASN1_STRFLGS_DUMP_UNKNOWN;
+        const STR_DUMP_DER = ffi::ASN1_STRFLGS_DUMP_DER;
+        #[cfg(ossl110)]
+        const STR_ESC_2254 = ffi::ASN1_STRFLGS_ESC_2254;
+    }
 }
 
 foreign_type_and_impl_send_sync! {
@@ -1234,6 +1273,41 @@ impl X509NameRef {
             nid: None,
             loc: -1,
         }
+    }
+
+    /// Formats the name as human-readable bytes
+    #[corresponds(X509_NAME_print_ex)]
+    pub fn format_bytes(
+        &self,
+        indent: i32,
+        flags: X509NamePrintFlags,
+    ) -> Result<Vec<u8>, crate::error::ErrorStack> {
+        unsafe {
+            let bio = crate::bio::MemBio::new()?;
+            let cvt_fn = if flags == X509NamePrintFlags::COMPAT {
+                cvt
+            } else {
+                cvt_n
+            };
+            cvt_fn(ffi::X509_NAME_print_ex(
+                bio.as_ptr(),
+                self.as_ptr(),
+                indent,
+                flags.bits(),
+            ))?;
+            Ok(bio.get_buf().to_owned())
+        }
+    }
+
+    pub fn format(
+        &self,
+        indent: i32,
+        mut flags: X509NamePrintFlags,
+    ) -> Result<String, crate::error::ErrorStack> {
+        flags.remove(X509NamePrintFlags::STR_ESC_MSB);
+        flags.insert(X509NamePrintFlags::STR_UTF8_CONVERT);
+        let bytes = self.format_bytes(indent, flags)?;
+        unsafe { Ok(String::from_utf8_unchecked(bytes)) }
     }
 
     /// Compare two names, like [`Ord`] but it may fail.
