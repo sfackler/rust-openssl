@@ -1196,3 +1196,20 @@ fn test_store_all_certificates() {
 
     assert_eq!(store.all_certificates().len(), 1);
 }
+
+#[test]
+fn test_get_extensions() {
+    let cert = include_bytes!("../../test/alt_name_cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let exts = cert.extensions().unwrap();
+    const EXPECTED_EXTS: &[(Nid, usize)] = &[
+        (Nid::BASIC_CONSTRAINTS, 2),
+        (Nid::KEY_USAGE, 4),
+        (Nid::SUBJECT_ALT_NAME, 81),
+    ];
+    assert_eq!(exts.len(), EXPECTED_EXTS.len());
+    for (i, (nid, len)) in EXPECTED_EXTS.iter().enumerate() {
+        assert_eq!(exts[i].object().unwrap().nid(), *nid);
+        assert_eq!(exts[i].data().unwrap().len(), *len);
+    }
+}
