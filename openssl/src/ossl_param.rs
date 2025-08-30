@@ -33,17 +33,12 @@ foreign_type_and_impl_send_sync! {
     pub struct OsslParamRef;
 }
 
-impl OsslParam {}
-
 impl OsslParamRef {
     /// Locates the `OsslParam` in the `OsslParam` array
     #[corresponds(OSSL_PARAM_locate)]
-    pub fn locate(&self, key: &[u8]) -> Result<&OsslParamRef, ErrorStack> {
+    pub fn locate(&self, key: &CStr) -> Result<&OsslParamRef, ErrorStack> {
         unsafe {
-            let param = cvt_p(ffi::OSSL_PARAM_locate(
-                self.as_ptr(),
-                key.as_ptr() as *const c_char,
-            ))?;
+            let param = cvt_p(ffi::OSSL_PARAM_locate(self.as_ptr(), key.as_ptr()))?;
             Ok(OsslParamRef::from_ptr(param))
         }
     }
@@ -109,7 +104,7 @@ impl OsslParamBuilder {
 
     /// Constructs the `OsslParam`.
     #[corresponds(OSSL_PARAM_BLD_to_param)]
-    pub fn to_param(&self) -> Result<OsslParam, ErrorStack> {
+    pub fn to_param(&mut self) -> Result<OsslParam, ErrorStack> {
         unsafe {
             let params = cvt_p(ffi::OSSL_PARAM_BLD_to_param(self.0))?;
             Ok(OsslParam::from_ptr(params))
@@ -122,11 +117,11 @@ impl OsslParamBuilderRef {
     ///
     /// Note, that both key and bn need to exist until the `to_param` is called!
     #[corresponds(OSSL_PARAM_BLD_push_BN)]
-    pub fn add_bn(&self, key: &[u8], bn: &BigNumRef) -> Result<(), ErrorStack> {
+    pub fn add_bn(&mut self, key: &CStr, bn: &BigNumRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::OSSL_PARAM_BLD_push_BN(
                 self.as_ptr(),
-                key.as_ptr() as *const c_char,
+                key.as_ptr(),
                 bn.as_ptr(),
             ))
             .map(|_| ())
@@ -137,11 +132,11 @@ impl OsslParamBuilderRef {
     ///
     /// Note, that both `key` and `buf` need to exist until the `to_param` is called!
     #[corresponds(OSSL_PARAM_BLD_push_utf8_string)]
-    pub fn add_utf8_string(&self, key: &[u8], buf: &str) -> Result<(), ErrorStack> {
+    pub fn add_utf8_string(&mut self, key: &CStr, buf: &str) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::OSSL_PARAM_BLD_push_utf8_string(
                 self.as_ptr(),
-                key.as_ptr() as *const c_char,
+                key.as_ptr(),
                 buf.as_ptr() as *const c_char,
                 buf.len(),
             ))
@@ -153,11 +148,11 @@ impl OsslParamBuilderRef {
     ///
     /// Note, that both `key` and `buf` need to exist until the `to_param` is called!
     #[corresponds(OSSL_PARAM_BLD_push_octet_string)]
-    pub fn add_octet_string(&self, key: &[u8], buf: &[u8]) -> Result<(), ErrorStack> {
+    pub fn add_octet_string(&mut self, key: &CStr, buf: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::OSSL_PARAM_BLD_push_octet_string(
                 self.as_ptr(),
-                key.as_ptr() as *const c_char,
+                key.as_ptr(),
                 buf.as_ptr() as *const c_void,
                 buf.len(),
             ))
@@ -169,11 +164,11 @@ impl OsslParamBuilderRef {
     ///
     /// Note, that both `key` and `buf` need to exist until the `to_param` is called!
     #[corresponds(OSSL_PARAM_BLD_push_uint)]
-    pub fn add_uint(&self, key: &[u8], val: u32) -> Result<(), ErrorStack> {
+    pub fn add_uint(&mut self, key: &CStr, val: u32) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::OSSL_PARAM_BLD_push_uint(
                 self.as_ptr(),
-                key.as_ptr() as *const c_char,
+                key.as_ptr(),
                 val as c_uint,
             ))
             .map(|_| ())

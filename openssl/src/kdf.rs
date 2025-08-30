@@ -34,15 +34,15 @@ cfg_if::cfg_if! {
         use crate::error::ErrorStack;
         use crate::ossl_param::OsslParamBuilder;
 
-        const OSSL_KDF_PARAM_PASSWORD: &[u8; 5] = b"pass\0";
-        const OSSL_KDF_PARAM_SALT: &[u8; 5] = b"salt\0";
-        const OSSL_KDF_PARAM_SECRET: &[u8; 7] = b"secret\0";
-        const OSSL_KDF_PARAM_ITER: &[u8; 5] = b"iter\0";
-        const OSSL_KDF_PARAM_SIZE: &[u8; 5] = b"size\0";
-        const OSSL_KDF_PARAM_THREADS: &[u8; 8] = b"threads\0";
-        const OSSL_KDF_PARAM_ARGON2_AD: &[u8; 3] = b"ad\0";
-        const OSSL_KDF_PARAM_ARGON2_LANES: &[u8; 6] = b"lanes\0";
-        const OSSL_KDF_PARAM_ARGON2_MEMCOST: &[u8; 8] = b"memcost\0";
+        const OSSL_KDF_PARAM_PASSWORD: &CStr = c"pass";
+        const OSSL_KDF_PARAM_SALT: &CStr = c"salt";
+        const OSSL_KDF_PARAM_SECRET: &CStr = c"secret";
+        const OSSL_KDF_PARAM_ITER: &CStr = c"iter";
+        const OSSL_KDF_PARAM_SIZE: &CStr = c"size";
+        const OSSL_KDF_PARAM_THREADS: &CStr = c"threads";
+        const OSSL_KDF_PARAM_ARGON2_AD: &CStr = c"ad";
+        const OSSL_KDF_PARAM_ARGON2_LANES: &CStr = c"lanes";
+        const OSSL_KDF_PARAM_ARGON2_MEMCOST: &CStr = c"memcost";
 
         #[allow(clippy::too_many_arguments)]
         pub fn argon2d(
@@ -120,7 +120,7 @@ cfg_if::cfg_if! {
             if max_threads > 0 {
                 threads = cmp::min(lanes, cmp::min(max_threads, u32::MAX as u64) as u32);
             }
-            let bld = OsslParamBuilder::new()?;
+            let mut bld = OsslParamBuilder::new()?;
             bld.add_octet_string(OSSL_KDF_PARAM_PASSWORD, pass)?;
             bld.add_octet_string(OSSL_KDF_PARAM_SALT, salt)?;
             bld.add_uint(OSSL_KDF_PARAM_THREADS, threads)?;
