@@ -25,7 +25,8 @@ use crate::x509::X509PurposeRef;
 #[cfg(ossl110)]
 use crate::x509::{CrlReason, X509Builder};
 use crate::x509::{
-    CrlStatus, X509Crl, X509Extension, X509Name, X509Req, X509StoreContext, X509VerifyResult, X509,
+    CrlStatus, X509Crl, X509Extension, X509Name, X509Pubkey, X509Req, X509StoreContext,
+    X509VerifyResult, X509,
 };
 
 #[cfg(ossl110)]
@@ -263,6 +264,37 @@ fn test_subject_alt_name_iter() {
         Some("http://www.example.com")
     );
     assert!(subject_alt_names_iter.next().is_none());
+}
+
+#[test]
+fn test_x509_pubkey() {
+    let cert = include_bytes!("../../test/certv3.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    let pubkey_digest = cert.pubkey_digest(MessageDigest::sha1()).unwrap();
+
+    let pkey = cert.public_key().unwrap();
+    let x_pkey = X509Pubkey::from_pubkey(&pkey).unwrap();
+
+    let xbytes = x_pkey.encoded_bytes().unwrap();
+    let hashed = crate::hash::hash(MessageDigest::sha1(), xbytes).unwrap();
+
+    assert_eq!(pubkey_digest.as_ref(), hashed.as_ref());
+}
+
+#[test]
+#[cfg(ossl110)]
+fn test_x509_pubkey_ref() {
+    let cert = include_bytes!("../../test/certv3.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    let pkey = cert.public_key().unwrap();
+    let x_pkey = X509Pubkey::from_pubkey(&pkey).unwrap();
+    let xbytes = x_pkey.encoded_bytes().unwrap();
+
+    let y_pkey = cert.x509_pubkey().unwrap();
+    let ybytes = y_pkey.encoded_bytes().unwrap();
+    assert_eq!(xbytes, ybytes);
 }
 
 #[test]
