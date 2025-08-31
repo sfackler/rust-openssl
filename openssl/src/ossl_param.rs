@@ -1,13 +1,17 @@
 //! OSSL_PARAM management for OpenSSL 3.*
 //!
-//! The OSSL_PARAM structure represents generic attribute that can represent various
+//! The OSSL_PARAM structure represents an array of generic
+//! attributes that can represent various
 //! properties in OpenSSL, including keys and operations.
 //!
-//! For convinience, the OSSL_PARAM_BLD builder can be used to dynamically construct
-//! these structure.
+//! This is always represented as an array of OSSL_PARAM
+//! structures, terminated by an entry with a NULL key.
+//!
+//! For convinience, the OSSL_PARAM_BLD builder can be used to
+//! dynamically construct these structures.
 //!
 //! Note, that this module is available only in OpenSSL 3.* and
-//! only internally for this crate!
+//! only internally for this crate.
 
 use crate::bn::{BigNum, BigNumRef};
 use crate::error::ErrorStack;
@@ -20,27 +24,32 @@ use std::ffi::CStr;
 use std::ptr;
 
 foreign_type_and_impl_send_sync! {
+    // This is the singular type, but it is always allocated
+    // and used as an array of such types.
     type CType = ffi::OSSL_PARAM;
+    // OSSL_PARMA_free correctly frees the entire array.
     fn drop = ffi::OSSL_PARAM_free;
 
-    /// `OsslParam` constructed using `OsslParamBuilder`.
-    pub struct OsslParam;
-    /// Reference to `OsslParam`.
-    pub struct OsslParamRef;
+    /// `OsslParamArray` constructed using `OsslParamBuilder`.
+    /// Internally this is a pointer to an array of the OSSL_PARAM
+    /// structures.
+    pub struct OsslParamArray;
+    /// Reference to `OsslParamArray`.
+    pub struct OsslParamArrayRef;
 }
 
-impl OsslParamRef {
-    /// Locates the `OsslParam` in the `OsslParam` array
+impl OsslParamArrayRef {
+    /// Locates the `OsslParamArray` in the `OsslParamArray` array
     #[corresponds(OSSL_PARAM_locate)]
     #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
-    pub fn locate(&self, key: &CStr) -> Result<&OsslParamRef, ErrorStack> {
+    pub fn locate(&self, key: &CStr) -> Result<&OsslParamArrayRef, ErrorStack> {
         unsafe {
             let param = cvt_p(ffi::OSSL_PARAM_locate(self.as_ptr(), key.as_ptr()))?;
-            Ok(OsslParamRef::from_ptr(param))
+            Ok(OsslParamArrayRef::from_ptr(param))
         }
     }
 
-    /// Get `BigNum` from the current `OsslParam`
+    /// Get `BigNum` from the current `OsslParamArray`
     #[corresponds(OSSL_PARAM_get_BN)]
     #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
     pub fn get_bn(&self) -> Result<BigNum, ErrorStack> {
@@ -51,7 +60,7 @@ impl OsslParamRef {
         }
     }
 
-    /// Get `&str` from the current `OsslParam`
+    /// Get `&str` from the current `OsslParamArray`
     #[corresponds(OSSL_PARAM_get_utf8_string)]
     #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
     pub fn get_utf8_string(&self) -> Result<&str, ErrorStack> {
@@ -62,7 +71,7 @@ impl OsslParamRef {
         }
     }
 
-    /// Get octet string (as `&[u8]) from the current `OsslParam`
+    /// Get octet string (as `&[u8]) from the current `OsslParamArray`
     #[corresponds(OSSL_PARAM_get_octet_string)]
     #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
     pub fn get_octet_string(&self) -> Result<&[u8], ErrorStack> {
@@ -83,14 +92,14 @@ foreign_type_and_impl_send_sync! {
     type CType = ffi::OSSL_PARAM_BLD;
     fn drop = ffi::OSSL_PARAM_BLD_free;
 
-    /// Builder used to construct `OsslParam`.
+    /// Builder used to construct `OsslParamArray`.
     pub struct OsslParamBuilder;
     /// Reference to `OsslParamBuilder`.
     pub struct OsslParamBuilderRef;
 }
 
 impl OsslParamBuilder {
-    /// Returns a builder for a OsslParam arrays.
+    /// Returns a builder for an OsslParamArray.
     ///
     /// The array is initially empty.
     #[corresponds(OSSL_PARAM_BLD_new)]
@@ -103,14 +112,14 @@ impl OsslParamBuilder {
         }
     }
 
-    /// Constructs the `OsslParam` and clears this builder.
+    /// Constructs the `OsslParamArray` and clears this builder.
     #[corresponds(OSSL_PARAM_BLD_to_param)]
     #[cfg_attr(any(not(ossl320), osslconf = "OPENSSL_NO_ARGON2"), allow(dead_code))]
     #[allow(clippy::wrong_self_convention)]
-    pub fn to_param(&mut self) -> Result<OsslParam, ErrorStack> {
+    pub fn to_param(&mut self) -> Result<OsslParamArray, ErrorStack> {
         unsafe {
             let params = cvt_p(ffi::OSSL_PARAM_BLD_to_param(self.0))?;
-            Ok(OsslParam::from_ptr(params))
+            Ok(OsslParamArray::from_ptr(params))
         }
     }
 }
