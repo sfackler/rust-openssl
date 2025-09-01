@@ -13,15 +13,13 @@
 //! Note, that this module is available only in OpenSSL 3.* and
 //! only internally for this crate.
 
-use crate::bn::{BigNum, BigNumRef};
+use crate::bn::BigNumRef;
 use crate::error::ErrorStack;
-use crate::util;
 use crate::{cvt, cvt_p};
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_char, c_uint, c_void};
 use openssl_macros::corresponds;
 use std::ffi::CStr;
-use std::ptr;
 
 foreign_type_and_impl_send_sync! {
     // This is the singular type, but it is always allocated
@@ -36,79 +34,6 @@ foreign_type_and_impl_send_sync! {
     pub struct OsslParamArray;
     /// Reference to `OsslParamArray`.
     pub struct OsslParamArrayRef;
-}
-
-impl OsslParamArrayRef {
-    /// Locates the individual `OSSL_PARAM` element identified by the key
-    /// in the `OsslParamArray` array and returns a reference
-    /// to it.
-    #[corresponds(OSSL_PARAM_locate)]
-    #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
-    pub(crate) fn locate<'a>(&'a self, key: &CStr) -> Result<&'a OsslParam<'a>, ErrorStack> {
-        unsafe {
-            let param = cvt_p(ffi::OSSL_PARAM_locate(self.as_ptr(), key.as_ptr()))?;
-            Ok(OsslParam::from_ptr(param))
-        }
-    }
-}
-
-/// A reference to a single `OSSL_PARAM` structure inside
-/// an `OsslParamArray`.
-pub(crate) struct OsslParam<'a>(&'a ffi::OSSL_PARAM);
-
-impl<'a> OsslParam<'a> {
-    /// Constructs a reference to a single `OSSL_PARAM` structure
-    /// from a pointer to an interior element of an OSSL_PARAM array.
-    ///
-    /// # Safety
-    ///
-    /// The pointer must be valid and point to an `OSSL_PARAM` structure.
-    unsafe fn from_ptr(ptr: *const ffi::OSSL_PARAM) -> &'a OsslParam<'a> {
-        &*(ptr as *const OsslParam<'a>)
-    }
-
-    /// Returns a pointer to the underlying `OSSL_PARAM` structure.
-    unsafe fn as_ptr(&self) -> *const ffi::OSSL_PARAM {
-        self.0 as *const ffi::OSSL_PARAM
-    }
-
-    /// Get `BigNum` from this underlying OSSL_PARAM.
-    #[corresponds(OSSL_PARAM_get_BN)]
-    #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
-    pub(crate) fn get_bn(&self) -> Result<BigNum, ErrorStack> {
-        unsafe {
-            let mut bn: *mut ffi::BIGNUM = ptr::null_mut();
-            cvt(ffi::OSSL_PARAM_get_BN(self.as_ptr(), &mut bn))?;
-            Ok(BigNum::from_ptr(bn))
-        }
-    }
-
-    /// Get `&str` from this underlying OSSL_PARAM.
-    #[corresponds(OSSL_PARAM_get_utf8_string)]
-    #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
-    pub(crate) fn get_utf8_string(&self) -> Result<&str, ErrorStack> {
-        unsafe {
-            let mut val: *const c_char = ptr::null_mut();
-            cvt(ffi::OSSL_PARAM_get_utf8_string_ptr(self.as_ptr(), &mut val))?;
-            Ok(CStr::from_ptr(val).to_str().unwrap())
-        }
-    }
-
-    /// Get octet string (as `&[u8]) from this underlying OSSL_PARAM.
-    #[corresponds(OSSL_PARAM_get_octet_string)]
-    #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
-    pub(crate) fn get_octet_string(&self) -> Result<&[u8], ErrorStack> {
-        unsafe {
-            let mut val: *const c_void = ptr::null_mut();
-            let mut val_len: usize = 0;
-            cvt(ffi::OSSL_PARAM_get_octet_string_ptr(
-                self.as_ptr(),
-                &mut val,
-                &mut val_len,
-            ))?;
-            Ok(util::from_raw_parts(val as *const u8, val_len))
-        }
-    }
 }
 
 foreign_type_and_impl_send_sync! {
