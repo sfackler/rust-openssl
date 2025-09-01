@@ -39,20 +39,23 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl OsslParamArrayRef {
-    /// Locates the `OsslParamArray` in the `OsslParamArray` array
+    /// Locates the individual `OSSL_PARAM` element identified by the key
+    /// in the `OsslParamArray` array and returns a reference
+    /// to it.
     #[corresponds(OSSL_PARAM_locate)]
     #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
-    pub fn locate(&self, key: &CStr) -> Result<&OsslParamArrayRef, ErrorStack> {
+    pub(crate) fn locate(&self, key: &CStr) -> Result<&OsslParamArrayRef, ErrorStack> {
         unsafe {
             let param = cvt_p(ffi::OSSL_PARAM_locate(self.as_ptr(), key.as_ptr()))?;
             Ok(OsslParamArrayRef::from_ptr(param))
         }
     }
 
-    /// Get `BigNum` from the current `OsslParamArray`
+    /// Get `BigNum` from the current OSSL_PARAM at the top of this
+    /// `OsslParamArray` reference.
     #[corresponds(OSSL_PARAM_get_BN)]
     #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
-    pub fn get_bn(&self) -> Result<BigNum, ErrorStack> {
+    pub(crate) fn get_bn(&self) -> Result<BigNum, ErrorStack> {
         unsafe {
             let mut bn: *mut ffi::BIGNUM = ptr::null_mut();
             cvt(ffi::OSSL_PARAM_get_BN(self.as_ptr(), &mut bn))?;
@@ -60,10 +63,11 @@ impl OsslParamArrayRef {
         }
     }
 
-    /// Get `&str` from the current `OsslParamArray`
+    /// Get `&str` from the current OSSL_PARAM at the top of this
+    /// `OsslParamArray` reference.
     #[corresponds(OSSL_PARAM_get_utf8_string)]
     #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
-    pub fn get_utf8_string(&self) -> Result<&str, ErrorStack> {
+    pub(crate) fn get_utf8_string(&self) -> Result<&str, ErrorStack> {
         unsafe {
             let mut val: *const c_char = ptr::null_mut();
             cvt(ffi::OSSL_PARAM_get_utf8_string_ptr(self.as_ptr(), &mut val))?;
@@ -71,10 +75,11 @@ impl OsslParamArrayRef {
         }
     }
 
-    /// Get octet string (as `&[u8]) from the current `OsslParamArray`
+    /// Get octet string (as `&[u8]) from the current OSSL_PARAM at the
+    /// top of this `OsslParamArray` reference.
     #[corresponds(OSSL_PARAM_get_octet_string)]
     #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
-    pub fn get_octet_string(&self) -> Result<&[u8], ErrorStack> {
+    pub(crate) fn get_octet_string(&self) -> Result<&[u8], ErrorStack> {
         unsafe {
             let mut val: *const c_void = ptr::null_mut();
             let mut val_len: usize = 0;
@@ -104,7 +109,7 @@ impl OsslParamBuilder {
     /// The array is initially empty.
     #[corresponds(OSSL_PARAM_BLD_new)]
     #[cfg_attr(any(not(ossl320), osslconf = "OPENSSL_NO_ARGON2"), allow(dead_code))]
-    pub fn new() -> Result<OsslParamBuilder, ErrorStack> {
+    pub(crate) fn new() -> Result<OsslParamBuilder, ErrorStack> {
         unsafe {
             ffi::init();
 
@@ -116,7 +121,7 @@ impl OsslParamBuilder {
     #[corresponds(OSSL_PARAM_BLD_to_param)]
     #[cfg_attr(any(not(ossl320), osslconf = "OPENSSL_NO_ARGON2"), allow(dead_code))]
     #[allow(clippy::wrong_self_convention)]
-    pub fn to_param(&mut self) -> Result<OsslParamArray, ErrorStack> {
+    pub(crate) fn to_param(&mut self) -> Result<OsslParamArray, ErrorStack> {
         unsafe {
             let params = cvt_p(ffi::OSSL_PARAM_BLD_to_param(self.0))?;
             Ok(OsslParamArray::from_ptr(params))
@@ -130,7 +135,7 @@ impl OsslParamBuilderRef {
     /// Note, that both key and bn need to exist until the `to_param` is called!
     #[corresponds(OSSL_PARAM_BLD_push_BN)]
     #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
-    pub fn add_bn(&mut self, key: &CStr, bn: &BigNumRef) -> Result<(), ErrorStack> {
+    pub(crate) fn add_bn(&mut self, key: &CStr, bn: &BigNumRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::OSSL_PARAM_BLD_push_BN(
                 self.as_ptr(),
@@ -146,7 +151,7 @@ impl OsslParamBuilderRef {
     /// Note, that both `key` and `buf` need to exist until the `to_param` is called!
     #[corresponds(OSSL_PARAM_BLD_push_utf8_string)]
     #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
-    pub fn add_utf8_string(&mut self, key: &CStr, buf: &str) -> Result<(), ErrorStack> {
+    pub(crate) fn add_utf8_string(&mut self, key: &CStr, buf: &str) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::OSSL_PARAM_BLD_push_utf8_string(
                 self.as_ptr(),
@@ -163,7 +168,7 @@ impl OsslParamBuilderRef {
     /// Note, that both `key` and `buf` need to exist until the `to_param` is called!
     #[corresponds(OSSL_PARAM_BLD_push_octet_string)]
     #[cfg_attr(any(not(ossl320), osslconf = "OPENSSL_NO_ARGON2"), allow(dead_code))]
-    pub fn add_octet_string(&mut self, key: &CStr, buf: &[u8]) -> Result<(), ErrorStack> {
+    pub(crate) fn add_octet_string(&mut self, key: &CStr, buf: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::OSSL_PARAM_BLD_push_octet_string(
                 self.as_ptr(),
@@ -180,7 +185,7 @@ impl OsslParamBuilderRef {
     /// Note, that both `key` and `buf` need to exist until the `to_param` is called!
     #[corresponds(OSSL_PARAM_BLD_push_uint)]
     #[cfg_attr(any(not(ossl320), osslconf = "OPENSSL_NO_ARGON2"), allow(dead_code))]
-    pub fn add_uint(&mut self, key: &CStr, val: u32) -> Result<(), ErrorStack> {
+    pub(crate) fn add_uint(&mut self, key: &CStr, val: u32) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::OSSL_PARAM_BLD_push_uint(
                 self.as_ptr(),
