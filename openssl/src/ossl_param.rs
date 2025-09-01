@@ -78,7 +78,11 @@ impl OsslParamBuilderRef {
     /// Note, that both key and bn need to exist until the `to_param` is called!
     #[corresponds(OSSL_PARAM_BLD_push_BN)]
     #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
-    pub(crate) fn add_bn(&mut self, key: &CStr, bn: &BigNumRef) -> Result<(), ErrorStack> {
+    pub(crate) fn add_bn<'a>(
+        &'a mut self,
+        key: &'a CStr,
+        bn: &'a BigNumRef,
+    ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::OSSL_PARAM_BLD_push_BN(
                 self.as_ptr(),
@@ -94,7 +98,11 @@ impl OsslParamBuilderRef {
     /// Note, that both `key` and `buf` need to exist until the `to_param` is called!
     #[corresponds(OSSL_PARAM_BLD_push_utf8_string)]
     #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
-    pub(crate) fn add_utf8_string(&mut self, key: &CStr, buf: &str) -> Result<(), ErrorStack> {
+    pub(crate) fn add_utf8_string<'a>(
+        &'a mut self,
+        key: &'a CStr,
+        buf: &'a str,
+    ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::OSSL_PARAM_BLD_push_utf8_string(
                 self.as_ptr(),
@@ -111,7 +119,11 @@ impl OsslParamBuilderRef {
     /// Note, that both `key` and `buf` need to exist until the `to_param` is called!
     #[corresponds(OSSL_PARAM_BLD_push_octet_string)]
     #[cfg_attr(any(not(ossl320), osslconf = "OPENSSL_NO_ARGON2"), allow(dead_code))]
-    pub(crate) fn add_octet_string(&mut self, key: &CStr, buf: &[u8]) -> Result<(), ErrorStack> {
+    pub(crate) fn add_octet_string<'a>(
+        &'a mut self,
+        key: &'a CStr,
+        buf: &'a [u8],
+    ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::OSSL_PARAM_BLD_push_octet_string(
                 self.as_ptr(),
@@ -128,7 +140,7 @@ impl OsslParamBuilderRef {
     /// Note, that both `key` and `buf` need to exist until the `to_param` is called!
     #[corresponds(OSSL_PARAM_BLD_push_uint)]
     #[cfg_attr(any(not(ossl320), osslconf = "OPENSSL_NO_ARGON2"), allow(dead_code))]
-    pub(crate) fn add_uint(&mut self, key: &CStr, val: u32) -> Result<(), ErrorStack> {
+    pub(crate) fn add_uint<'a>(&'a mut self, key: &'a CStr, val: u32) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::OSSL_PARAM_BLD_push_uint(
                 self.as_ptr(),
