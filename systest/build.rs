@@ -85,7 +85,8 @@ fn main() {
         if version >= 0x30000000 {
             cfg.header("openssl/provider.h")
                 .header("openssl/params.h")
-                .header("openssl/param_build.h");
+                .header("openssl/param_build.h")
+                .header("openssl/ssl.h");
         }
         if version >= 0x30200000 {
             cfg.header("openssl/thread.h");

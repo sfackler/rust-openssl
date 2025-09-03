@@ -1011,3 +1011,9 @@ extern "C" {
     pub fn SSL_get_value_uint(s: *mut SSL, class_: u32, id: u32, v: *mut u64) -> c_int;
     pub fn SSL_set_value_uint(s: *mut SSL, class_: u32, id: u32, v: u64) -> c_int;
 }
+
+#[cfg(ossl300)]
+extern "C" {
+    pub fn SSL_CTX_set0_tmp_dh_pkey(ctx: *mut SSL_CTX, dhpkey: *mut EVP_PKEY) -> c_int;
+    pub fn SSL_set0_tmp_dh_pkey(s: *mut SSL, dhpkey: *mut EVP_PKEY) -> c_int;
+}
