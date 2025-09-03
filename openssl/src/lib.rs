@@ -160,6 +160,8 @@ pub mod dh;
 pub mod dsa;
 pub mod ec;
 pub mod ecdsa;
+#[cfg(ossl300)]
+mod encdec;
 pub mod encrypt;
 #[cfg(not(any(boringssl, awslc)))]
 pub mod envelope;
@@ -177,6 +179,8 @@ pub mod memcmp;
 pub mod nid;
 #[cfg(not(osslconf = "OPENSSL_NO_OCSP"))]
 pub mod ocsp;
+#[cfg(ossl300)]
+mod params;
 pub mod pkcs12;
 pub mod pkcs5;
 #[cfg(not(any(boringssl, awslc)))]
