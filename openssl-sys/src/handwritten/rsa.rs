@@ -16,6 +16,7 @@ cfg_if! {
     }
 }
 
+#[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
 extern "C" {
     pub fn RSA_new() -> *mut RSA;
     pub fn RSA_size(k: *const RSA) -> c_int;
