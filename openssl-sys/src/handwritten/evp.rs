@@ -615,6 +615,13 @@ extern "C" {
     pub fn EVP_PKEY_keygen(ctx: *mut EVP_PKEY_CTX, key: *mut *mut EVP_PKEY) -> c_int;
     pub fn EVP_PKEY_paramgen(ctx: *mut EVP_PKEY_CTX, key: *mut *mut EVP_PKEY) -> c_int;
 
+    #[cfg(ossl111)]
+    pub fn EVP_PKEY_param_check(ctx: *mut EVP_PKEY_CTX) -> c_int;
+    #[cfg(ossl111)]
+    pub fn EVP_PKEY_public_check(ctx: *mut EVP_PKEY_CTX) -> c_int;
+    #[cfg(ossl111)]
+    pub fn EVP_PKEY_check(ctx: *mut EVP_PKEY_CTX) -> c_int;
+
     pub fn EVP_PKEY_sign_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
 
     #[cfg(ossl340)]
@@ -698,6 +705,7 @@ extern "C" {
 const_ptr_api! {
     extern "C" {
         pub fn EVP_PKCS82PKEY(p8: #[const_ptr_if(any(ossl110, libressl280))] PKCS8_PRIV_KEY_INFO) -> *mut EVP_PKEY;
+        pub fn EVP_PKEY2PKCS8(pkey: #[const_ptr_if(any(ossl300))] EVP_PKEY) -> *mut PKCS8_PRIV_KEY_INFO;
     }
 }
 
