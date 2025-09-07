@@ -77,7 +77,7 @@ impl<'a> OsslParamBuilder<'a> {
     #[allow(clippy::wrong_self_convention)]
     pub(crate) fn to_param(&'a mut self) -> Result<OsslParamArray, ErrorStack> {
         unsafe {
-            let params = cvt_p(ffi::OSSL_PARAM_BLD_to_param(self.builder.as_ptr()))?;
+            let params = cvt_p(ffi::OSSL_PARAM_BLD_to_param(self.as_ptr()))?;
             Ok(OsslParamArray::from_ptr(params))
         }
     }
@@ -85,7 +85,7 @@ impl<'a> OsslParamBuilder<'a> {
     /// Adds a `BigNum` to `OsslParamBuilder`.
     #[corresponds(OSSL_PARAM_BLD_push_BN)]
     #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
-    pub(crate) fn add_bn(&'a mut self, key: &'a CStr, bn: &'a BigNumRef) -> Result<(), ErrorStack> {
+    pub(crate) fn add_bn(&mut self, key: &'a CStr, bn: &'a BigNumRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::OSSL_PARAM_BLD_push_BN(
                 self.as_ptr(),
@@ -100,7 +100,7 @@ impl<'a> OsslParamBuilder<'a> {
     #[corresponds(OSSL_PARAM_BLD_push_utf8_string)]
     #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
     pub(crate) fn add_utf8_string(
-        &'a mut self,
+        &mut self,
         key: &'a CStr,
         buf: &'a str,
     ) -> Result<(), ErrorStack> {
@@ -119,7 +119,7 @@ impl<'a> OsslParamBuilder<'a> {
     #[corresponds(OSSL_PARAM_BLD_push_octet_string)]
     #[cfg_attr(any(not(ossl320), osslconf = "OPENSSL_NO_ARGON2"), allow(dead_code))]
     pub(crate) fn add_octet_string(
-        &'a mut self,
+        &mut self,
         key: &'a CStr,
         buf: &'a [u8],
     ) -> Result<(), ErrorStack> {
@@ -137,7 +137,7 @@ impl<'a> OsslParamBuilder<'a> {
     /// Adds a unsigned int to `OsslParamBuilder`.
     #[corresponds(OSSL_PARAM_BLD_push_uint)]
     #[cfg_attr(any(not(ossl320), osslconf = "OPENSSL_NO_ARGON2"), allow(dead_code))]
-    pub(crate) fn add_uint(&'a mut self, key: &'a CStr, val: u32) -> Result<(), ErrorStack> {
+    pub(crate) fn add_uint(&mut self, key: &'a CStr, val: u32) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::OSSL_PARAM_BLD_push_uint(
                 self.as_ptr(),
@@ -149,7 +149,7 @@ impl<'a> OsslParamBuilder<'a> {
     }
 
     /// Returns a raw pointer to the underlying `OSSL_PARAM_BLD` structure.
-    pub(crate) unsafe fn as_ptr(&self) -> *mut ffi::OSSL_PARAM_BLD {
+    pub(crate) unsafe fn as_ptr(&mut self) -> *mut ffi::OSSL_PARAM_BLD {
         self.builder.as_ptr()
     }
 }
