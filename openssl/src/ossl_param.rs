@@ -20,6 +20,7 @@ use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_char, c_uint, c_void};
 use openssl_macros::corresponds;
 use std::ffi::CStr;
+use std::marker::PhantomData;
 
 foreign_type_and_impl_send_sync! {
     // This is the singular type, but it is always allocated
@@ -41,22 +42,32 @@ foreign_type_and_impl_send_sync! {
     fn drop = ffi::OSSL_PARAM_BLD_free;
 
     /// Builder used to construct `OsslParamArray`.
-    pub struct OsslParamBuilder;
-    /// Reference to `OsslParamBuilder`.
-    pub struct OsslParamBuilderRef;
+    pub struct OsslParamBuilderInternal;
+    /// Reference to `OsslParamBuilderInternal`.
+    pub struct OsslParamBuilderRefInternal;
 }
 
-impl OsslParamBuilder {
+/// Wrapper around the internal OsslParamBuilderInternal that adds lifetime management
+/// since the builder does not own the key and value data that is added to it.
+pub struct OsslParamBuilder<'a> {
+    builder: OsslParamBuilderInternal,
+    _marker: PhantomData<&'a ()>,
+}
+
+impl<'a> OsslParamBuilder<'a> {
     /// Returns a builder for an OsslParamArray.
     ///
     /// The array is initially empty.
     #[corresponds(OSSL_PARAM_BLD_new)]
     #[cfg_attr(any(not(ossl320), osslconf = "OPENSSL_NO_ARGON2"), allow(dead_code))]
-    pub(crate) fn new() -> Result<OsslParamBuilder, ErrorStack> {
+    pub(crate) fn new() -> Result<OsslParamBuilder<'a>, ErrorStack> {
         unsafe {
             ffi::init();
 
-            cvt_p(ffi::OSSL_PARAM_BLD_new()).map(OsslParamBuilder)
+            cvt_p(ffi::OSSL_PARAM_BLD_new()).map(|builder| OsslParamBuilder {
+                builder: OsslParamBuilderInternal(builder),
+                _marker: PhantomData,
+            })
         }
     }
 
@@ -64,25 +75,17 @@ impl OsslParamBuilder {
     #[corresponds(OSSL_PARAM_BLD_to_param)]
     #[cfg_attr(any(not(ossl320), osslconf = "OPENSSL_NO_ARGON2"), allow(dead_code))]
     #[allow(clippy::wrong_self_convention)]
-    pub(crate) fn to_param(&mut self) -> Result<OsslParamArray, ErrorStack> {
+    pub(crate) fn to_param(&'a mut self) -> Result<OsslParamArray, ErrorStack> {
         unsafe {
-            let params = cvt_p(ffi::OSSL_PARAM_BLD_to_param(self.0))?;
+            let params = cvt_p(ffi::OSSL_PARAM_BLD_to_param(self.builder.as_ptr()))?;
             Ok(OsslParamArray::from_ptr(params))
         }
     }
-}
 
-impl OsslParamBuilderRef {
     /// Adds a `BigNum` to `OsslParamBuilder`.
-    ///
-    /// Note, that both key and bn need to exist until the `to_param` is called!
     #[corresponds(OSSL_PARAM_BLD_push_BN)]
     #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
-    pub(crate) fn add_bn<'a>(
-        &'a mut self,
-        key: &'a CStr,
-        bn: &'a BigNumRef,
-    ) -> Result<(), ErrorStack> {
+    pub(crate) fn add_bn(&'a mut self, key: &'a CStr, bn: &'a BigNumRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::OSSL_PARAM_BLD_push_BN(
                 self.as_ptr(),
@@ -94,11 +97,9 @@ impl OsslParamBuilderRef {
     }
 
     /// Adds a utf8 string to `OsslParamBuilder`.
-    ///
-    /// Note, that both `key` and `buf` need to exist until the `to_param` is called!
     #[corresponds(OSSL_PARAM_BLD_push_utf8_string)]
     #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
-    pub(crate) fn add_utf8_string<'a>(
+    pub(crate) fn add_utf8_string(
         &'a mut self,
         key: &'a CStr,
         buf: &'a str,
@@ -115,11 +116,9 @@ impl OsslParamBuilderRef {
     }
 
     /// Adds a octet string to `OsslParamBuilder`.
-    ///
-    /// Note, that both `key` and `buf` need to exist until the `to_param` is called!
     #[corresponds(OSSL_PARAM_BLD_push_octet_string)]
     #[cfg_attr(any(not(ossl320), osslconf = "OPENSSL_NO_ARGON2"), allow(dead_code))]
-    pub(crate) fn add_octet_string<'a>(
+    pub(crate) fn add_octet_string(
         &'a mut self,
         key: &'a CStr,
         buf: &'a [u8],
@@ -136,11 +135,9 @@ impl OsslParamBuilderRef {
     }
 
     /// Adds a unsigned int to `OsslParamBuilder`.
-    ///
-    /// Note, that both `key` and `buf` need to exist until the `to_param` is called!
     #[corresponds(OSSL_PARAM_BLD_push_uint)]
     #[cfg_attr(any(not(ossl320), osslconf = "OPENSSL_NO_ARGON2"), allow(dead_code))]
-    pub(crate) fn add_uint<'a>(&'a mut self, key: &'a CStr, val: u32) -> Result<(), ErrorStack> {
+    pub(crate) fn add_uint(&'a mut self, key: &'a CStr, val: u32) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::OSSL_PARAM_BLD_push_uint(
                 self.as_ptr(),
@@ -149,5 +146,10 @@ impl OsslParamBuilderRef {
             ))
             .map(|_| ())
         }
+    }
+
+    /// Returns a raw pointer to the underlying `OSSL_PARAM_BLD` structure.
+    pub(crate) unsafe fn as_ptr(&self) -> *mut ffi::OSSL_PARAM_BLD {
+        self.builder.as_ptr()
     }
 }
