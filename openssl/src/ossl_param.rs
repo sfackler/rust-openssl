@@ -13,14 +13,15 @@
 //! Note, that this module is available only in OpenSSL 3.* and
 //! only internally for this crate.
 
-use crate::bn::BigNumRef;
 use crate::error::ErrorStack;
+use crate::util;
 use crate::{cvt, cvt_p};
-use foreign_types::{ForeignType, ForeignTypeRef};
-use libc::{c_char, c_uint, c_void};
+use foreign_types::ForeignType;
+use libc::{c_uint, c_void};
 use openssl_macros::corresponds;
 use std::ffi::CStr;
 use std::marker::PhantomData;
+use std::ptr;
 
 foreign_type_and_impl_send_sync! {
     // This is the singular type, but it is always allocated
@@ -35,6 +36,29 @@ foreign_type_and_impl_send_sync! {
     pub struct OsslParamArray;
     /// Reference to `OsslParamArray`.
     pub struct OsslParamArrayRef;
+}
+
+impl OsslParamArray {
+    /// Locates the individual `OSSL_PARAM` element representing an
+    /// octet string identified by the key in the `OsslParamArray`
+    /// array and returns a reference to it.
+    ///
+    /// Combines OSSL_PARAM_locate and OSSL_PARAM_get_octet_string.
+    #[corresponds(OSSL_PARAM_get_octet_string)]
+    #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
+    pub(crate) fn locate_octet_string<'a>(&'a self, key: &CStr) -> Result<&'a [u8], ErrorStack> {
+        unsafe {
+            let param = cvt_p(ffi::OSSL_PARAM_locate(self.as_ptr(), key.as_ptr()))?;
+            let mut val: *const c_void = ptr::null_mut();
+            let mut val_len: usize = 0;
+            cvt(ffi::OSSL_PARAM_get_octet_string_ptr(
+                param,
+                &mut val,
+                &mut val_len,
+            ))?;
+            Ok(util::from_raw_parts(val as *const u8, val_len))
+        }
+    }
 }
 
 foreign_type_and_impl_send_sync! {
@@ -82,39 +106,6 @@ impl<'a> OsslParamBuilder<'a> {
         }
     }
 
-    /// Adds a `BigNum` to `OsslParamBuilder`.
-    #[corresponds(OSSL_PARAM_BLD_push_BN)]
-    #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
-    pub(crate) fn add_bn(&mut self, key: &'a CStr, bn: &'a BigNumRef) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::OSSL_PARAM_BLD_push_BN(
-                self.as_ptr(),
-                key.as_ptr(),
-                bn.as_ptr(),
-            ))
-            .map(|_| ())
-        }
-    }
-
-    /// Adds a utf8 string to `OsslParamBuilder`.
-    #[corresponds(OSSL_PARAM_BLD_push_utf8_string)]
-    #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
-    pub(crate) fn add_utf8_string(
-        &mut self,
-        key: &'a CStr,
-        buf: &'a str,
-    ) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::OSSL_PARAM_BLD_push_utf8_string(
-                self.as_ptr(),
-                key.as_ptr(),
-                buf.as_ptr() as *const c_char,
-                buf.len(),
-            ))
-            .map(|_| ())
-        }
-    }
-
     /// Adds a octet string to `OsslParamBuilder`.
     #[corresponds(OSSL_PARAM_BLD_push_octet_string)]
     #[cfg_attr(any(not(ossl320), osslconf = "OPENSSL_NO_ARGON2"), allow(dead_code))]
@@ -151,5 +142,28 @@ impl<'a> OsslParamBuilder<'a> {
     /// Returns a raw pointer to the underlying `OSSL_PARAM_BLD` structure.
     pub(crate) unsafe fn as_ptr(&mut self) -> *mut ffi::OSSL_PARAM_BLD {
         self.builder.as_ptr()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_builder_locate_octet_string() {
+        let mut builder = OsslParamBuilder::new().unwrap();
+        builder
+            .add_octet_string(CStr::from_bytes_with_nul(b"key1\0").unwrap(), b"value1")
+            .unwrap();
+        let params = builder.to_param().unwrap();
+
+        assert!(params
+            .locate_octet_string(CStr::from_bytes_with_nul(b"invalid\0").unwrap())
+            .is_err());
+        assert_eq!(
+            params
+                .locate_octet_string(CStr::from_bytes_with_nul(b"key1\0").unwrap())
+                .unwrap(),
+            b"value1"
+        );
     }
 }
