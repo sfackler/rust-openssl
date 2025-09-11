@@ -83,7 +83,9 @@ fn main() {
         }
 
         if version >= 0x30000000 {
-            cfg.header("openssl/provider.h")
+            cfg.header("openssl/decoder.h")
+                .header("openssl/encoder.h")
+                .header("openssl/provider.h")
                 .header("openssl/params.h")
                 .header("openssl/param_build.h")
                 .header("openssl/ssl.h");
@@ -100,7 +102,7 @@ fn main() {
         name == "PasswordCallback"
             || name == "pem_password_cb"
             || name == "bio_info_cb"
-            || name == "OSSL_PASSPHRASE_CALLBACK"
+            || name == "OSSL_PASSPHRASE_CALLBACK" 
             || name.starts_with("CRYPTO_EX_")
     });
 
