@@ -44,3 +44,5 @@ pub const CMS_DEBUG_DECRYPT: c_uint = 0x20000;
 pub const CMS_KEY_PARAM: c_uint = 0x40000;
 #[cfg(ossl110)]
 pub const CMS_ASCIICRLF: c_uint = 0x80000;
+#[cfg(ossl300)]
+pub const CMS_CADES: c_uint = 0x100000;
