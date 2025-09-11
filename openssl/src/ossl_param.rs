@@ -13,11 +13,12 @@
 //! Note, that this module is available only in OpenSSL 3.* and
 //! only internally for this crate.
 
+use crate::bn::BigNumRef;
 use crate::error::ErrorStack;
 use crate::util;
 use crate::{cvt, cvt_p};
-use foreign_types::ForeignType;
-use libc::{c_uint, c_void};
+use foreign_types::{ForeignType, ForeignTypeRef};
+use libc::{c_char, c_void};
 use openssl_macros::corresponds;
 use std::ffi::CStr;
 use std::marker::PhantomData;
@@ -38,7 +39,18 @@ foreign_type_and_impl_send_sync! {
     pub struct OsslParamArrayRef;
 }
 
-impl OsslParamArray {
+impl OsslParamArrayRef {
+    /// Locate a parameter by the given key (returning a const reference).
+    #[corresponds(OSSL_PARAM_locate_const)]
+    fn locate_const(&self, key: &CStr) -> Option<*const ffi::OSSL_PARAM> {
+        let param = unsafe { ffi::OSSL_PARAM_locate_const(self.as_ptr(), key.as_ptr()) };
+        if param.is_null() {
+            None
+        } else {
+            Some(param)
+        }
+    }
+
     /// Locates the individual `OSSL_PARAM` element representing an
     /// octet string identified by the key in the `OsslParamArray`
     /// array and returns a reference to it.
@@ -47,8 +59,8 @@ impl OsslParamArray {
     #[corresponds(OSSL_PARAM_get_octet_string)]
     #[allow(dead_code)] // TODO: remove when when used by ML-DSA / ML-KEM
     pub(crate) fn locate_octet_string<'a>(&'a self, key: &CStr) -> Result<&'a [u8], ErrorStack> {
+        let param = self.locate_const(key).ok_or_else(ErrorStack::get)?;
         unsafe {
-            let param = cvt_p(ffi::OSSL_PARAM_locate(self.as_ptr(), key.as_ptr()))?;
             let mut val: *const c_void = ptr::null_mut();
             let mut val_len: usize = 0;
             cvt(ffi::OSSL_PARAM_get_octet_string_ptr(
@@ -58,6 +70,14 @@ impl OsslParamArray {
             ))?;
             Ok(util::from_raw_parts(val as *const u8, val_len))
         }
+    }
+
+    /// Merges two `ParamsRef` objects into a new `Params` object.
+    #[corresponds(OSSL_PARAM_merge)]
+    #[allow(dead_code)] // TODO: remove when used by DH key creation
+    pub fn merge(&self, other: &OsslParamArrayRef) -> Result<OsslParamArray, ErrorStack> {
+        cvt_p(unsafe { ffi::OSSL_PARAM_merge(self.as_ptr(), other.as_ptr()) })
+            .map(|p| unsafe { OsslParamArray::from_ptr(p) })
     }
 }
 
@@ -106,7 +126,7 @@ impl<'a> OsslParamBuilder<'a> {
         }
     }
 
-    /// Adds a octet string to `OsslParamBuilder`.
+    /// Adds an octet string to `OsslParamBuilder`.
     #[corresponds(OSSL_PARAM_BLD_push_octet_string)]
     #[cfg_attr(any(not(ossl320), osslconf = "OPENSSL_NO_ARGON2"), allow(dead_code))]
     pub(crate) fn add_octet_string(
@@ -125,7 +145,7 @@ impl<'a> OsslParamBuilder<'a> {
         }
     }
 
-    /// Adds a unsigned int to `OsslParamBuilder`.
+    /// Adds an unsigned int to `OsslParamBuilder`.
     #[corresponds(OSSL_PARAM_BLD_push_uint)]
     #[cfg_attr(any(not(ossl320), osslconf = "OPENSSL_NO_ARGON2"), allow(dead_code))]
     pub(crate) fn add_uint(&mut self, key: &'a CStr, val: u32) -> Result<(), ErrorStack> {
@@ -133,10 +153,37 @@ impl<'a> OsslParamBuilder<'a> {
             cvt(ffi::OSSL_PARAM_BLD_push_uint(
                 self.as_ptr(),
                 key.as_ptr(),
-                val as c_uint,
+                val,
             ))
             .map(|_| ())
         }
+    }
+
+    /// Adds a `BigNum` to `OsslParamBuilder`.
+    #[corresponds(OSSL_PARAM_BLD_push_BN)]
+    #[allow(dead_code)] // TODO: remove when when used by EVP_KEY.from_data
+    pub(crate) fn add_bn(&mut self, key: &'a CStr, bn: &'a BigNumRef) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::OSSL_PARAM_BLD_push_BN(self.as_ptr(), key.as_ptr(), bn.as_ptr()) })
+            .map(|_| ())
+    }
+
+    /// Adds a utf8 string to `OsslParamBuilder`.
+    #[corresponds(OSSL_PARAM_BLD_push_utf8_string)]
+    #[allow(dead_code)] // TODO: remove when when used by EVP_KEY.from_data
+    pub(crate) fn add_utf8_string(
+        &mut self,
+        key: &'a CStr,
+        value: &'a str,
+    ) -> Result<(), ErrorStack> {
+        cvt(unsafe {
+            ffi::OSSL_PARAM_BLD_push_utf8_string(
+                self.as_ptr(),
+                key.as_ptr(),
+                value.as_ptr().cast::<c_char>(),
+                value.len(),
+            )
+        })
+        .map(|_| ())
     }
 
     /// Returns a raw pointer to the underlying `OSSL_PARAM_BLD` structure.
@@ -148,11 +195,17 @@ impl<'a> OsslParamBuilder<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bn::BigNum;
+    use crate::pkey::{
+        OSSL_PKEY_PARAM_GROUP_NAME, OSSL_PKEY_PARAM_PUB_KEY, OSSL_PKEY_PARAM_RSA_D,
+        OSSL_PKEY_PARAM_RSA_E, OSSL_PKEY_PARAM_RSA_N, OSSL_SIGNATURE_PARAM_NONCE_TYPE,
+    };
+
     #[test]
     fn test_builder_locate_octet_string() {
         let mut builder = OsslParamBuilder::new().unwrap();
         builder
-            .add_octet_string(CStr::from_bytes_with_nul(b"key1\0").unwrap(), b"value1")
+            .add_octet_string(OSSL_PKEY_PARAM_PUB_KEY, b"value1")
             .unwrap();
         let params = builder.to_param().unwrap();
 
@@ -160,10 +213,109 @@ mod tests {
             .locate_octet_string(CStr::from_bytes_with_nul(b"invalid\0").unwrap())
             .is_err());
         assert_eq!(
-            params
-                .locate_octet_string(CStr::from_bytes_with_nul(b"key1\0").unwrap())
-                .unwrap(),
+            params.locate_octet_string(OSSL_PKEY_PARAM_PUB_KEY).unwrap(),
             b"value1"
         );
+    }
+
+    fn assert_param(params: &OsslParamArray, key: &CStr, is_null: bool) {
+        match params.locate_const(key) {
+            Some(_) => assert!(!is_null, "Unexpectedly found param: {key:?}"),
+            None => assert!(is_null, "Failed to find param: {key:?}"),
+        }
+    }
+
+    #[test]
+    fn test_param_builder_uint() {
+        let mut builder = OsslParamBuilder::new().unwrap();
+        builder
+            .add_uint(OSSL_SIGNATURE_PARAM_NONCE_TYPE, 42)
+            .unwrap();
+        let params = builder.to_param().unwrap();
+
+        assert_param(&params, OSSL_SIGNATURE_PARAM_NONCE_TYPE, false);
+        assert_param(&params, OSSL_PKEY_PARAM_GROUP_NAME, true);
+    }
+
+    #[test]
+    fn test_param_builder_bignum() {
+        let n = BigNum::from_u32(0xbc747fc5).unwrap();
+        let e = BigNum::from_u32(0x10001).unwrap();
+        let d = BigNum::from_u32(0x7b133399).unwrap();
+
+        let mut builder = OsslParamBuilder::new().unwrap();
+        builder.add_bn(OSSL_PKEY_PARAM_RSA_N, &n).unwrap();
+        builder.add_bn(OSSL_PKEY_PARAM_RSA_E, &e).unwrap();
+        builder.add_bn(OSSL_PKEY_PARAM_RSA_D, &d).unwrap();
+        let params = builder.to_param().unwrap();
+
+        for param in [
+            OSSL_PKEY_PARAM_RSA_N,
+            OSSL_PKEY_PARAM_RSA_E,
+            OSSL_PKEY_PARAM_RSA_D,
+        ] {
+            assert_param(&params, param, false);
+        }
+
+        assert_param(&params, OSSL_PKEY_PARAM_GROUP_NAME, true);
+    }
+
+    #[test]
+    fn test_param_builder_string() {
+        let mut builder = OsslParamBuilder::new().unwrap();
+        builder
+            .add_utf8_string(OSSL_PKEY_PARAM_GROUP_NAME, "primve256v1")
+            .unwrap();
+        let params = builder.to_param().unwrap();
+
+        assert_param(&params, OSSL_PKEY_PARAM_GROUP_NAME, false);
+        assert_param(&params, OSSL_PKEY_PARAM_RSA_N, true);
+    }
+
+    #[test]
+    fn test_param_builder_octet_string() {
+        let mut builder = OsslParamBuilder::new().unwrap();
+        builder
+            .add_octet_string(OSSL_PKEY_PARAM_PUB_KEY, b"foobar")
+            .unwrap();
+        let params = builder.to_param().unwrap();
+
+        assert_param(&params, OSSL_PKEY_PARAM_PUB_KEY, false);
+        assert_param(&params, OSSL_PKEY_PARAM_GROUP_NAME, true);
+    }
+
+    #[test]
+    fn test_merge() {
+        let n = BigNum::from_u32(0xbc747fc5).unwrap();
+        let e = BigNum::from_u32(0x10001).unwrap();
+        let d = BigNum::from_u32(0x7b133399).unwrap();
+
+        let mut merged_params: OsslParamArray;
+        let mut builder1 = OsslParamBuilder::new().unwrap();
+        builder1.add_bn(OSSL_PKEY_PARAM_RSA_N, &n).unwrap();
+        let params1 = builder1.to_param().unwrap();
+        {
+            let mut builder2 = OsslParamBuilder::new().unwrap();
+            builder2.add_bn(OSSL_PKEY_PARAM_RSA_E, &e).unwrap();
+            let params2 = builder2.to_param().unwrap();
+            merged_params = params1.merge(&params2).unwrap();
+        }
+
+        // Merge 1 & 2, d (added in 3) should not be present
+        assert_param(&merged_params, OSSL_PKEY_PARAM_RSA_N, false);
+        assert_param(&merged_params, OSSL_PKEY_PARAM_RSA_E, false);
+        assert_param(&merged_params, OSSL_PKEY_PARAM_RSA_D, true);
+
+        {
+            let mut builder3 = OsslParamBuilder::new().unwrap();
+            builder3.add_bn(OSSL_PKEY_PARAM_RSA_D, &d).unwrap();
+            let params3 = builder3.to_param().unwrap();
+            merged_params = merged_params.merge(&params3).unwrap();
+        }
+
+        // Merge 3 into 1+2, we should now have all params
+        assert_param(&merged_params, OSSL_PKEY_PARAM_RSA_N, false);
+        assert_param(&merged_params, OSSL_PKEY_PARAM_RSA_E, false);
+        assert_param(&merged_params, OSSL_PKEY_PARAM_RSA_D, false);
     }
 }
