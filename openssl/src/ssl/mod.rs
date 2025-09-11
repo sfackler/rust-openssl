@@ -2145,6 +2145,8 @@ impl SslCipherRef {
     }
 
     /// Returns the two-byte ID of the cipher
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
     #[corresponds(SSL_CIPHER_get_protocol_id)]
     #[cfg(ossl111)]
     pub fn protocol_id(&self) -> [u8; 2] {
