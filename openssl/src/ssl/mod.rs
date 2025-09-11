@@ -2146,6 +2146,7 @@ impl SslCipherRef {
 
     /// Returns the two-byte ID of the cipher
     #[corresponds(SSL_CIPHER_get_protocol_id)]
+    #[cfg(ossl111)]
     pub fn protocol_id(&self) -> [u8; 2] {
         unsafe {
             let id = ffi::SSL_CIPHER_get_protocol_id(self.as_ptr());
