@@ -100,6 +100,7 @@ fn main() {
         name == "PasswordCallback"
             || name == "pem_password_cb"
             || name == "bio_info_cb"
+            || name == "OSSL_PASSPHRASE_CALLBACK"
             || name.starts_with("CRYPTO_EX_")
     });
 
