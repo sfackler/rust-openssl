@@ -1692,7 +1692,10 @@ fn ssl_ex_data_leak() {
 #[cfg(ossl111)]
 fn cipher_id() {
     let mut server = Server::builder();
-    server.ctx().set_ciphersuites("TLS_AES_256_GCM_SHA384").unwrap();
+    server
+        .ctx()
+        .set_ciphersuites("TLS_AES_256_GCM_SHA384")
+        .unwrap();
     let server = server.build();
 
     let client = server.client();
