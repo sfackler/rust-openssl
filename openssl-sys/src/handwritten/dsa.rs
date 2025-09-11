@@ -19,6 +19,7 @@ cfg_if! {
     }
 }
 
+#[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
 extern "C" {
     pub fn DSA_new() -> *mut DSA;
     pub fn DSA_free(dsa: *mut DSA);
@@ -72,6 +73,9 @@ extern "C" {
     pub fn DSA_get0_key(d: *const DSA, pub_key: *mut *const BIGNUM, priv_key: *mut *const BIGNUM);
     #[cfg(any(ossl110, libressl273))]
     pub fn DSA_set0_key(d: *mut DSA, pub_key: *mut BIGNUM, priv_key: *mut BIGNUM) -> c_int;
+}
+
+extern "C" {
     pub fn d2i_DSA_SIG(
         sig: *mut *mut DSA_SIG,
         pp: *mut *const c_uchar,

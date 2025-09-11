@@ -169,15 +169,25 @@ const_ptr_api! {
         pub fn i2d_PUBKEY_bio(b: *mut BIO, x: #[const_ptr_if(ossl300)] EVP_PKEY) -> c_int;
 
         pub fn i2d_PUBKEY(k: #[const_ptr_if(ossl300)] EVP_PKEY, buf: *mut *mut u8) -> c_int;
+        pub fn i2d_PrivateKey(k: #[const_ptr_if(ossl300)] EVP_PKEY, buf: *mut *mut u8) -> c_int;
+    }
+}
+
+#[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
+const_ptr_api! {
+    extern "C" {
         pub fn i2d_RSA_PUBKEY(k: #[const_ptr_if(ossl300)] RSA, buf: *mut *mut u8) -> c_int;
         pub fn i2d_DSA_PUBKEY(a: #[const_ptr_if(ossl300)] DSA, pp: *mut *mut c_uchar) -> c_int;
-        pub fn i2d_PrivateKey(k: #[const_ptr_if(ossl300)] EVP_PKEY, buf: *mut *mut u8) -> c_int;
         pub fn i2d_ECPrivateKey(ec_key: #[const_ptr_if(ossl300)] EC_KEY, pp: *mut *mut c_uchar) -> c_int;
         pub fn i2d_EC_PUBKEY(a: #[const_ptr_if(ossl300)] EC_KEY, pp: *mut *mut c_uchar) -> c_int;
     }
 }
 extern "C" {
     pub fn d2i_PUBKEY(k: *mut *mut EVP_PKEY, buf: *mut *const u8, len: c_long) -> *mut EVP_PKEY;
+}
+
+#[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
+extern "C" {
     pub fn d2i_RSA_PUBKEY(k: *mut *mut RSA, buf: *mut *const u8, len: c_long) -> *mut RSA;
     pub fn d2i_DSA_PUBKEY(k: *mut *mut DSA, pp: *mut *const c_uchar, length: c_long) -> *mut DSA;
     pub fn d2i_EC_PUBKEY(

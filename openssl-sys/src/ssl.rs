@@ -315,7 +315,9 @@ pub const SSL_ERROR_WANT_CLIENT_HELLO_CB: c_int = 11;
 pub const SSL_VERIFY_NONE: c_int = 0;
 pub const SSL_VERIFY_PEER: c_int = 1;
 pub const SSL_VERIFY_FAIL_IF_NO_PEER_CERT: c_int = 2;
+#[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
 pub const SSL_CTRL_SET_TMP_DH: c_int = 3;
+#[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
 pub const SSL_CTRL_SET_TMP_ECDH: c_int = 4;
 #[cfg(any(libressl, all(ossl101, not(ossl110))))]
 pub const SSL_CTRL_GET_SESSION_REUSED: c_int = 8;
@@ -366,18 +368,22 @@ pub const SSL_CTRL_GET_MAX_PROTO_VERSION: c_int = 131;
 #[cfg(ossl300)]
 pub const SSL_CTRL_GET_TMP_KEY: c_int = 133;
 
+#[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
 pub unsafe fn SSL_CTX_set_tmp_dh(ctx: *mut SSL_CTX, dh: *mut DH) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TMP_DH, 0, dh as *mut c_void)
 }
 
+#[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
 pub unsafe fn SSL_CTX_set_tmp_ecdh(ctx: *mut SSL_CTX, key: *mut EC_KEY) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TMP_ECDH, 0, key as *mut c_void)
 }
 
+#[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
 pub unsafe fn SSL_set_tmp_dh(ssl: *mut SSL, dh: *mut DH) -> c_long {
     SSL_ctrl(ssl, SSL_CTRL_SET_TMP_DH, 0, dh as *mut c_void)
 }
 
+#[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
 pub unsafe fn SSL_set_tmp_ecdh(ssl: *mut SSL, key: *mut EC_KEY) -> c_long {
     SSL_ctrl(ssl, SSL_CTRL_SET_TMP_ECDH, 0, key as *mut c_void)
 }
@@ -602,11 +608,13 @@ pub unsafe fn SSL_CTX_set_read_ahead(ctx: *mut SSL_CTX, m: c_long) -> c_long {
 
 #[allow(clashing_extern_declarations)]
 extern "C" {
+    #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
     #[deprecated(note = "use SSL_CTX_set_tmp_dh_callback__fixed_rust instead")]
     pub fn SSL_CTX_set_tmp_dh_callback(
         ctx: *mut SSL_CTX,
         dh: unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int) -> *mut DH,
     );
+    #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
     #[deprecated(note = "use SSL_set_tmp_dh_callback__fixed_rust instead")]
     pub fn SSL_set_tmp_dh_callback(
         ctx: *mut SSL,
