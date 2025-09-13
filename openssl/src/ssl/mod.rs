@@ -2143,6 +2143,18 @@ impl SslCipherRef {
             Some(Nid::from_raw(n))
         }
     }
+
+    /// Returns the two-byte ID of the cipher
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    #[corresponds(SSL_CIPHER_get_protocol_id)]
+    #[cfg(ossl111)]
+    pub fn protocol_id(&self) -> [u8; 2] {
+        unsafe {
+            let id = ffi::SSL_CIPHER_get_protocol_id(self.as_ptr());
+            id.to_be_bytes()
+        }
+    }
 }
 
 impl fmt::Debug for SslCipherRef {
