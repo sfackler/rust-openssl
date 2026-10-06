@@ -264,7 +264,7 @@ fn set_ctx_options() {
 }
 
 #[test]
-#[cfg(not(any(boringssl, awslc)))]
+#[cfg(not(any(boringssl, awslc, libressl440)))]
 fn clear_ctx_options() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_options(SslOptions::ALL);
